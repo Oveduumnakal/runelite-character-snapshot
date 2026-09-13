@@ -5,32 +5,386 @@
 
 ## Contents
 
-- [com.oveduumnakal.dataexport.PlayerDataCollector](#comoveduumnakaldataexportplayerdatacollector)
-- [com.oveduumnakal.dataexport.PlayerDataExportConfig](#comoveduumnakaldataexportplayerdataexportconfig)
-- [com.oveduumnakal.dataexport.PlayerDataExportPlugin](#comoveduumnakaldataexportplayerdataexportplugin)
-- [com.oveduumnakal.dataexport.PlayerDataWriter](#comoveduumnakaldataexportplayerdatawriter)
-- [com.oveduumnakal.dataexport.model.PlayerSyncData](#comoveduumnakaldataexportmodelplayersyncdata)
-- [com.oveduumnakal.dataexport.model.PlayerSyncData.BankData](#comoveduumnakaldataexportmodelplayersyncdatabankdata)
-- [com.oveduumnakal.dataexport.model.PlayerSyncData.BankTab](#comoveduumnakaldataexportmodelplayersyncdatabanktab)
-- [com.oveduumnakal.dataexport.model.PlayerSyncData.CombatAchievementData](#comoveduumnakaldataexportmodelplayersyncdatacombatachievementdata)
-- [com.oveduumnakal.dataexport.model.PlayerSyncData.DiaryRegion](#comoveduumnakaldataexportmodelplayersyncdatadiaryregion)
-- [com.oveduumnakal.dataexport.model.PlayerSyncData.GeOffer](#comoveduumnakaldataexportmodelplayersyncdatageoffer)
-- [com.oveduumnakal.dataexport.model.PlayerSyncData.InventoryItem](#comoveduumnakaldataexportmodelplayersyncdatainventoryitem)
-- [com.oveduumnakal.dataexport.model.PlayerSyncData.ItemEntry](#comoveduumnakaldataexportmodelplayersyncdataitementry)
-- [com.oveduumnakal.dataexport.model.PlayerSyncData.LocationData](#comoveduumnakaldataexportmodelplayersyncdatalocationdata)
-- [com.oveduumnakal.dataexport.model.PlayerSyncData.PlayerInfo](#comoveduumnakaldataexportmodelplayersyncdataplayerinfo)
-- [com.oveduumnakal.dataexport.model.PlayerSyncData.QuestEntry](#comoveduumnakaldataexportmodelplayersyncdataquestentry)
-- [com.oveduumnakal.dataexport.model.PlayerSyncData.SkillEntry](#comoveduumnakaldataexportmodelplayersyncdataskillentry)
-- [com.oveduumnakal.dataexport.model.PlayerSyncData.SlayerData](#comoveduumnakaldataexportmodelplayersyncdataslayerdata)
-- [com.oveduumnakal.dataexport.model.PlayerSyncData.VitalsData](#comoveduumnakaldataexportmodelplayersyncdatavitalsdata)
+- [com.oveduumnakal.charactersnapshot.CharacterSnapshotConfig](#comoveduumnakalcharactersnapshotcharactersnapshotconfig)
+- [com.oveduumnakal.charactersnapshot.CharacterSnapshotPlugin](#comoveduumnakalcharactersnapshotcharactersnapshotplugin)
+- [com.oveduumnakal.charactersnapshot.SnapshotCollector](#comoveduumnakalcharactersnapshotsnapshotcollector)
+- [com.oveduumnakal.charactersnapshot.SnapshotWriter](#comoveduumnakalcharactersnapshotsnapshotwriter)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot](#comoveduumnakalcharactersnapshotmodelcharactersnapshot)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbankdata)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankTab](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbanktab)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementdata)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiaryregion)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.GeOffer](#comoveduumnakalcharactersnapshotmodelcharactersnapshotgeoffer)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.InventoryItem](#comoveduumnakalcharactersnapshotmodelcharactersnapshotinventoryitem)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry](#comoveduumnakalcharactersnapshotmodelcharactersnapshotitementry)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.LocationData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotlocationdata)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.PlayerInfo](#comoveduumnakalcharactersnapshotmodelcharactersnapshotplayerinfo)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.QuestEntry](#comoveduumnakalcharactersnapshotmodelcharactersnapshotquestentry)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SkillEntry](#comoveduumnakalcharactersnapshotmodelcharactersnapshotskillentry)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SlayerData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotslayerdata)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.VitalsData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotvitalsdata)
 
 ---
 
-## com.oveduumnakal.dataexport.PlayerDataCollector
+## com.oveduumnakal.charactersnapshot.CharacterSnapshotConfig
+
+_interface_
+
+`public interface CharacterSnapshotConfig`
+
+Configuration for the Character Snapshot plugin: the save location and interval, and a toggle
+for each category of data written to the export file.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `String` | `GROUP` | Config group key, shared with `ConfigChanged` handling. |
+| `String` | `dataSection` | Data section: which categories of data to include. |
+| `String` | `storageSection` | Storage section: where and how often data is written. |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `default String` | `saveDirectory()` |  |
+| `default boolean` | `syncAccountInfo()` |  |
+| `default boolean` | `syncBank()` |  |
+| `default boolean` | `syncCombatAchievements()` |  |
+| `default boolean` | `syncDiaries()` |  |
+| `default boolean` | `syncEquipment()` |  |
+| `default boolean` | `syncGrandExchange()` |  |
+| `default int` | `syncIntervalSeconds()` |  |
+| `default boolean` | `syncInventory()` |  |
+| `default boolean` | `syncLocation()` |  |
+| `default boolean` | `syncQuests()` |  |
+| `default boolean` | `syncSkills()` |  |
+| `default boolean` | `syncSlayer()` |  |
+| `default boolean` | `syncVitals()` |  |
+
+### Field Detail
+
+#### GROUP
+
+`String GROUP`
+
+Config group key, shared with `ConfigChanged` handling.
+
+#### dataSection
+
+`String dataSection`
+
+Data section: which categories of data to include.
+
+#### storageSection
+
+`String storageSection`
+
+Storage section: where and how often data is written.
+
+### Method Detail
+
+#### saveDirectory
+
+`default String saveDirectory()`
+
+- **Returns:** a custom directory to write export files into, or blank to use the default
+        (`.runelite/osrs-companion`)
+
+#### syncAccountInfo
+
+`default boolean syncAccountInfo()`
+
+- **Returns:** whether to include account type, membership, and world
+
+#### syncBank
+
+`default boolean syncBank()`
+
+- **Returns:** whether to include bank contents (captured when the bank is opened)
+
+#### syncCombatAchievements
+
+`default boolean syncCombatAchievements()`
+
+- **Returns:** whether to include combat-achievement tier progress
+
+#### syncDiaries
+
+`default boolean syncDiaries()`
+
+- **Returns:** whether to include achievement diary completion
+
+#### syncEquipment
+
+`default boolean syncEquipment()`
+
+- **Returns:** whether to include currently worn equipment
+
+#### syncGrandExchange
+
+`default boolean syncGrandExchange()`
+
+- **Returns:** whether to include active Grand Exchange offers
+
+#### syncIntervalSeconds
+
+`default int syncIntervalSeconds()`
+
+- **Returns:** how often, in seconds, updated data is written to disk (minimum 30)
+
+#### syncInventory
+
+`default boolean syncInventory()`
+
+- **Returns:** whether to include the current inventory contents
+
+#### syncLocation
+
+`default boolean syncLocation()`
+
+- **Returns:** whether to include the character's world location
+
+#### syncQuests
+
+`default boolean syncQuests()`
+
+- **Returns:** whether to include quest completion state and total quest points
+
+#### syncSkills
+
+`default boolean syncSkills()`
+
+- **Returns:** whether to include skill levels, experience, and boosted levels
+
+#### syncSlayer
+
+`default boolean syncSlayer()`
+
+- **Returns:** whether to include the current slayer task
+
+#### syncVitals
+
+`default boolean syncVitals()`
+
+- **Returns:** whether to include current hitpoints, prayer, and run energy
+
+---
+
+## com.oveduumnakal.charactersnapshot.CharacterSnapshotPlugin
 
 _class_
 
-`public class PlayerDataCollector`
+`public class CharacterSnapshotPlugin`
+
+Writes a live snapshot of the logged-in character to a local JSON file for external tools. State is
+collected on the client thread from events and periodic polling, and written off-thread. The plugin
+makes no network calls of any kind.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private static final int` | `INITIAL_DELAY_TICKS` |  |
+| `private static final int` | `POLL_INTERVAL_TICKS` |  |
+| `private Client` | `client` |  |
+| `private SnapshotCollector` | `collector` |  |
+| `private CharacterSnapshotConfig` | `config` |  |
+| `private volatile boolean` | `dirty` |  |
+| `private ScheduledExecutorService` | `executor` |  |
+| `private Gson` | `gson` |  |
+| `private boolean` | `initialCollectionDone` |  |
+| `private String` | `lastPlayerName` |  |
+| `private int` | `syncTickThreshold` |  |
+| `private int` | `tickCounter` |  |
+| `private SnapshotWriter` | `writer` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `private void` | `doFullCollection()` | Runs a one-off full collection of every enabled data source after login. |
+| `private void` | `doSave()` | Builds a snapshot on the client thread and writes it off-thread. |
+| `public void` | `onConfigChanged(ConfigChanged event)` | Recomputes the save interval when this plugin's configuration changes. |
+| `public void` | `onGameStateChanged(GameStateChanged event)` | Schedules the initial collection on login and clears state on logout or world hop so one character's data cannot leak into another's file. |
+| `public void` | `onGameTick(GameTick event)` | Drives the initial collection, periodic polling, and interval-gated saves. |
+| `public void` | `onGrandExchangeOfferChanged(GrandExchangeOfferChanged event)` | Caches a changed Grand Exchange offer. |
+| `public void` | `onItemContainerChanged(ItemContainerChanged event)` | Caches bank, inventory, or equipment changes. |
+| `public void` | `onStatChanged(StatChanged event)` | Caches a changed skill (real, experience, and boosted levels). |
+| `private void` | `pollPeriodic()` | Polls the data sources that are not event-driven, marking the snapshot dirty on any change. |
+| `CharacterSnapshotConfig` | `provideConfig(ConfigManager configManager)` | Provides the plugin configuration. |
+| `private void` | `recalcSyncThreshold()` | Recomputes the save threshold in game ticks (one tick is about 0.6 seconds). |
+| `private File` | `resolveSyncDir()` | Resolves the export directory: the configured folder if set, else the default under the RuneLite directory. |
+| `protected void` | `shutDown()` | Writes a final snapshot when still logged in, then releases resources. |
+| `protected void` | `startUp()` | Initializes the collector and writer and computes the save interval. |
+
+### Field Detail
+
+#### INITIAL_DELAY_TICKS
+
+`private static final int INITIAL_DELAY_TICKS`
+
+#### POLL_INTERVAL_TICKS
+
+`private static final int POLL_INTERVAL_TICKS`
+
+#### client
+
+`private Client client`
+
+#### collector
+
+`private SnapshotCollector collector`
+
+#### config
+
+`private CharacterSnapshotConfig config`
+
+#### dirty
+
+`private volatile boolean dirty`
+
+#### executor
+
+`private ScheduledExecutorService executor`
+
+#### gson
+
+`private Gson gson`
+
+#### initialCollectionDone
+
+`private boolean initialCollectionDone`
+
+#### lastPlayerName
+
+`private String lastPlayerName`
+
+#### syncTickThreshold
+
+`private int syncTickThreshold`
+
+#### tickCounter
+
+`private int tickCounter`
+
+#### writer
+
+`private SnapshotWriter writer`
+
+### Method Detail
+
+#### doFullCollection
+
+`private void doFullCollection()`
+
+Runs a one-off full collection of every enabled data source after login.
+
+#### doSave
+
+`private void doSave()`
+
+Builds a snapshot on the client thread and writes it off-thread. Clears the dirty flag
+optimistically and re-sets it if the write fails, so a failed write is retried.
+
+#### onConfigChanged
+
+`public void onConfigChanged(ConfigChanged event)`
+
+Recomputes the save interval when this plugin's configuration changes.
+
+- **Parameter** `event` — the config-changed event
+
+#### onGameStateChanged
+
+`public void onGameStateChanged(GameStateChanged event)`
+
+Schedules the initial collection on login and clears state on logout or world hop so one
+character's data cannot leak into another's file.
+
+- **Parameter** `event` — the game-state event
+
+#### onGameTick
+
+`public void onGameTick(GameTick event)`
+
+Drives the initial collection, periodic polling, and interval-gated saves.
+
+- **Parameter** `event` — the game-tick event
+
+#### onGrandExchangeOfferChanged
+
+`public void onGrandExchangeOfferChanged(GrandExchangeOfferChanged event)`
+
+Caches a changed Grand Exchange offer.
+
+- **Parameter** `event` — the offer-changed event
+
+#### onItemContainerChanged
+
+`public void onItemContainerChanged(ItemContainerChanged event)`
+
+Caches bank, inventory, or equipment changes.
+
+- **Parameter** `event` — the container-changed event
+
+#### onStatChanged
+
+`public void onStatChanged(StatChanged event)`
+
+Caches a changed skill (real, experience, and boosted levels).
+
+- **Parameter** `event` — the stat-changed event
+
+#### pollPeriodic
+
+`private void pollPeriodic()`
+
+Polls the data sources that are not event-driven, marking the snapshot dirty on any change.
+
+#### provideConfig
+
+`CharacterSnapshotConfig provideConfig(ConfigManager configManager)`
+
+Provides the plugin configuration.
+
+- **Parameter** `configManager` — the config manager
+- **Returns:** the bound configuration
+
+#### recalcSyncThreshold
+
+`private void recalcSyncThreshold()`
+
+Recomputes the save threshold in game ticks (one tick is about 0.6 seconds).
+
+#### resolveSyncDir
+
+`private File resolveSyncDir()`
+
+Resolves the export directory: the configured folder if set, else the default under the
+RuneLite directory.
+
+- **Returns:** the directory to write export files into
+
+#### shutDown
+
+`protected void shutDown()`
+
+Writes a final snapshot when still logged in, then releases resources.
+
+#### startUp
+
+`protected void startUp()`
+
+Initializes the collector and writer and computes the save interval.
+
+---
+
+## com.oveduumnakal.charactersnapshot.SnapshotCollector
+
+_class_
+
+`public class SnapshotCollector`
 
 Reads player state from the RuneLite `Client` into in-memory caches and assembles the
 export snapshot. Container updates arrive from events; quests, diaries, combat achievements, and
@@ -47,7 +401,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private int` | `bankTotal` |  |
 | `private final Client` | `client` |  |
 | `private CombatAchievementData` | `combatAchievements` |  |
-| `private final PlayerDataExportConfig` | `config` |  |
+| `private final CharacterSnapshotConfig` | `config` |  |
 | `private Map<String,DiaryRegion>` | `diaries` |  |
 | `private Map<String,ItemEntry>` | `equipment` |  |
 | `private final Map<Integer,GeOffer>` | `geOffers` |  |
@@ -61,14 +415,14 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 
 | Constructor | Description |
 |---|---|
-| `PlayerDataCollector(Client client, PlayerDataExportConfig config)` |  |
+| `SnapshotCollector(Client client, CharacterSnapshotConfig config)` |  |
 
 ### Method Summary
 
 | Modifier and Type | Method | Description |
 |---|---|---|
 | `private LocationData` | `buildLocation(Player localPlayer)` | Reads the character's world location. |
-| `public PlayerSyncData` | `buildSnapshot()` | Assembles the export snapshot from the caches and cheap client reads, honouring the config toggles. |
+| `public CharacterSnapshot` | `buildSnapshot()` | Assembles the export snapshot from the caches and cheap client reads, honouring the config toggles. |
 | `private VitalsData` | `buildVitals()` | Reads current combat vitals from boosted and real skill levels and run energy. |
 | `private DiaryRegion` | `diaryRegion(int easy, int medium, int hard, int elite)` | Reads a diary region's four tiers, each complete when its varbit equals 1. |
 | `private String` | `getItemName(int itemId)` | Resolves an item id to its display name. |
@@ -111,7 +465,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 
 #### config
 
-`private final PlayerDataExportConfig config`
+`private final CharacterSnapshotConfig config`
 
 #### diaries
 
@@ -147,9 +501,9 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 
 ### Constructor Detail
 
-#### PlayerDataCollector
+#### SnapshotCollector
 
-`public PlayerDataCollector(Client client, PlayerDataExportConfig config)`
+`public SnapshotCollector(Client client, CharacterSnapshotConfig config)`
 
 - **Parameter** `client` — the RuneLite client
 - **Parameter** `config` — the plugin configuration
@@ -167,7 +521,7 @@ Reads the character's world location.
 
 #### buildSnapshot
 
-`public PlayerSyncData buildSnapshot()`
+`public CharacterSnapshot buildSnapshot()`
 
 Assembles the export snapshot from the caches and cheap client reads, honouring the config
 toggles. Owned collections are copied so the writer thread reads a stable graph.
@@ -319,367 +673,13 @@ Updates a single skill from a stat-changed event.
 
 ---
 
-## com.oveduumnakal.dataexport.PlayerDataExportConfig
-
-_interface_
-
-`public interface PlayerDataExportConfig`
-
-Configuration for the Player Data Export plugin: the save location and interval, and a toggle
-for each category of data written to the export file.
-
-### Field Summary
-
-| Modifier and Type | Field | Description |
-|---|---|---|
-| `String` | `GROUP` | Config group key, shared with `ConfigChanged` handling. |
-| `String` | `dataSection` | Data section: which categories of data to include. |
-| `String` | `storageSection` | Storage section: where and how often data is written. |
-
-### Method Summary
-
-| Modifier and Type | Method | Description |
-|---|---|---|
-| `default String` | `saveDirectory()` |  |
-| `default boolean` | `syncAccountInfo()` |  |
-| `default boolean` | `syncBank()` |  |
-| `default boolean` | `syncCombatAchievements()` |  |
-| `default boolean` | `syncDiaries()` |  |
-| `default boolean` | `syncEquipment()` |  |
-| `default boolean` | `syncGrandExchange()` |  |
-| `default int` | `syncIntervalSeconds()` |  |
-| `default boolean` | `syncInventory()` |  |
-| `default boolean` | `syncLocation()` |  |
-| `default boolean` | `syncQuests()` |  |
-| `default boolean` | `syncSkills()` |  |
-| `default boolean` | `syncSlayer()` |  |
-| `default boolean` | `syncVitals()` |  |
-
-### Field Detail
-
-#### GROUP
-
-`String GROUP`
-
-Config group key, shared with `ConfigChanged` handling.
-
-#### dataSection
-
-`String dataSection`
-
-Data section: which categories of data to include.
-
-#### storageSection
-
-`String storageSection`
-
-Storage section: where and how often data is written.
-
-### Method Detail
-
-#### saveDirectory
-
-`default String saveDirectory()`
-
-- **Returns:** a custom directory to write export files into, or blank to use the default
-        (`.runelite/osrs-companion`)
-
-#### syncAccountInfo
-
-`default boolean syncAccountInfo()`
-
-- **Returns:** whether to include account type, membership, and world
-
-#### syncBank
-
-`default boolean syncBank()`
-
-- **Returns:** whether to include bank contents (captured when the bank is opened)
-
-#### syncCombatAchievements
-
-`default boolean syncCombatAchievements()`
-
-- **Returns:** whether to include combat-achievement tier progress
-
-#### syncDiaries
-
-`default boolean syncDiaries()`
-
-- **Returns:** whether to include achievement diary completion
-
-#### syncEquipment
-
-`default boolean syncEquipment()`
-
-- **Returns:** whether to include currently worn equipment
-
-#### syncGrandExchange
-
-`default boolean syncGrandExchange()`
-
-- **Returns:** whether to include active Grand Exchange offers
-
-#### syncIntervalSeconds
-
-`default int syncIntervalSeconds()`
-
-- **Returns:** how often, in seconds, updated data is written to disk (minimum 30)
-
-#### syncInventory
-
-`default boolean syncInventory()`
-
-- **Returns:** whether to include the current inventory contents
-
-#### syncLocation
-
-`default boolean syncLocation()`
-
-- **Returns:** whether to include the character's world location
-
-#### syncQuests
-
-`default boolean syncQuests()`
-
-- **Returns:** whether to include quest completion state and total quest points
-
-#### syncSkills
-
-`default boolean syncSkills()`
-
-- **Returns:** whether to include skill levels, experience, and boosted levels
-
-#### syncSlayer
-
-`default boolean syncSlayer()`
-
-- **Returns:** whether to include the current slayer task
-
-#### syncVitals
-
-`default boolean syncVitals()`
-
-- **Returns:** whether to include current hitpoints, prayer, and run energy
-
----
-
-## com.oveduumnakal.dataexport.PlayerDataExportPlugin
+## com.oveduumnakal.charactersnapshot.SnapshotWriter
 
 _class_
 
-`public class PlayerDataExportPlugin`
+`public class SnapshotWriter`
 
-Exports the logged-in character's data to a local JSON file for use by external tools. Data is
-collected on the client thread from events and periodic polling, and written off-thread. The
-plugin makes no network calls of any kind.
-
-### Field Summary
-
-| Modifier and Type | Field | Description |
-|---|---|---|
-| `private static final int` | `INITIAL_DELAY_TICKS` |  |
-| `private static final int` | `POLL_INTERVAL_TICKS` |  |
-| `private Client` | `client` |  |
-| `private PlayerDataCollector` | `collector` |  |
-| `private PlayerDataExportConfig` | `config` |  |
-| `private volatile boolean` | `dirty` |  |
-| `private ScheduledExecutorService` | `executor` |  |
-| `private Gson` | `gson` |  |
-| `private boolean` | `initialCollectionDone` |  |
-| `private String` | `lastPlayerName` |  |
-| `private int` | `syncTickThreshold` |  |
-| `private int` | `tickCounter` |  |
-| `private PlayerDataWriter` | `writer` |  |
-
-### Method Summary
-
-| Modifier and Type | Method | Description |
-|---|---|---|
-| `private void` | `doFullCollection()` | Runs a one-off full collection of every enabled data source after login. |
-| `private void` | `doSave()` | Builds a snapshot on the client thread and writes it off-thread. |
-| `public void` | `onConfigChanged(ConfigChanged event)` | Recomputes the save interval when this plugin's configuration changes. |
-| `public void` | `onGameStateChanged(GameStateChanged event)` | Schedules the initial collection on login and clears state on logout or world hop so one character's data cannot leak into another's file. |
-| `public void` | `onGameTick(GameTick event)` | Drives the initial collection, periodic polling, and interval-gated saves. |
-| `public void` | `onGrandExchangeOfferChanged(GrandExchangeOfferChanged event)` | Caches a changed Grand Exchange offer. |
-| `public void` | `onItemContainerChanged(ItemContainerChanged event)` | Caches bank, inventory, or equipment changes. |
-| `public void` | `onStatChanged(StatChanged event)` | Caches a changed skill (real, experience, and boosted levels). |
-| `private void` | `pollPeriodic()` | Polls the data sources that are not event-driven, marking the snapshot dirty on any change. |
-| `PlayerDataExportConfig` | `provideConfig(ConfigManager configManager)` | Provides the plugin configuration. |
-| `private void` | `recalcSyncThreshold()` | Recomputes the save threshold in game ticks (one tick is about 0.6 seconds). |
-| `private File` | `resolveSyncDir()` | Resolves the export directory: the configured folder if set, else the default under the RuneLite directory. |
-| `protected void` | `shutDown()` | Writes a final snapshot when still logged in, then releases resources. |
-| `protected void` | `startUp()` | Initializes the collector and writer and computes the save interval. |
-
-### Field Detail
-
-#### INITIAL_DELAY_TICKS
-
-`private static final int INITIAL_DELAY_TICKS`
-
-#### POLL_INTERVAL_TICKS
-
-`private static final int POLL_INTERVAL_TICKS`
-
-#### client
-
-`private Client client`
-
-#### collector
-
-`private PlayerDataCollector collector`
-
-#### config
-
-`private PlayerDataExportConfig config`
-
-#### dirty
-
-`private volatile boolean dirty`
-
-#### executor
-
-`private ScheduledExecutorService executor`
-
-#### gson
-
-`private Gson gson`
-
-#### initialCollectionDone
-
-`private boolean initialCollectionDone`
-
-#### lastPlayerName
-
-`private String lastPlayerName`
-
-#### syncTickThreshold
-
-`private int syncTickThreshold`
-
-#### tickCounter
-
-`private int tickCounter`
-
-#### writer
-
-`private PlayerDataWriter writer`
-
-### Method Detail
-
-#### doFullCollection
-
-`private void doFullCollection()`
-
-Runs a one-off full collection of every enabled data source after login.
-
-#### doSave
-
-`private void doSave()`
-
-Builds a snapshot on the client thread and writes it off-thread. Clears the dirty flag
-optimistically and re-sets it if the write fails, so a failed write is retried.
-
-#### onConfigChanged
-
-`public void onConfigChanged(ConfigChanged event)`
-
-Recomputes the save interval when this plugin's configuration changes.
-
-- **Parameter** `event` — the config-changed event
-
-#### onGameStateChanged
-
-`public void onGameStateChanged(GameStateChanged event)`
-
-Schedules the initial collection on login and clears state on logout or world hop so one
-character's data cannot leak into another's file.
-
-- **Parameter** `event` — the game-state event
-
-#### onGameTick
-
-`public void onGameTick(GameTick event)`
-
-Drives the initial collection, periodic polling, and interval-gated saves.
-
-- **Parameter** `event` — the game-tick event
-
-#### onGrandExchangeOfferChanged
-
-`public void onGrandExchangeOfferChanged(GrandExchangeOfferChanged event)`
-
-Caches a changed Grand Exchange offer.
-
-- **Parameter** `event` — the offer-changed event
-
-#### onItemContainerChanged
-
-`public void onItemContainerChanged(ItemContainerChanged event)`
-
-Caches bank, inventory, or equipment changes.
-
-- **Parameter** `event` — the container-changed event
-
-#### onStatChanged
-
-`public void onStatChanged(StatChanged event)`
-
-Caches a changed skill (real, experience, and boosted levels).
-
-- **Parameter** `event` — the stat-changed event
-
-#### pollPeriodic
-
-`private void pollPeriodic()`
-
-Polls the data sources that are not event-driven, marking the snapshot dirty on any change.
-
-#### provideConfig
-
-`PlayerDataExportConfig provideConfig(ConfigManager configManager)`
-
-Provides the plugin configuration.
-
-- **Parameter** `configManager` — the config manager
-- **Returns:** the bound configuration
-
-#### recalcSyncThreshold
-
-`private void recalcSyncThreshold()`
-
-Recomputes the save threshold in game ticks (one tick is about 0.6 seconds).
-
-#### resolveSyncDir
-
-`private File resolveSyncDir()`
-
-Resolves the export directory: the configured folder if set, else the default under the
-RuneLite directory.
-
-- **Returns:** the directory to write export files into
-
-#### shutDown
-
-`protected void shutDown()`
-
-Writes a final snapshot when still logged in, then releases resources.
-
-#### startUp
-
-`protected void startUp()`
-
-Initializes the collector and writer and computes the save interval.
-
----
-
-## com.oveduumnakal.dataexport.PlayerDataWriter
-
-_class_
-
-`public class PlayerDataWriter`
-
-Serializes a `PlayerSyncData` snapshot to a per-character JSON file. The write is atomic:
+Serializes a `CharacterSnapshot` snapshot to a per-character JSON file. The write is atomic:
 the JSON is written to a temporary file in the target directory and then renamed over the
 destination, so a second process polling the file never observes a half-written document.
 
@@ -693,7 +693,7 @@ destination, so a second process polling the file never observes a half-written 
 
 | Constructor | Description |
 |---|---|
-| `PlayerDataWriter(Gson gson)` |  |
+| `SnapshotWriter(Gson gson)` |  |
 
 ### Method Summary
 
@@ -701,7 +701,7 @@ destination, so a second process polling the file never observes a half-written 
 |---|---|---|
 | `private static void` | `deleteQuietly(Path path)` | Deletes a temporary file, ignoring any failure. |
 | `static String` | `filenameFor(String username)` | Builds the JSON filename for a username, lower-casing it and replacing every character outside `[a-z0-9_-]` with an underscore so the name cannot escape the target directory. |
-| `public boolean` | `write(PlayerSyncData data, File syncDir)` | Writes the snapshot to ` / .json` atomically. |
+| `public boolean` | `write(CharacterSnapshot data, File syncDir)` | Writes the snapshot to ` / .json` atomically. |
 
 ### Field Detail
 
@@ -711,9 +711,9 @@ destination, so a second process polling the file never observes a half-written 
 
 ### Constructor Detail
 
-#### PlayerDataWriter
+#### SnapshotWriter
 
-`public PlayerDataWriter(Gson gson)`
+`public SnapshotWriter(Gson gson)`
 
 - **Parameter** `gson` — the injected Gson instance; a pretty-printing copy is derived from it
 
@@ -739,7 +739,7 @@ Builds the JSON filename for a username, lower-casing it and replacing every cha
 
 #### write
 
-`public boolean write(PlayerSyncData data, File syncDir)`
+`public boolean write(CharacterSnapshot data, File syncDir)`
 
 Writes the snapshot to `<syncDir>/<sanitized-username>.json` atomically.
 
@@ -749,11 +749,11 @@ Writes the snapshot to `<syncDir>/<sanitized-username>.json` atomically.
 
 ---
 
-## com.oveduumnakal.dataexport.model.PlayerSyncData
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot
 
 _class_
 
-`public class PlayerSyncData`
+`public class CharacterSnapshot`
 
 Top-level data model written to the local JSON export file, one file per character. Serialized
 to JSON via Gson. Fields left `null` are omitted or written as `null` depending on
@@ -763,19 +763,19 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 
 | Type | Description |
 |---|---|
-| _class_ [`BankData`](#comoveduumnakaldataexportmodelplayersyncdatabankdata) | Bank contents: total distinct item count and a flat list of the stacks it holds. |
-| _class_ [`BankTab`](#comoveduumnakaldataexportmodelplayersyncdatabanktab) | A bank tab: an index and the items it holds. |
-| _class_ [`CombatAchievementData`](#comoveduumnakaldataexportmodelplayersyncdatacombatachievementdata) | Combat-achievement tier progress. |
-| _class_ [`DiaryRegion`](#comoveduumnakaldataexportmodelplayersyncdatadiaryregion) | Completion of the four achievement-diary tiers for one region. |
-| _class_ [`GeOffer`](#comoveduumnakaldataexportmodelplayersyncdatageoffer) | One active Grand Exchange offer. |
-| _class_ [`InventoryItem`](#comoveduumnakaldataexportmodelplayersyncdatainventoryitem) | An inventory item, carrying its slot index in addition to the item stack. |
-| _class_ [`ItemEntry`](#comoveduumnakaldataexportmodelplayersyncdataitementry) | One stack of items: id, resolved name, and quantity. |
-| _class_ [`LocationData`](#comoveduumnakaldataexportmodelplayersyncdatalocationdata) | World location of the character. |
-| _class_ [`PlayerInfo`](#comoveduumnakaldataexportmodelplayersyncdataplayerinfo) | Identity and account context of the logged-in character. |
-| _class_ [`QuestEntry`](#comoveduumnakaldataexportmodelplayersyncdataquestentry) | Completion state of one quest. |
-| _class_ [`SkillEntry`](#comoveduumnakaldataexportmodelplayersyncdataskillentry) | Real level and experience for one skill, plus the current boosted level. |
-| _class_ [`SlayerData`](#comoveduumnakaldataexportmodelplayersyncdataslayerdata) | The current slayer task. |
-| _class_ [`VitalsData`](#comoveduumnakaldataexportmodelplayersyncdatavitalsdata) | Current combat vitals: hitpoints, prayer, and run energy. |
+| _class_ [`BankData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbankdata) | Bank contents: total distinct item count and a flat list of the stacks it holds. |
+| _class_ [`BankTab`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbanktab) | A bank tab: an index and the items it holds. |
+| _class_ [`CombatAchievementData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementdata) | Combat-achievement tier progress. |
+| _class_ [`DiaryRegion`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiaryregion) | Completion of the four achievement-diary tiers for one region. |
+| _class_ [`GeOffer`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotgeoffer) | One active Grand Exchange offer. |
+| _class_ [`InventoryItem`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotinventoryitem) | An inventory item, carrying its slot index in addition to the item stack. |
+| _class_ [`ItemEntry`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotitementry) | One stack of items: id, resolved name, and quantity. |
+| _class_ [`LocationData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotlocationdata) | World location of the character. |
+| _class_ [`PlayerInfo`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotplayerinfo) | Identity and account context of the logged-in character. |
+| _class_ [`QuestEntry`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotquestentry) | Completion state of one quest. |
+| _class_ [`SkillEntry`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotskillentry) | Real level and experience for one skill, plus the current boosted level. |
+| _class_ [`SlayerData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotslayerdata) | The current slayer task. |
+| _class_ [`VitalsData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotvitalsdata) | Current combat vitals: hitpoints, prayer, and run energy. |
 
 ### Field Summary
 
@@ -891,7 +891,7 @@ Current combat vitals (hitpoints, prayer, run energy).
 
 ---
 
-## com.oveduumnakal.dataexport.model.PlayerSyncData.BankData
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData
 
 _class_
 
@@ -945,7 +945,7 @@ Number of distinct item stacks in the bank.
 
 ---
 
-## com.oveduumnakal.dataexport.model.PlayerSyncData.BankTab
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankTab
 
 _class_
 
@@ -992,7 +992,7 @@ Zero-based tab index.
 
 ---
 
-## com.oveduumnakal.dataexport.model.PlayerSyncData.CombatAchievementData
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData
 
 _class_
 
@@ -1106,7 +1106,7 @@ Raw medium-tier varbit value.
 
 ---
 
-## com.oveduumnakal.dataexport.model.PlayerSyncData.DiaryRegion
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion
 
 _class_
 
@@ -1168,7 +1168,7 @@ Whether the medium tier is complete.
 
 ---
 
-## com.oveduumnakal.dataexport.model.PlayerSyncData.GeOffer
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.GeOffer
 
 _class_
 
@@ -1262,7 +1262,7 @@ Total quantity of the offer.
 
 ---
 
-## com.oveduumnakal.dataexport.model.PlayerSyncData.InventoryItem
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.InventoryItem
 
 _class_
 
@@ -1303,7 +1303,7 @@ Zero-based inventory slot.
 
 ---
 
-## com.oveduumnakal.dataexport.model.PlayerSyncData.ItemEntry
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry
 
 _class_
 
@@ -1357,7 +1357,7 @@ Stack quantity.
 
 ---
 
-## com.oveduumnakal.dataexport.model.PlayerSyncData.LocationData
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.LocationData
 
 _class_
 
@@ -1419,7 +1419,7 @@ World y coordinate.
 
 ---
 
-## com.oveduumnakal.dataexport.model.PlayerSyncData.PlayerInfo
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.PlayerInfo
 
 _class_
 
@@ -1489,7 +1489,7 @@ World the character is logged into.
 
 ---
 
-## com.oveduumnakal.dataexport.model.PlayerSyncData.QuestEntry
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.QuestEntry
 
 _class_
 
@@ -1543,7 +1543,7 @@ One of `NOT_STARTED`, `IN_PROGRESS`, `FINISHED`.
 
 ---
 
-## com.oveduumnakal.dataexport.model.PlayerSyncData.SkillEntry
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SkillEntry
 
 _class_
 
@@ -1597,7 +1597,7 @@ Experience points (a `long` so the OVERALL total does not overflow).
 
 ---
 
-## com.oveduumnakal.dataexport.model.PlayerSyncData.SlayerData
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SlayerData
 
 _class_
 
@@ -1659,7 +1659,7 @@ Current task-completion streak.
 
 ---
 
-## com.oveduumnakal.dataexport.model.PlayerSyncData.VitalsData
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.VitalsData
 
 _class_
 

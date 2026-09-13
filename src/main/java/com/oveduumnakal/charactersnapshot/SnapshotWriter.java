@@ -3,7 +3,7 @@
  * Copyright (c) 2026, Oveduumnakal
  * All rights reserved.
  */
-package com.oveduumnakal.dataexport;
+package com.oveduumnakal.charactersnapshot;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,23 +15,23 @@ import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 
 import com.google.gson.Gson;
-import com.oveduumnakal.dataexport.model.PlayerSyncData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * Serializes a {@link PlayerSyncData} snapshot to a per-character JSON file. The write is atomic:
+ * Serializes a {@link CharacterSnapshot} snapshot to a per-character JSON file. The write is atomic:
  * the JSON is written to a temporary file in the target directory and then renamed over the
  * destination, so a second process polling the file never observes a half-written document.
  */
 @Slf4j
-public class PlayerDataWriter
+public class SnapshotWriter
 {
 	private final Gson gson;
 
 	/**
 	 * @param gson the injected Gson instance; a pretty-printing copy is derived from it
 	 */
-	public PlayerDataWriter(Gson gson)
+	public SnapshotWriter(Gson gson)
 	{
 		this.gson = gson.newBuilder()
 				.setPrettyPrinting()
@@ -45,7 +45,7 @@ public class PlayerDataWriter
 	 * @param syncDir the directory to write into (created if absent)
 	 * @return {@code true} if the file was written, {@code false} on missing data or I/O error
 	 */
-	public boolean write(PlayerSyncData data, File syncDir)
+	public boolean write(CharacterSnapshot data, File syncDir)
 	{
 		if (data == null || data.player == null)
 			return false;
@@ -76,7 +76,7 @@ public class PlayerDataWriter
 		}
 		catch (IOException e)
 		{
-			log.warn("Player Data Export: failed to write {}", filename, e);
+			log.warn("Character Snapshot: failed to write {}", filename, e);
 			deleteQuietly(tmp);
 			return false;
 		}

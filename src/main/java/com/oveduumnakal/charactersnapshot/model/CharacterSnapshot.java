@@ -3,7 +3,7 @@
  * Copyright (c) 2026, Oveduumnakal
  * All rights reserved.
  */
-package com.oveduumnakal.dataexport.model;
+package com.oveduumnakal.charactersnapshot.model;
 
 import java.util.Collections;
 import java.util.List;
@@ -16,7 +16,7 @@ import lombok.EqualsAndHashCode;
  * to JSON via Gson. Fields left {@code null} are omitted or written as {@code null} depending on
  * the configured toggles. See {@code SCHEMA.md} for the field-by-field contract.
  */
-public class PlayerSyncData
+public class CharacterSnapshot
 {
 	/** Schema version of this file; bumped when the shape of the export changes. */
 	public int schemaVersion = 2;

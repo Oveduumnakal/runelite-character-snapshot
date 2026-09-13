@@ -14,7 +14,7 @@ repositories {
 }
 
 def runeLiteVersion = 'latest.release'
-def pluginMainClass = 'com.oveduumnakal.dataexport.PlayerDataExportPluginTest'
+def pluginMainClass = 'com.oveduumnakal.charactersnapshot.CharacterSnapshotPluginTest'
 
 dependencies {
 	compileOnly group: 'net.runelite', name:'client', version: runeLiteVersion

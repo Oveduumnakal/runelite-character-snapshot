@@ -3,11 +3,11 @@
  * Copyright (c) 2026, Oveduumnakal
  * All rights reserved.
  */
-package com.oveduumnakal.dataexport;
+package com.oveduumnakal.charactersnapshot;
 
 import java.util.EnumSet;
 
-import com.oveduumnakal.dataexport.model.PlayerSyncData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot;
 import org.junit.Test;
 
 import net.runelite.api.Client;
@@ -25,10 +25,10 @@ import static org.mockito.Mockito.when;
 
 /**
  * Tests the collector's client-facing behaviour with a mocked {@link Client}: the flat bank list,
- * cross-account {@link PlayerDataCollector#reset()}, and that a built snapshot is isolated from
+ * cross-account {@link SnapshotCollector#reset()}, and that a built snapshot is isolated from
  * later cache mutation.
  */
-public class PlayerDataCollectorTest
+public class SnapshotCollectorTest
 {
 	/**
 	 * Bank contents are exported as a flat item list.
@@ -39,10 +39,10 @@ public class PlayerDataCollectorTest
 		Client client = loggedInClient("Zezima");
 		ItemComposition claws = named("Dragon claws");
 		when(client.getItemDefinition(1)).thenReturn(claws);
-		PlayerDataCollector collector = new PlayerDataCollector(client, allEnabled());
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
 
 		collector.updateBank(container(item(1, 5)));
-		PlayerSyncData data = collector.buildSnapshot();
+		CharacterSnapshot data = collector.buildSnapshot();
 
 		assertEquals(1, data.bank.totalItems);
 		assertEquals(1, data.bank.items.size());
@@ -59,7 +59,7 @@ public class PlayerDataCollectorTest
 		Client client = loggedInClient("Zezima");
 		ItemComposition claws = named("Dragon claws");
 		when(client.getItemDefinition(1)).thenReturn(claws);
-		PlayerDataCollector collector = new PlayerDataCollector(client, allEnabled());
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
 
 		collector.updateBank(container(item(1, 5)));
 		collector.reset();
@@ -78,10 +78,10 @@ public class PlayerDataCollectorTest
 		ItemComposition whip = named("Abyssal whip");
 		when(client.getItemDefinition(1)).thenReturn(claws);
 		when(client.getItemDefinition(2)).thenReturn(whip);
-		PlayerDataCollector collector = new PlayerDataCollector(client, allEnabled());
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
 
 		collector.updateBank(container(item(1, 5)));
-		PlayerSyncData first = collector.buildSnapshot();
+		CharacterSnapshot first = collector.buildSnapshot();
 		collector.updateBank(container(item(2, 1)));
 
 		assertEquals("Dragon claws", first.bank.items.get(0).name);
@@ -95,7 +95,7 @@ public class PlayerDataCollectorTest
 	{
 		Client client = mock(Client.class);
 		when(client.getLocalPlayer()).thenReturn(null);
-		PlayerDataCollector collector = new PlayerDataCollector(client, allEnabled());
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
 
 		assertTrue(collector.buildSnapshot() == null);
 	}
@@ -122,9 +122,9 @@ public class PlayerDataCollectorTest
 	 *
 	 * @return the mock config
 	 */
-	private static PlayerDataExportConfig allEnabled()
+	private static CharacterSnapshotConfig allEnabled()
 	{
-		PlayerDataExportConfig config = mock(PlayerDataExportConfig.class);
+		CharacterSnapshotConfig config = mock(CharacterSnapshotConfig.class);
 		when(config.syncSkills()).thenReturn(true);
 		when(config.syncVitals()).thenReturn(true);
 		when(config.syncBank()).thenReturn(true);

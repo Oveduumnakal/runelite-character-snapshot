@@ -3,7 +3,7 @@
  * Copyright (c) 2026, Oveduumnakal
  * All rights reserved.
  */
-package com.oveduumnakal.dataexport;
+package com.oveduumnakal.charactersnapshot;
 
 import java.io.File;
 import java.util.concurrent.ScheduledExecutorService;
@@ -11,7 +11,7 @@ import javax.inject.Inject;
 
 import com.google.gson.Gson;
 import com.google.inject.Provides;
-import com.oveduumnakal.dataexport.model.PlayerSyncData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot;
 import lombok.extern.slf4j.Slf4j;
 
 import net.runelite.api.Client;
@@ -32,17 +32,17 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 
 /**
- * Exports the logged-in character's data to a local JSON file for use by external tools. Data is
- * collected on the client thread from events and periodic polling, and written off-thread. The
- * plugin makes no network calls of any kind.
+ * Writes a live snapshot of the logged-in character to a local JSON file for external tools. State is
+ * collected on the client thread from events and periodic polling, and written off-thread. The plugin
+ * makes no network calls of any kind.
  */
 @Slf4j
 @PluginDescriptor(
-	name = "Player Data Export",
-	description = "Saves your player data to a local JSON file for use by external tools",
-	tags = {"data", "export", "json", "local", "snapshot"}
+	name = "Character Snapshot",
+	description = "Saves a live snapshot of your character to a local JSON file for external tools",
+	tags = {"snapshot", "live", "state", "character", "data", "json", "local"}
 )
-public class PlayerDataExportPlugin extends Plugin
+public class CharacterSnapshotPlugin extends Plugin
 {
 	private static final int INITIAL_DELAY_TICKS = 10;
 
@@ -52,7 +52,7 @@ public class PlayerDataExportPlugin extends Plugin
 	private Client client;
 
 	@Inject
-	private PlayerDataExportConfig config;
+	private CharacterSnapshotConfig config;
 
 	@Inject
 	private ScheduledExecutorService executor;
@@ -60,9 +60,9 @@ public class PlayerDataExportPlugin extends Plugin
 	@Inject
 	private Gson gson;
 
-	private PlayerDataCollector collector;
+	private SnapshotCollector collector;
 
-	private PlayerDataWriter writer;
+	private SnapshotWriter writer;
 
 	private volatile boolean dirty = false;
 
@@ -80,8 +80,8 @@ public class PlayerDataExportPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
-		collector = new PlayerDataCollector(client, config);
-		writer = new PlayerDataWriter(gson);
+		collector = new SnapshotCollector(client, config);
+		writer = new SnapshotWriter(gson);
 		recalcSyncThreshold();
 	}
 
@@ -105,9 +105,9 @@ public class PlayerDataExportPlugin extends Plugin
 	 * @return the bound configuration
 	 */
 	@Provides
-	PlayerDataExportConfig provideConfig(ConfigManager configManager)
+	CharacterSnapshotConfig provideConfig(ConfigManager configManager)
 	{
-		return configManager.getConfig(PlayerDataExportConfig.class);
+		return configManager.getConfig(CharacterSnapshotConfig.class);
 	}
 
 	/**
@@ -118,7 +118,7 @@ public class PlayerDataExportPlugin extends Plugin
 	@Subscribe
 	public void onConfigChanged(ConfigChanged event)
 	{
-		if (PlayerDataExportConfig.GROUP.equals(event.getGroup()))
+		if (CharacterSnapshotConfig.GROUP.equals(event.getGroup()))
 			recalcSyncThreshold();
 	}
 
@@ -327,7 +327,7 @@ public class PlayerDataExportPlugin extends Plugin
 		if (collector == null || writer == null || !dirty)
 			return;
 
-		PlayerSyncData snapshot = collector.buildSnapshot();
+		CharacterSnapshot snapshot = collector.buildSnapshot();
 		if (snapshot == null)
 			return;
 

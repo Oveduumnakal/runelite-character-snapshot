@@ -3,7 +3,7 @@
  * Copyright (c) 2026, Oveduumnakal
  * All rights reserved.
  */
-package com.oveduumnakal.dataexport;
+package com.oveduumnakal.charactersnapshot;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -13,19 +13,19 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 
-import com.oveduumnakal.dataexport.model.PlayerSyncData;
-import com.oveduumnakal.dataexport.model.PlayerSyncData.BankData;
-import com.oveduumnakal.dataexport.model.PlayerSyncData.CombatAchievementData;
-import com.oveduumnakal.dataexport.model.PlayerSyncData.DiaryRegion;
-import com.oveduumnakal.dataexport.model.PlayerSyncData.GeOffer;
-import com.oveduumnakal.dataexport.model.PlayerSyncData.InventoryItem;
-import com.oveduumnakal.dataexport.model.PlayerSyncData.ItemEntry;
-import com.oveduumnakal.dataexport.model.PlayerSyncData.LocationData;
-import com.oveduumnakal.dataexport.model.PlayerSyncData.PlayerInfo;
-import com.oveduumnakal.dataexport.model.PlayerSyncData.QuestEntry;
-import com.oveduumnakal.dataexport.model.PlayerSyncData.SkillEntry;
-import com.oveduumnakal.dataexport.model.PlayerSyncData.SlayerData;
-import com.oveduumnakal.dataexport.model.PlayerSyncData.VitalsData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.GeOffer;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.InventoryItem;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.LocationData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.PlayerInfo;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.QuestEntry;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SkillEntry;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SlayerData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.VitalsData;
 
 import net.runelite.api.Client;
 import net.runelite.api.GrandExchangeOffer;
@@ -50,7 +50,7 @@ import net.runelite.api.vars.AccountType;
  * a copied, stable object graph to the writer thread. Poll methods return whether the polled data
  * changed, so the plugin can mark the snapshot dirty without a blanket varbit listener.
  */
-public class PlayerDataCollector
+public class SnapshotCollector
 {
 	private static final String[] EQUIPMENT_SLOTS = {
 		"HEAD", "CAPE", "AMULET", "WEAPON", "BODY",
@@ -59,7 +59,7 @@ public class PlayerDataCollector
 
 	private final Client client;
 
-	private final PlayerDataExportConfig config;
+	private final CharacterSnapshotConfig config;
 
 	private final Map<String, SkillEntry> skills = new LinkedHashMap<>();
 
@@ -87,7 +87,7 @@ public class PlayerDataCollector
 	 * @param client the RuneLite client
 	 * @param config the plugin configuration
 	 */
-	public PlayerDataCollector(Client client, PlayerDataExportConfig config)
+	public SnapshotCollector(Client client, CharacterSnapshotConfig config)
 	{
 		this.client = client;
 		this.config = config;
@@ -380,13 +380,13 @@ public class PlayerDataCollector
 	 * @return the snapshot, or {@code null} when no character is logged in
 	 */
 	@SuppressWarnings("deprecation")
-	public PlayerSyncData buildSnapshot()
+	public CharacterSnapshot buildSnapshot()
 	{
 		Player localPlayer = client.getLocalPlayer();
 		if (localPlayer == null || localPlayer.getName() == null)
 			return null;
 
-		PlayerSyncData data = new PlayerSyncData();
+		CharacterSnapshot data = new CharacterSnapshot();
 		data.lastUpdated = Instant.now().toString();
 
 		String accountType = null;

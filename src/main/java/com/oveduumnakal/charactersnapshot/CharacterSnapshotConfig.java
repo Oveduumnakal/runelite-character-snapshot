@@ -3,7 +3,7 @@
  * Copyright (c) 2026, Oveduumnakal
  * All rights reserved.
  */
-package com.oveduumnakal.dataexport;
+package com.oveduumnakal.charactersnapshot;
 
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
@@ -13,14 +13,14 @@ import net.runelite.client.config.Range;
 import net.runelite.client.config.Units;
 
 /**
- * Configuration for the Player Data Export plugin: the save location and interval, and a toggle
+ * Configuration for the Character Snapshot plugin: the save location and interval, and a toggle
  * for each category of data written to the export file.
  */
-@ConfigGroup(PlayerDataExportConfig.GROUP)
-public interface PlayerDataExportConfig extends Config
+@ConfigGroup(CharacterSnapshotConfig.GROUP)
+public interface CharacterSnapshotConfig extends Config
 {
 	/** Config group key, shared with {@code ConfigChanged} handling. */
-	String GROUP = "playerdataexport";
+	String GROUP = "charactersnapshot";
 
 	/** Storage section: where and how often data is written. */
 	@ConfigSection(

@@ -3,14 +3,14 @@
  * Copyright (c) 2026, Oveduumnakal
  * All rights reserved.
  */
-package com.oveduumnakal.dataexport;
+package com.oveduumnakal.charactersnapshot;
 
-import com.oveduumnakal.dataexport.model.PlayerSyncData.BankData;
-import com.oveduumnakal.dataexport.model.PlayerSyncData.CombatAchievementData;
-import com.oveduumnakal.dataexport.model.PlayerSyncData.DiaryRegion;
-import com.oveduumnakal.dataexport.model.PlayerSyncData.ItemEntry;
-import com.oveduumnakal.dataexport.model.PlayerSyncData.QuestEntry;
-import com.oveduumnakal.dataexport.model.PlayerSyncData.SlayerData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.QuestEntry;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SlayerData;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
