@@ -5,14 +5,18 @@
  */
 package com.oveduumnakal.dataexport;
 
+import com.oveduumnakal.dataexport.model.PlayerSyncData.BankData;
 import com.oveduumnakal.dataexport.model.PlayerSyncData.CombatAchievementData;
 import com.oveduumnakal.dataexport.model.PlayerSyncData.DiaryRegion;
+import com.oveduumnakal.dataexport.model.PlayerSyncData.ItemEntry;
 import com.oveduumnakal.dataexport.model.PlayerSyncData.QuestEntry;
 import com.oveduumnakal.dataexport.model.PlayerSyncData.SlayerData;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Verifies value equality on the polled model types. The collector marks a snapshot dirty by
@@ -60,5 +64,30 @@ public class ModelEqualityTest
 			new QuestEntry("COOKS_ASSISTANT", "Cook's Assistant", "FINISHED"));
 		assertNotEquals(new QuestEntry("COOKS_ASSISTANT", "Cook's Assistant", "FINISHED"),
 			new QuestEntry("COOKS_ASSISTANT", "Cook's Assistant", "IN_PROGRESS"));
+	}
+
+	/**
+	 * Bank data exposes a single-tab compatibility view over the flat item list.
+	 */
+	@Test
+	public void bankExposesSingleTabCompatView()
+	{
+		BankData bank = new BankData(1, java.util.Collections.singletonList(new ItemEntry(1, "Yew logs", 5)));
+		assertEquals(1, bank.tabs.size());
+		assertEquals(0, bank.tabs.get(0).tabIndex);
+		ItemEntry first = bank.tabs.get(0).items.get(0);
+		assertEquals("Yew logs", first.name);
+	}
+
+	/**
+	 * Combat-achievement data derives compatibility booleans from the tier values.
+	 */
+	@Test
+	public void combatAchievementCompatBooleans()
+	{
+		CombatAchievementData ca = new CombatAchievementData(2, 0, 0, 0, 0, 0);
+		assertTrue(ca.easyComplete);
+		assertTrue(!ca.mediumComplete);
+		assertNotNull(ca.completedTasks);
 	}
 }

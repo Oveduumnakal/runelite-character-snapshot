@@ -61,7 +61,9 @@ missing sections as "not exported", not "empty".
 
 An **item entry** is `{ itemId, name, quantity }`; `name` is null for an unresolved or empty item.
 
-- `bank`: `{ totalItems, items[] }` — `items` is a flat list (bank tabs are not modelled).
+- `bank`: `{ totalItems, items[], tabs[] }` — `items` is the canonical flat list. `tabs` is a
+  compatibility view: the same items wrapped in a single tab (`[{ tabIndex: 0, items: [...] }]`) for
+  consumers that expect the tabbed shape. Individual bank tabs are not modelled.
 - `inventory`: array of item entries with an extra `slot` (0–27); empty slots are included with
   `itemId` -1 so slot indices stay meaningful.
 - `equipment`: map of slot name (`HEAD`, `CAPE`, `AMULET`, `WEAPON`, `BODY`, `SHIELD`, `LEGS`,
@@ -80,6 +82,10 @@ An **item entry** is `{ itemId, name, quantity }`; `name` is null for an unresol
 `{ tierEasy, tierMedium, tierHard, tierElite, tierMaster, tierGrandmaster }` — each is the raw value
 of the corresponding RuneLite combat-achievement tier varbit. A tier's value is non-zero once that
 tier is claimed; treat the exact number as opaque and compare `> 0` for "claimed".
+
+Compatibility fields (derived, for the osrs-companion MCP server): `easyComplete`, `mediumComplete`,
+`hardComplete`, `eliteComplete` — booleans equal to `tier* > 0` — and `completedTasks`, always an
+empty array (individual tasks are not enumerated). The `tier*` integers are the source of truth.
 
 ## slayer
 

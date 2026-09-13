@@ -11,6 +11,7 @@
 - [com.oveduumnakal.dataexport.PlayerDataWriter](#comoveduumnakaldataexportplayerdatawriter)
 - [com.oveduumnakal.dataexport.model.PlayerSyncData](#comoveduumnakaldataexportmodelplayersyncdata)
 - [com.oveduumnakal.dataexport.model.PlayerSyncData.BankData](#comoveduumnakaldataexportmodelplayersyncdatabankdata)
+- [com.oveduumnakal.dataexport.model.PlayerSyncData.BankTab](#comoveduumnakaldataexportmodelplayersyncdatabanktab)
 - [com.oveduumnakal.dataexport.model.PlayerSyncData.CombatAchievementData](#comoveduumnakaldataexportmodelplayersyncdatacombatachievementdata)
 - [com.oveduumnakal.dataexport.model.PlayerSyncData.DiaryRegion](#comoveduumnakaldataexportmodelplayersyncdatadiaryregion)
 - [com.oveduumnakal.dataexport.model.PlayerSyncData.GeOffer](#comoveduumnakaldataexportmodelplayersyncdatageoffer)
@@ -763,6 +764,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | Type | Description |
 |---|---|
 | _class_ [`BankData`](#comoveduumnakaldataexportmodelplayersyncdatabankdata) | Bank contents: total distinct item count and a flat list of the stacks it holds. |
+| _class_ [`BankTab`](#comoveduumnakaldataexportmodelplayersyncdatabanktab) | A bank tab: an index and the items it holds. |
 | _class_ [`CombatAchievementData`](#comoveduumnakaldataexportmodelplayersyncdatacombatachievementdata) | Combat-achievement tier progress. |
 | _class_ [`DiaryRegion`](#comoveduumnakaldataexportmodelplayersyncdatadiaryregion) | Completion of the four achievement-diary tiers for one region. |
 | _class_ [`GeOffer`](#comoveduumnakaldataexportmodelplayersyncdatageoffer) | One active Grand Exchange offer. |
@@ -902,6 +904,7 @@ Bank contents: total distinct item count and a flat list of the stacks it holds.
 | Modifier and Type | Field | Description |
 |---|---|---|
 | `public List<ItemEntry>` | `items` | Bank contents as a flat item list. |
+| `public List<BankTab>` | `tabs` | Compatibility view: the flat list wrapped in a single tab, for consumers that expect the tabbed shape (e.g. |
 | `public int` | `totalItems` | Number of distinct item stacks in the bank. |
 
 ### Constructor Summary
@@ -917,6 +920,13 @@ Bank contents: total distinct item count and a flat list of the stacks it holds.
 `public List<ItemEntry> items`
 
 Bank contents as a flat item list.
+
+#### tabs
+
+`public List<BankTab> tabs`
+
+Compatibility view: the flat list wrapped in a single tab, for consumers that expect the
+tabbed shape (e.g. the osrs-companion MCP server). Individual tabs are not modelled.
 
 #### totalItems
 
@@ -935,6 +945,53 @@ Number of distinct item stacks in the bank.
 
 ---
 
+## com.oveduumnakal.dataexport.model.PlayerSyncData.BankTab
+
+_class_
+
+`public static class BankTab`
+
+A bank tab: an index and the items it holds. The exporter emits a single tab wrapping the flat
+item list; it is a compatibility view, not a faithful per-tab breakdown.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public List<ItemEntry>` | `items` | Items in this tab. |
+| `public int` | `tabIndex` | Zero-based tab index. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `BankTab(int tabIndex, List<ItemEntry> items)` |  |
+
+### Field Detail
+
+#### items
+
+`public List<ItemEntry> items`
+
+Items in this tab.
+
+#### tabIndex
+
+`public int tabIndex`
+
+Zero-based tab index.
+
+### Constructor Detail
+
+#### BankTab
+
+`public BankTab(int tabIndex, List<ItemEntry> items)`
+
+- **Parameter** `tabIndex` — the tab index
+- **Parameter** `items` — the items in the tab
+
+---
+
 ## com.oveduumnakal.dataexport.model.PlayerSyncData.CombatAchievementData
 
 _class_
@@ -948,6 +1005,11 @@ Combat-achievement tier progress. Each field is the raw value of the correspondi
 
 | Modifier and Type | Field | Description |
 |---|---|---|
+| `public List<String>` | `completedTasks` | Compatibility field: always empty; individual tasks are not enumerated. |
+| `public boolean` | `easyComplete` | Compatibility flag: whether the easy tier has any progress (`tierEasy > 0`). |
+| `public boolean` | `eliteComplete` | Compatibility flag: whether the elite tier has any progress. |
+| `public boolean` | `hardComplete` | Compatibility flag: whether the hard tier has any progress. |
+| `public boolean` | `mediumComplete` | Compatibility flag: whether the medium tier has any progress. |
 | `public int` | `tierEasy` | Raw easy-tier varbit value. |
 | `public int` | `tierElite` | Raw elite-tier varbit value. |
 | `public int` | `tierGrandmaster` | Raw grandmaster-tier varbit value. |
@@ -962,6 +1024,36 @@ Combat-achievement tier progress. Each field is the raw value of the correspondi
 | `CombatAchievementData(int tierEasy, int tierMedium, int tierHard, int tierElite, int tierMaster, int tierGrandmaster)` |  |
 
 ### Field Detail
+
+#### completedTasks
+
+`public List<String> completedTasks`
+
+Compatibility field: always empty; individual tasks are not enumerated.
+
+#### easyComplete
+
+`public boolean easyComplete`
+
+Compatibility flag: whether the easy tier has any progress (`tierEasy > 0`).
+
+#### eliteComplete
+
+`public boolean eliteComplete`
+
+Compatibility flag: whether the elite tier has any progress.
+
+#### hardComplete
+
+`public boolean hardComplete`
+
+Compatibility flag: whether the hard tier has any progress.
+
+#### mediumComplete
+
+`public boolean mediumComplete`
+
+Compatibility flag: whether the medium tier has any progress.
 
 #### tierEasy
 

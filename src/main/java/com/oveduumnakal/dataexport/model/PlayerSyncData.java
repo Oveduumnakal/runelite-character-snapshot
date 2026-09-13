@@ -5,6 +5,7 @@
  */
 package com.oveduumnakal.dataexport.model;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -224,12 +225,42 @@ public class PlayerSyncData
 		public List<ItemEntry> items;
 
 		/**
+		 * Compatibility view: the flat list wrapped in a single tab, for consumers that expect the
+		 * tabbed shape (e.g. the osrs-companion MCP server). Individual tabs are not modelled.
+		 */
+		public List<BankTab> tabs;
+
+		/**
 		 * @param totalItems distinct stack count
 		 * @param items      flat item list
 		 */
 		public BankData(int totalItems, List<ItemEntry> items)
 		{
 			this.totalItems = totalItems;
+			this.items = items;
+			this.tabs = Collections.singletonList(new BankTab(0, items));
+		}
+	}
+
+	/**
+	 * A bank tab: an index and the items it holds. The exporter emits a single tab wrapping the flat
+	 * item list; it is a compatibility view, not a faithful per-tab breakdown.
+	 */
+	public static class BankTab
+	{
+		/** Zero-based tab index. */
+		public int tabIndex;
+
+		/** Items in this tab. */
+		public List<ItemEntry> items;
+
+		/**
+		 * @param tabIndex the tab index
+		 * @param items    the items in the tab
+		 */
+		public BankTab(int tabIndex, List<ItemEntry> items)
+		{
+			this.tabIndex = tabIndex;
 			this.items = items;
 		}
 	}
@@ -320,6 +351,21 @@ public class PlayerSyncData
 		/** Raw grandmaster-tier varbit value. */
 		public int tierGrandmaster;
 
+		/** Compatibility flag: whether the easy tier has any progress ({@code tierEasy > 0}). */
+		public boolean easyComplete;
+
+		/** Compatibility flag: whether the medium tier has any progress. */
+		public boolean mediumComplete;
+
+		/** Compatibility flag: whether the hard tier has any progress. */
+		public boolean hardComplete;
+
+		/** Compatibility flag: whether the elite tier has any progress. */
+		public boolean eliteComplete;
+
+		/** Compatibility field: always empty; individual tasks are not enumerated. */
+		public List<String> completedTasks;
+
 		/**
 		 * @param tierEasy        easy varbit value
 		 * @param tierMedium      medium varbit value
@@ -337,6 +383,11 @@ public class PlayerSyncData
 			this.tierElite = tierElite;
 			this.tierMaster = tierMaster;
 			this.tierGrandmaster = tierGrandmaster;
+			this.easyComplete = tierEasy > 0;
+			this.mediumComplete = tierMedium > 0;
+			this.hardComplete = tierHard > 0;
+			this.eliteComplete = tierElite > 0;
+			this.completedTasks = Collections.emptyList();
 		}
 	}
 
