@@ -396,7 +396,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 
 | Modifier and Type | Field | Description |
 |---|---|---|
-| `private static final String[]` | `EQUIPMENT_SLOTS` |  |
+| `private static final EquipmentInventorySlot[]` | `EQUIPMENT_SLOTS` |  |
 | `private List<ItemEntry>` | `bankItems` |  |
 | `private int` | `bankTotal` |  |
 | `private final Client` | `client` |  |
@@ -445,7 +445,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 
 #### EQUIPMENT_SLOTS
 
-`private static final String[] EQUIPMENT_SLOTS`
+`private static final EquipmentInventorySlot[] EQUIPMENT_SLOTS`
 
 #### bankItems
 
@@ -639,7 +639,9 @@ Replaces the cached bank contents with a flat item list.
 
 `public void updateEquipment(ItemContainer container)`
 
-Rebuilds the cached equipment from scratch so an unequipped slot is dropped.
+Rebuilds the cached equipment from scratch so an unequipped slot is dropped. The worn container
+is not contiguous (it has unused arms, hair and jaw indices), so each slot is read at its own
+`EquipmentInventorySlot#getSlotIdx()` rather than by position.
 
 - **Parameter** `container` — the equipment item container
 

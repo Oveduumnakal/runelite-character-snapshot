@@ -5,12 +5,18 @@
  */
 package com.oveduumnakal.charactersnapshot;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.List;
+import java.util.Map;
 
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry;
 import org.junit.Test;
 
 import net.runelite.api.Client;
+import net.runelite.api.EquipmentInventorySlot;
 import net.runelite.api.Item;
 import net.runelite.api.ItemComposition;
 import net.runelite.api.ItemContainer;
@@ -25,8 +31,8 @@ import static org.mockito.Mockito.when;
 
 /**
  * Tests the collector's client-facing behaviour with a mocked {@link Client}: the flat bank list,
- * cross-account {@link SnapshotCollector#reset()}, and that a built snapshot is isolated from
- * later cache mutation.
+ * equipment slot mapping, cross-account {@link SnapshotCollector#reset()}, and that a built
+ * snapshot is isolated from later cache mutation.
  */
 public class SnapshotCollectorTest
 {
@@ -85,6 +91,58 @@ public class SnapshotCollectorTest
 		collector.updateBank(container(item(2, 1)));
 
 		assertEquals("Dragon claws", first.bank.items.get(0).name);
+	}
+
+	/**
+	 * Each worn item is exported under its own slot name, including the ring and ammo slots that sit
+	 * past the container's unused arms, hair and jaw indices.
+	 */
+	@Test
+	public void equipmentUsesRealSlotIndices()
+	{
+		Client client = loggedInClient("Zezima");
+		EquipmentInventorySlot[] slots = EquipmentInventorySlot.values();
+		Item[] worn = new Item[slots.length];
+		for (EquipmentInventorySlot slot : slots)
+		{
+			int idx = slot.getSlotIdx();
+			worn[idx] = item(idx + 100, 1);
+			ItemComposition def = named(slot.name() + " item");
+			when(client.getItemDefinition(idx + 100)).thenReturn(def);
+		}
+
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+		collector.updateEquipment(container(worn));
+		Map<String, ItemEntry> equipment = collector.buildSnapshot().equipment;
+
+		List<String> exported = Arrays.asList(
+			"HEAD", "CAPE", "AMULET", "WEAPON", "BODY", "SHIELD", "LEGS", "GLOVES", "BOOTS", "RING", "AMMO");
+		assertEquals(exported, new ArrayList<>(equipment.keySet()));
+		for (String name : exported)
+		{
+			EquipmentInventorySlot slot = EquipmentInventorySlot.valueOf(name);
+			assertEquals(slot.getSlotIdx() + 100, equipment.get(name).itemId);
+			assertEquals(name + " item", equipment.get(name).name);
+		}
+	}
+
+	/**
+	 * An equipment container shorter than the ammo index drops the slots it does not cover rather
+	 * than throwing.
+	 */
+	@Test
+	public void shortEquipmentContainerIsTolerated()
+	{
+		Client client = loggedInClient("Zezima");
+		ItemComposition helm = named("Helm");
+		when(client.getItemDefinition(1)).thenReturn(helm);
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.updateEquipment(container(item(1, 1)));
+		Map<String, ItemEntry> equipment = collector.buildSnapshot().equipment;
+
+		assertEquals(1, equipment.size());
+		assertEquals("Helm", equipment.get("HEAD").name);
 	}
 
 	/**

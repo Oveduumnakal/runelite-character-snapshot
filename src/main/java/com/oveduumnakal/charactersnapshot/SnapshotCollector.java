@@ -28,6 +28,7 @@ import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SlayerData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.VitalsData;
 
 import net.runelite.api.Client;
+import net.runelite.api.EquipmentInventorySlot;
 import net.runelite.api.GrandExchangeOffer;
 import net.runelite.api.GrandExchangeOfferState;
 import net.runelite.api.Item;
@@ -52,9 +53,11 @@ import net.runelite.api.vars.AccountType;
  */
 public class SnapshotCollector
 {
-	private static final String[] EQUIPMENT_SLOTS = {
-		"HEAD", "CAPE", "AMULET", "WEAPON", "BODY",
-		"SHIELD", "LEGS", "GLOVES", "BOOTS", "RING", "AMMO"
+	private static final EquipmentInventorySlot[] EQUIPMENT_SLOTS = {
+		EquipmentInventorySlot.HEAD, EquipmentInventorySlot.CAPE, EquipmentInventorySlot.AMULET,
+		EquipmentInventorySlot.WEAPON, EquipmentInventorySlot.BODY, EquipmentInventorySlot.SHIELD,
+		EquipmentInventorySlot.LEGS, EquipmentInventorySlot.GLOVES, EquipmentInventorySlot.BOOTS,
+		EquipmentInventorySlot.RING, EquipmentInventorySlot.AMMO
 	};
 
 	private final Client client;
@@ -193,7 +196,9 @@ public class SnapshotCollector
 	}
 
 	/**
-	 * Rebuilds the cached equipment from scratch so an unequipped slot is dropped.
+	 * Rebuilds the cached equipment from scratch so an unequipped slot is dropped. The worn container
+	 * is not contiguous (it has unused arms, hair and jaw indices), so each slot is read at its own
+	 * {@link EquipmentInventorySlot#getSlotIdx()} rather than by position.
 	 *
 	 * @param container the equipment item container
 	 */
@@ -204,11 +209,15 @@ public class SnapshotCollector
 
 		Map<String, ItemEntry> equip = new LinkedHashMap<>();
 		Item[] items = container.getItems();
-		for (int i = 0; i < EQUIPMENT_SLOTS.length && i < items.length; i++)
+		for (EquipmentInventorySlot slot : EQUIPMENT_SLOTS)
 		{
-			int id = items[i].getId();
+			int idx = slot.getSlotIdx();
+			if (idx >= items.length)
+				continue;
+
+			int id = items[idx].getId();
 			if (id > 0)
-				equip.put(EQUIPMENT_SLOTS[i], new ItemEntry(id, getItemName(id), items[i].getQuantity()));
+				equip.put(slot.name(), new ItemEntry(id, getItemName(id), items[idx].getQuantity()));
 		}
 
 		equipment = equip;
