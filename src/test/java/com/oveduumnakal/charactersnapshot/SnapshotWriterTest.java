@@ -22,8 +22,8 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
 /**
- * Tests the JSON writer: filename sanitization, the blank-name guard, and that the atomic write
- * leaves a valid, UTF-8 file and no temporary leftovers.
+ * Tests the JSON writer: filename sanitization, the blank-name guard, that the atomic write
+ * leaves a valid, UTF-8 file and no temporary leftovers, and reading a previous export back.
  */
 public class SnapshotWriterTest
 {
@@ -117,6 +117,37 @@ public class SnapshotWriterTest
 
 		assertTrue(!writer.write(new CharacterSnapshot(), dir));
 		assertTrue(!writer.write(null, dir));
+	}
+
+	/**
+	 * A written export reads back through the writer with its bank intact.
+	 */
+	@Test
+	public void readReturnsPreviousExport() throws Exception
+	{
+		File dir = tmp.newFolder("export");
+		SnapshotWriter writer = new SnapshotWriter(new Gson());
+
+		writer.write(sample("Zezima", "Dragon claws"), dir);
+		CharacterSnapshot previous = writer.read("Zezima", dir);
+
+		assertEquals("Zezima", previous.player.username);
+		assertEquals("Dragon claws", previous.bank.items.get(0).name);
+	}
+
+	/**
+	 * A missing file, a blank name, or malformed JSON reads as no previous export.
+	 */
+	@Test
+	public void readReturnsNullWhenUnavailable() throws Exception
+	{
+		File dir = tmp.newFolder("export");
+		SnapshotWriter writer = new SnapshotWriter(new Gson());
+		Files.write(new File(dir, "broken.json").toPath(), "{ not json".getBytes(StandardCharsets.UTF_8));
+
+		assertNull(writer.read("Zezima", dir));
+		assertNull(writer.read(" ", dir));
+		assertNull(writer.read("Broken", dir));
 	}
 
 	/**

@@ -24,6 +24,13 @@ public class CharacterSnapshot
 	/** ISO-8601 instant at which this snapshot was built. */
 	public String lastUpdated;
 
+	/**
+	 * ISO-8601 instant each item section ({@code bank}, {@code inventory}, {@code equipment}) was last
+	 * captured from the client, keyed by section name. Earlier than {@link #lastUpdated} when the section
+	 * was carried over from a previous session because it has not been re-captured yet.
+	 */
+	public Map<String, String> sectionUpdated;
+
 	/** Identity and account context of the logged-in character. */
 	public PlayerInfo player;
 
@@ -33,7 +40,10 @@ public class CharacterSnapshot
 	/** Current combat vitals (hitpoints, prayer, run energy). */
 	public VitalsData vitals;
 
-	/** Bank contents as a flat item list, captured when the bank is opened. */
+	/**
+	 * Bank contents as a flat item list, captured when the bank is opened and carried over from the
+	 * previous session until then.
+	 */
 	public BankData bank;
 
 	/** Inventory contents, one entry per slot (empty slots have item id -1). */

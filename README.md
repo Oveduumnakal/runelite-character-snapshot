@@ -34,7 +34,7 @@ assistant. The plugin makes **no network calls of any kind** — nothing leaves 
 - **Character and account.** Name, combat level, world, account type (ironman and friends), and
   members status.
 
-- **Items.** Bank contents (captured when you open the bank), inventory, and worn equipment.
+- **Items.** Bank contents (captured when you open the bank, and kept from your last session until then), inventory, and worn equipment.
 
 - **Progress.** Skill levels and experience, quests and total quest points, achievement-diary
   completion, combat-achievement tiers, and slayer points and streak.

@@ -124,7 +124,8 @@ public class CharacterSnapshotPlugin extends Plugin
 
 	/**
 	 * Schedules the initial collection on login and clears state on logout or world hop so one
-	 * character's data cannot leak into another's file.
+	 * character's data cannot leak into another's file. The initial collection restores the
+	 * character's own last known items from its previous export.
 	 *
 	 * @param event the game-state event
 	 */
@@ -233,6 +234,7 @@ public class CharacterSnapshotPlugin extends Plugin
 
 		if (!initialCollectionDone && tickCounter >= 0)
 		{
+			collector.restore(writer.read(currentName, resolveSyncDir()));
 			doFullCollection();
 			lastPlayerName = currentName;
 			initialCollectionDone = true;

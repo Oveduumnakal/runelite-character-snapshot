@@ -300,7 +300,8 @@ Recomputes the save interval when this plugin's configuration changes.
 `public void onGameStateChanged(GameStateChanged event)`
 
 Schedules the initial collection on login and clears state on logout or world hop so one
-character's data cannot leak into another's file.
+character's data cannot leak into another's file. The initial collection restores the
+character's own last known items from its previous export.
 
 - **Parameter** `event` — the game-state event
 
@@ -399,13 +400,16 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private static final EquipmentInventorySlot[]` | `EQUIPMENT_SLOTS` |  |
 | `private List<ItemEntry>` | `bankItems` |  |
 | `private int` | `bankTotal` |  |
+| `private Instant` | `bankUpdated` |  |
 | `private final Client` | `client` |  |
 | `private CombatAchievementData` | `combatAchievements` |  |
 | `private final CharacterSnapshotConfig` | `config` |  |
 | `private Map<String,DiaryRegion>` | `diaries` |  |
 | `private Map<String,ItemEntry>` | `equipment` |  |
+| `private Instant` | `equipmentUpdated` |  |
 | `private final Map<Integer,GeOffer>` | `geOffers` |  |
 | `private List<InventoryItem>` | `inventory` |  |
+| `private Instant` | `inventoryUpdated` |  |
 | `private Integer` | `questPoints` |  |
 | `private List<QuestEntry>` | `quests` |  |
 | `private final Map<String,SkillEntry>` | `skills` |  |
@@ -422,10 +426,12 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | Modifier and Type | Method | Description |
 |---|---|---|
 | `private LocationData` | `buildLocation(Player localPlayer)` | Reads the character's world location. |
+| `private Map<String,String>` | `buildSectionUpdated(CharacterSnapshot data)` | Collects the capture time of each item section present in the snapshot. |
 | `public CharacterSnapshot` | `buildSnapshot()` | Assembles the export snapshot from the caches and cheap client reads, honouring the config toggles. |
 | `private VitalsData` | `buildVitals()` | Reads current combat vitals from boosted and real skill levels and run energy. |
 | `private DiaryRegion` | `diaryRegion(int easy, int medium, int hard, int elite)` | Reads a diary region's four tiers, each complete when its varbit equals 1. |
 | `private String` | `getItemName(int itemId)` | Resolves an item id to its display name. |
+| `private static Instant` | `parseInstant(String value)` | Parses an ISO-8601 instant, tolerating a missing or malformed value. |
 | `public void` | `pollAllGeOffers()` | Rebuilds the Grand Exchange cache from the client's current offer array. |
 | `public void` | `pollAllSkills()` | Reads every skill from the client, plus a computed `OVERALL` total. |
 | `public boolean` | `pollCombatAchievements()` | Polls the six combat-achievement tier varbits. |
@@ -433,6 +439,8 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
 | `public boolean` | `pollSlayer()` | Polls the current slayer task, clearing it when no task is assigned. |
 | `public void` | `reset()` | Clears every cache. |
+| `public void` | `restore(CharacterSnapshot previous)` | Seeds the bank, inventory, and equipment caches from this character's previous export, so a section not yet re-captured this session keeps its last known contents instead of vanishing. |
+| `private static Instant` | `sectionTime(Map<String,String> times, String section, Instant fallback)` | Resolves a restored section's capture time from the previous export. |
 | `private static String` | `stateName(QuestState state)` | Maps a quest state to its exported string form. |
 | `private GeOffer` | `toGeOffer(int slot, GrandExchangeOffer offer)` | Converts a client GE offer into the exported model. |
 | `public void` | `updateBank(ItemContainer container)` | Replaces the cached bank contents with a flat item list. |
@@ -455,6 +463,10 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 
 `private int bankTotal`
 
+#### bankUpdated
+
+`private Instant bankUpdated`
+
 #### client
 
 `private final Client client`
@@ -475,6 +487,10 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 
 `private Map<String,ItemEntry> equipment`
 
+#### equipmentUpdated
+
+`private Instant equipmentUpdated`
+
 #### geOffers
 
 `private final Map<Integer,GeOffer> geOffers`
@@ -482,6 +498,10 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 #### inventory
 
 `private List<InventoryItem> inventory`
+
+#### inventoryUpdated
+
+`private Instant inventoryUpdated`
 
 #### questPoints
 
@@ -518,6 +538,15 @@ Reads the character's world location.
 
 - **Parameter** `localPlayer` — the local player
 - **Returns:** the location, or `null` when it is unavailable
+
+#### buildSectionUpdated
+
+`private Map<String,String> buildSectionUpdated(CharacterSnapshot data)`
+
+Collects the capture time of each item section present in the snapshot.
+
+- **Parameter** `data` — the snapshot being built, with its item sections already set
+- **Returns:** section name to ISO-8601 capture time, or `null` when no item section is present
 
 #### buildSnapshot
 
@@ -556,6 +585,15 @@ Resolves an item id to its display name.
 
 - **Parameter** `itemId` — the item id
 - **Returns:** the item name, or `null` when it cannot be resolved
+
+#### parseInstant
+
+`private static Instant parseInstant(String value)`
+
+Parses an ISO-8601 instant, tolerating a missing or malformed value.
+
+- **Parameter** `value` — the text to parse, may be `null`
+- **Returns:** the instant, or `null` if absent or unparseable
 
 #### pollAllGeOffers
 
@@ -607,6 +645,29 @@ Polls the current slayer task, clearing it when no task is assigned.
 
 Clears every cache. Called on logout and account change so one character's data can never leak
 into another character's export file.
+
+#### restore
+
+`public void restore(CharacterSnapshot previous)`
+
+Seeds the bank, inventory, and equipment caches from this character's previous export, so a
+section not yet re-captured this session keeps its last known contents instead of vanishing. Only
+sections not captured since the last `#reset()` are filled, so live data is never replaced,
+and each restored section keeps its original capture time. A snapshot belonging to a different
+character, or a section with no readable capture time, is ignored.
+
+- **Parameter** `previous` — the previous export, may be `null`
+
+#### sectionTime
+
+`private static Instant sectionTime(Map<String,String> times, String section, Instant fallback)`
+
+Resolves a restored section's capture time from the previous export.
+
+- **Parameter** `times` — the previous export's per-section times
+- **Parameter** `section` — the section name
+- **Parameter** `fallback` — the previous export's overall build time, may be `null`
+- **Returns:** the section's own time if readable, else `fallback`
 
 #### stateName
 
@@ -683,7 +744,8 @@ _class_
 
 Serializes a `CharacterSnapshot` snapshot to a per-character JSON file. The write is atomic:
 the JSON is written to a temporary file in the target directory and then renamed over the
-destination, so a second process polling the file never observes a half-written document.
+destination, so a second process polling the file never observes a half-written document. It can
+also read a character's previous export back, so its last known contents survive a new session.
 
 ### Field Summary
 
@@ -703,6 +765,7 @@ destination, so a second process polling the file never observes a half-written 
 |---|---|---|
 | `private static void` | `deleteQuietly(Path path)` | Deletes a temporary file, ignoring any failure. |
 | `static String` | `filenameFor(String username)` | Builds the JSON filename for a username, lower-casing it and replacing every character outside `[a-z0-9_-]` with an underscore so the name cannot escape the target directory. |
+| `public CharacterSnapshot` | `read(String username, File syncDir)` | Reads a character's previous export from ` / .json`. |
 | `public boolean` | `write(CharacterSnapshot data, File syncDir)` | Writes the snapshot to ` / .json` atomically. |
 
 ### Field Detail
@@ -738,6 +801,16 @@ Builds the JSON filename for a username, lower-casing it and replacing every cha
 
 - **Parameter** `username` — the raw in-game name
 - **Returns:** the sanitized `<name>.json` filename, or `null` for a null/blank name
+
+#### read
+
+`public CharacterSnapshot read(String username, File syncDir)`
+
+Reads a character's previous export from `<syncDir>/<sanitized-username>.json`.
+
+- **Parameter** `username` — the raw in-game name
+- **Parameter** `syncDir` — the directory the export was written into
+- **Returns:** the parsed snapshot, or `null` if the name is blank or the file is missing or unreadable
 
 #### write
 
@@ -784,7 +857,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | Modifier and Type | Field | Description |
 |---|---|---|
 | `public Map<String,DiaryRegion>` | `achievementDiaries` | Achievement diary completion keyed by region name. |
-| `public BankData` | `bank` | Bank contents as a flat item list, captured when the bank is opened. |
+| `public BankData` | `bank` | Bank contents as a flat item list, captured when the bank is opened and carried over from the previous session until then. |
 | `public CombatAchievementData` | `combatAchievements` | Combat-achievement tier progress. |
 | `public Map<String,ItemEntry>` | `equipment` | Worn equipment keyed by slot name. |
 | `public List<GeOffer>` | `grandExchange` | Active Grand Exchange offers by slot. |
@@ -795,6 +868,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | `public Integer` | `questPoints` | Total quest points. |
 | `public List<QuestEntry>` | `quests` | Quest completion state, one entry per quest. |
 | `public int` | `schemaVersion` | Schema version of this file; bumped when the shape of the export changes. |
+| `public Map<String,String>` | `sectionUpdated` | ISO-8601 instant each item section (`bank`, `inventory`, `equipment`) was last captured from the client, keyed by section name. |
 | `public Map<String,SkillEntry>` | `skills` | Real level and experience per skill, keyed by upper-case skill name, plus `OVERALL`. |
 | `public SlayerData` | `slayer` | Current slayer task, or `null` when no task is assigned. |
 | `public VitalsData` | `vitals` | Current combat vitals (hitpoints, prayer, run energy). |
@@ -811,7 +885,8 @@ Achievement diary completion keyed by region name.
 
 `public BankData bank`
 
-Bank contents as a flat item list, captured when the bank is opened.
+Bank contents as a flat item list, captured when the bank is opened and carried over from the
+previous session until then.
 
 #### combatAchievements
 
@@ -872,6 +947,14 @@ Quest completion state, one entry per quest.
 `public int schemaVersion`
 
 Schema version of this file; bumped when the shape of the export changes.
+
+#### sectionUpdated
+
+`public Map<String,String> sectionUpdated`
+
+ISO-8601 instant each item section (`bank`, `inventory`, `equipment`) was last
+captured from the client, keyed by section name. Earlier than `#lastUpdated` when the section
+was carried over from a previous session because it has not been re-captured yet.
 
 #### skills
 

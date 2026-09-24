@@ -7,12 +7,17 @@ package com.oveduumnakal.charactersnapshot;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.InventoryItem;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.PlayerInfo;
 import org.junit.Test;
 
 import net.runelite.api.Client;
@@ -31,11 +36,15 @@ import static org.mockito.Mockito.when;
 
 /**
  * Tests the collector's client-facing behaviour with a mocked {@link Client}: the flat bank list,
- * equipment slot mapping, cross-account {@link SnapshotCollector#reset()}, and that a built
- * snapshot is isolated from later cache mutation.
+ * equipment slot mapping, cross-account {@link SnapshotCollector#reset()}, restoring last known
+ * items from a previous export, and that a built snapshot is isolated from later cache mutation.
  */
 public class SnapshotCollectorTest
 {
+	private static final String OLD_BANK_TIME = "2026-09-20T10:00:00Z";
+
+	private static final String OLD_BUILD_TIME = "2026-09-21T12:00:00Z";
+
 	/**
 	 * Bank contents are exported as a flat item list.
 	 */
@@ -146,6 +155,96 @@ public class SnapshotCollectorTest
 	}
 
 	/**
+	 * A restored bank survives into the next snapshot, with its original capture time, when the bank
+	 * has not been opened this session.
+	 */
+	@Test
+	public void restoredBankKeptUntilReopened()
+	{
+		Client client = loggedInClient("Zezima");
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.restore(previous("Zezima", "Dragon claws"));
+		CharacterSnapshot data = collector.buildSnapshot();
+
+		assertEquals("Dragon claws", data.bank.items.get(0).name);
+		assertEquals(OLD_BANK_TIME, data.sectionUpdated.get("bank"));
+		assertEquals("Old helm", data.equipment.get("HEAD").name);
+		assertEquals(OLD_BUILD_TIME, data.sectionUpdated.get("equipment"));
+		assertEquals("Old rune", data.inventory.get(0).name);
+	}
+
+	/**
+	 * A live bank update replaces the restored bank and its capture time.
+	 */
+	@Test
+	public void liveBankReplacesRestored()
+	{
+		Client client = loggedInClient("Zezima");
+		ItemComposition whip = named("Abyssal whip");
+		when(client.getItemDefinition(2)).thenReturn(whip);
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.restore(previous("Zezima", "Dragon claws"));
+		collector.updateBank(container(item(2, 1)));
+		CharacterSnapshot data = collector.buildSnapshot();
+
+		assertEquals(1, data.bank.items.size());
+		assertEquals("Abyssal whip", data.bank.items.get(0).name);
+		assertTrue(!OLD_BANK_TIME.equals(data.sectionUpdated.get("bank")));
+	}
+
+	/**
+	 * Restoring never overwrites a section already captured live this session.
+	 */
+	@Test
+	public void restoreDoesNotReplaceLiveData()
+	{
+		Client client = loggedInClient("Zezima");
+		ItemComposition whip = named("Abyssal whip");
+		when(client.getItemDefinition(2)).thenReturn(whip);
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.updateBank(container(item(2, 1)));
+		collector.restore(previous("Zezima", "Dragon claws"));
+		CharacterSnapshot data = collector.buildSnapshot();
+
+		assertEquals("Abyssal whip", data.bank.items.get(0).name);
+	}
+
+	/**
+	 * A previous export belonging to another character is ignored.
+	 */
+	@Test
+	public void restoreIgnoresOtherCharacter()
+	{
+		Client client = loggedInClient("Zezima");
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.restore(previous("Zezima_", "Dragon claws"));
+
+		assertNull(collector.buildSnapshot().bank);
+	}
+
+	/**
+	 * A restored bank is still left out of the export while the bank toggle is off.
+	 */
+	@Test
+	public void restoredBankRespectsToggle()
+	{
+		Client client = loggedInClient("Zezima");
+		CharacterSnapshotConfig config = allEnabled();
+		when(config.syncBank()).thenReturn(false);
+		SnapshotCollector collector = new SnapshotCollector(client, config);
+
+		collector.restore(previous("Zezima", "Dragon claws"));
+		CharacterSnapshot data = collector.buildSnapshot();
+
+		assertNull(data.bank);
+		assertTrue(!data.sectionUpdated.containsKey("bank"));
+	}
+
+	/**
 	 * No snapshot is produced when no character is logged in.
 	 */
 	@Test
@@ -156,6 +255,29 @@ public class SnapshotCollectorTest
 		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
 
 		assertTrue(collector.buildSnapshot() == null);
+	}
+
+	/**
+	 * Builds a previous export with a bank (own capture time), an equipped helm and one inventory item
+	 * (both falling back to the build time).
+	 *
+	 * @param name     the player name the export belongs to
+	 * @param bankItem the single banked item's name
+	 * @return the previous export
+	 */
+	private static CharacterSnapshot previous(String name, String bankItem)
+	{
+		CharacterSnapshot data = new CharacterSnapshot();
+		data.lastUpdated = OLD_BUILD_TIME;
+		data.player = new PlayerInfo(name, 126, 302, "NORMAL", true);
+		data.bank = new BankData(1, Collections.singletonList(new ItemEntry(1, bankItem, 5)));
+		data.inventory = Collections.singletonList(new InventoryItem(3, "Old rune", 10, 0));
+		data.equipment = new LinkedHashMap<>();
+		data.equipment.put("HEAD", new ItemEntry(4, "Old helm", 1));
+		Map<String, String> times = new LinkedHashMap<>();
+		times.put("bank", OLD_BANK_TIME);
+		data.sectionUpdated = times;
+		return data;
 	}
 
 	/**
