@@ -6,7 +6,9 @@
 package com.oveduumnakal.charactersnapshot;
 
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +78,12 @@ public class SnapshotCollector
 
 	private Map<String, ItemEntry> equipment = new LinkedHashMap<>();
 
+	private Instant bankUpdated = null;
+
+	private Instant inventoryUpdated = null;
+
+	private Instant equipmentUpdated = null;
+
 	private List<QuestEntry> quests = null;
 
 	private Integer questPoints = null;
@@ -108,6 +116,9 @@ public class SnapshotCollector
 		bankItems = null;
 		bankTotal = 0;
 		inventory = new ArrayList<>();
+		bankUpdated = null;
+		inventoryUpdated = null;
+		equipmentUpdated = null;
 		quests = null;
 		questPoints = null;
 		diaries = null;
@@ -171,6 +182,7 @@ public class SnapshotCollector
 
 		bankItems = items;
 		bankTotal = items.size();
+		bankUpdated = Instant.now();
 	}
 
 	/**
@@ -193,6 +205,7 @@ public class SnapshotCollector
 		}
 
 		inventory = inv;
+		inventoryUpdated = Instant.now();
 	}
 
 	/**
@@ -221,6 +234,51 @@ public class SnapshotCollector
 		}
 
 		equipment = equip;
+		equipmentUpdated = Instant.now();
+	}
+
+	/**
+	 * Seeds the bank, inventory, and equipment caches from this character's previous export, so a
+	 * section not yet re-captured this session keeps its last known contents instead of vanishing. Only
+	 * sections not captured since the last {@link #reset()} are filled, so live data is never replaced,
+	 * and each restored section keeps its original capture time. A snapshot belonging to a different
+	 * character, or a section with no readable capture time, is ignored.
+	 *
+	 * @param previous the previous export, may be {@code null}
+	 */
+	public void restore(CharacterSnapshot previous)
+	{
+		Player localPlayer = client.getLocalPlayer();
+		if (previous == null || previous.player == null || localPlayer == null
+				|| !Objects.equals(previous.player.username, localPlayer.getName()))
+			return;
+
+		Instant fallback = parseInstant(previous.lastUpdated);
+		Map<String, String> times = previous.sectionUpdated != null
+				? previous.sectionUpdated
+				: Collections.emptyMap();
+
+		Instant bankTime = sectionTime(times, "bank", fallback);
+		if (bankUpdated == null && bankTime != null && previous.bank != null && previous.bank.items != null)
+		{
+			bankItems = new ArrayList<>(previous.bank.items);
+			bankTotal = bankItems.size();
+			bankUpdated = bankTime;
+		}
+
+		Instant inventoryTime = sectionTime(times, "inventory", fallback);
+		if (inventoryUpdated == null && inventoryTime != null && previous.inventory != null)
+		{
+			inventory = new ArrayList<>(previous.inventory);
+			inventoryUpdated = inventoryTime;
+		}
+
+		Instant equipmentTime = sectionTime(times, "equipment", fallback);
+		if (equipmentUpdated == null && equipmentTime != null && previous.equipment != null)
+		{
+			equipment = new LinkedHashMap<>(previous.equipment);
+			equipmentUpdated = equipmentTime;
+		}
 	}
 
 	/**
@@ -429,6 +487,8 @@ public class SnapshotCollector
 		if (config.syncEquipment() && !equipment.isEmpty())
 			data.equipment = new LinkedHashMap<>(equipment);
 
+		data.sectionUpdated = buildSectionUpdated(data);
+
 		if (config.syncQuests() && quests != null)
 		{
 			data.quests = new ArrayList<>(quests);
@@ -451,6 +511,62 @@ public class SnapshotCollector
 			data.grandExchange = new ArrayList<>(geOffers.values());
 
 		return data;
+	}
+
+	/**
+	 * Collects the capture time of each item section present in the snapshot.
+	 *
+	 * @param data the snapshot being built, with its item sections already set
+	 * @return section name to ISO-8601 capture time, or {@code null} when no item section is present
+	 */
+	private Map<String, String> buildSectionUpdated(CharacterSnapshot data)
+	{
+		Map<String, String> times = new LinkedHashMap<>();
+		if (data.bank != null && bankUpdated != null)
+			times.put("bank", bankUpdated.toString());
+
+		if (data.inventory != null && inventoryUpdated != null)
+			times.put("inventory", inventoryUpdated.toString());
+
+		if (data.equipment != null && equipmentUpdated != null)
+			times.put("equipment", equipmentUpdated.toString());
+
+		return times.isEmpty() ? null : times;
+	}
+
+	/**
+	 * Resolves a restored section's capture time from the previous export.
+	 *
+	 * @param times    the previous export's per-section times
+	 * @param section  the section name
+	 * @param fallback the previous export's overall build time, may be {@code null}
+	 * @return the section's own time if readable, else {@code fallback}
+	 */
+	private static Instant sectionTime(Map<String, String> times, String section, Instant fallback)
+	{
+		Instant own = parseInstant(times.get(section));
+		return own != null ? own : fallback;
+	}
+
+	/**
+	 * Parses an ISO-8601 instant, tolerating a missing or malformed value.
+	 *
+	 * @param value the text to parse, may be {@code null}
+	 * @return the instant, or {@code null} if absent or unparseable
+	 */
+	private static Instant parseInstant(String value)
+	{
+		if (value == null)
+			return null;
+
+		try
+		{
+			return Instant.parse(value);
+		}
+		catch (DateTimeParseException e)
+		{
+			return null;
+		}
 	}
 
 	/**

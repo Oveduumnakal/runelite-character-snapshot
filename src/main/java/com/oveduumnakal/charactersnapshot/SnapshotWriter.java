@@ -15,13 +15,15 @@ import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonParseException;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * Serializes a {@link CharacterSnapshot} snapshot to a per-character JSON file. The write is atomic:
  * the JSON is written to a temporary file in the target directory and then renamed over the
- * destination, so a second process polling the file never observes a half-written document.
+ * destination, so a second process polling the file never observes a half-written document. It can
+ * also read a character's previous export back, so its last known contents survive a new session.
  */
 @Slf4j
 public class SnapshotWriter
@@ -79,6 +81,35 @@ public class SnapshotWriter
 			log.warn("Character Snapshot: failed to write {}", filename, e);
 			deleteQuietly(tmp);
 			return false;
+		}
+	}
+
+	/**
+	 * Reads a character's previous export from {@code <syncDir>/<sanitized-username>.json}.
+	 *
+	 * @param username the raw in-game name
+	 * @param syncDir  the directory the export was written into
+	 * @return the parsed snapshot, or {@code null} if the name is blank or the file is missing or unreadable
+	 */
+	public CharacterSnapshot read(String username, File syncDir)
+	{
+		String filename = filenameFor(username);
+		if (filename == null)
+			return null;
+
+		Path file = syncDir.toPath().resolve(filename);
+		if (!Files.isRegularFile(file))
+			return null;
+
+		try
+		{
+			String json = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
+			return gson.fromJson(json, CharacterSnapshot.class);
+		}
+		catch (IOException | JsonParseException e)
+		{
+			log.warn("Character Snapshot: could not read previous {}", filename, e);
+			return null;
 		}
 	}
 
