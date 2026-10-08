@@ -491,10 +491,10 @@ public class CharacterSnapshot
 		public int totalQuantity;
 
 		/** Per-item price of the offer. */
-		public int price;
+		public long price;
 
 		/** Coins spent or gained so far. */
-		public int spent;
+		public long spent;
 
 		/**
 		 * @param slot          slot index
@@ -507,7 +507,7 @@ public class CharacterSnapshot
 		 * @param spent         coins moved
 		 */
 		public GeOffer(int slot, int itemId, String name, String state, int quantitySold,
-			int totalQuantity, int price, int spent)
+			int totalQuantity, long price, long spent)
 		{
 			this.slot = slot;
 			this.itemId = itemId;

@@ -1267,10 +1267,10 @@ One active Grand Exchange offer.
 |---|---|---|
 | `public int` | `itemId` | Item id being traded. |
 | `public String` | `name` | Resolved item name. |
-| `public int` | `price` | Per-item price of the offer. |
+| `public long` | `price` | Per-item price of the offer. |
 | `public int` | `quantitySold` | Quantity bought or sold so far. |
 | `public int` | `slot` | Slot index, 0–7. |
-| `public int` | `spent` | Coins spent or gained so far. |
+| `public long` | `spent` | Coins spent or gained so far. |
 | `public String` | `state` | Offer state, e.g. |
 | `public int` | `totalQuantity` | Total quantity of the offer. |
 
@@ -1278,7 +1278,7 @@ One active Grand Exchange offer.
 
 | Constructor | Description |
 |---|---|
-| `GeOffer(int slot, int itemId, String name, String state, int quantitySold, int totalQuantity, int price, int spent)` |  |
+| `GeOffer(int slot, int itemId, String name, String state, int quantitySold, int totalQuantity, long price, long spent)` |  |
 
 ### Field Detail
 
@@ -1296,7 +1296,7 @@ Resolved item name.
 
 #### price
 
-`public int price`
+`public long price`
 
 Per-item price of the offer.
 
@@ -1314,7 +1314,7 @@ Slot index, 0–7.
 
 #### spent
 
-`public int spent`
+`public long spent`
 
 Coins spent or gained so far.
 
@@ -1334,7 +1334,7 @@ Total quantity of the offer.
 
 #### GeOffer
 
-`public GeOffer(int slot, int itemId, String name, String state, int quantitySold, int totalQuantity, int price, int spent)`
+`public GeOffer(int slot, int itemId, String name, String state, int quantitySold, int totalQuantity, long price, long spent)`
 
 - **Parameter** `slot` — slot index
 - **Parameter** `itemId` — item id
