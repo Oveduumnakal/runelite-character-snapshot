@@ -85,6 +85,12 @@ public class CharacterSnapshot
 	public CollectionLogData collectionLog;
 
 	/**
+	 * Boss kill counts keyed by lower-case boss name, sorted by name. Absent when the toggle is off or no
+	 * count is known yet.
+	 */
+	public Map<String, Integer> killCounts;
+
+	/**
 	 * Identity and account context of the logged-in character.
 	 */
 	public static class PlayerInfo

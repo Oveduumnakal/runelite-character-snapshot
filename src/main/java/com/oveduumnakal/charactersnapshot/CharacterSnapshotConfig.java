@@ -297,4 +297,20 @@ public interface CharacterSnapshotConfig extends Config
 	{
 		return true;
 	}
+
+	/**
+	 * @return whether to include boss kill counts
+	 */
+	@ConfigItem(
+		keyName = "syncKillCounts",
+		name = "Boss kill counts",
+		description = "Include boss kill counts (read from the Chat Commands plugin's stored counts and from "
+			+ "kill-count chat messages)",
+		section = dataSection,
+		position = 15
+	)
+	default boolean syncKillCounts()
+	{
+		return true;
+	}
 }

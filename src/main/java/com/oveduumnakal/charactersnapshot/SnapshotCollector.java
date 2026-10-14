@@ -63,6 +63,7 @@ import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.api.vars.AccountType;
 import net.runelite.api.widgets.Widget;
+import net.runelite.client.config.ConfigManager;
 
 /**
  * Reads player state from the RuneLite {@link Client} into in-memory caches and assembles the
@@ -144,6 +145,10 @@ public class SnapshotCollector
 
 	private final CharacterSnapshotConfig config;
 
+	private final ConfigManager configManager;
+
+	private final Map<String, Integer> killCounts = new TreeMap<>();
+
 	private final Map<String, SkillEntry> skills = new LinkedHashMap<>();
 
 	private final Map<Integer, GeOffer> geOffers = new TreeMap<>();
@@ -190,13 +195,27 @@ public class SnapshotCollector
 	private List<ItemEntry> runePouch = null;
 
 	/**
+	 * Creates a collector that cannot read other plugins' stored data.
+	 *
 	 * @param client the RuneLite client
 	 * @param config the plugin configuration
 	 */
 	public SnapshotCollector(Client client, CharacterSnapshotConfig config)
 	{
+		this(client, config, null);
+	}
+
+	/**
+	 * @param client        the RuneLite client
+	 * @param config        the plugin configuration
+	 * @param configManager read-only source of data other built-in plugins store in the RuneScape-profile
+	 *                      config, may be {@code null}
+	 */
+	public SnapshotCollector(Client client, CharacterSnapshotConfig config, ConfigManager configManager)
+	{
 		this.client = client;
 		this.config = config;
+		this.configManager = configManager;
 	}
 
 	/**
@@ -232,6 +251,7 @@ public class SnapshotCollector
 		lastLocation = null;
 		polledLocation = null;
 		polledEnergy = null;
+		killCounts.clear();
 	}
 
 	/**
@@ -466,6 +486,15 @@ public class SnapshotCollector
 			inventoryUpdated = inventoryTime;
 		}
 
+		if (previous.killCounts != null)
+		{
+			for (Map.Entry<String, Integer> entry : previous.killCounts.entrySet())
+			{
+				if (entry.getKey() != null && entry.getValue() != null)
+					killCounts.merge(entry.getKey(), entry.getValue(), Math::max);
+			}
+		}
+
 		Instant equipmentTime = sectionTime(times, "equipment", fallback);
 		if (equipmentUpdated == null && equipmentTime != null && previous.equipment != null)
 		{
@@ -561,6 +590,55 @@ public class SnapshotCollector
 		}
 
 		return runes;
+	}
+
+	/**
+	 * Merges the kill counts RuneLite's Chat Commands plugin stored in the RuneScape-profile config
+	 * (group {@code killcount}, key = lower-cased boss name) into the cache, keeping the larger of the
+	 * stored and cached value since kill counts only grow. If that plugin is disabled its stored counts
+	 * go stale, but counts parsed from chat by {@link #onChatMessage} stay current.
+	 *
+	 * @return whether any cached count changed
+	 */
+	public boolean pollKillCounts()
+	{
+		if (configManager == null)
+			return false;
+
+		boolean changed = false;
+		String profile = configManager.getRSProfileKey();
+		for (String key : configManager.getRSProfileConfigurationKeys(ChatCounts.KILLCOUNT_GROUP, profile, ""))
+		{
+			Integer stored = configManager.getRSProfileConfiguration(ChatCounts.KILLCOUNT_GROUP, key, int.class);
+			if (stored == null || stored <= 0)
+				continue;
+
+			Integer cached = killCounts.get(key);
+			if (cached == null || stored > cached)
+			{
+				killCounts.put(key, stored);
+				changed = true;
+			}
+		}
+
+		return changed;
+	}
+
+	/**
+	 * Reads a kill-count line from chat. A chat count is current by definition, so it replaces the cached
+	 * value even when lower.
+	 *
+	 * @param message the raw chat message
+	 * @return whether the cached counts changed
+	 */
+	public boolean onChatMessage(String message)
+	{
+		Map.Entry<String, Integer> parsed = ChatCounts.parseKillCount(message);
+		if (parsed == null)
+			return false;
+
+		Integer previous = killCounts.put(parsed.getKey(), parsed.getValue());
+		return !parsed.getValue().equals(previous);
 	}
 
 	/**
@@ -969,6 +1047,9 @@ public class SnapshotCollector
 
 		if (config.syncRunePouch() && runePouch != null)
 			data.runePouch = new ArrayList<>(runePouch);
+
+		if (config.syncKillCounts() && !killCounts.isEmpty())
+			data.killCounts = new TreeMap<>(killCounts);
 
 		if (config.syncQuests() && quests != null)
 		{

@@ -7,6 +7,7 @@
 
 - [com.oveduumnakal.charactersnapshot.CharacterSnapshotConfig](#comoveduumnakalcharactersnapshotcharactersnapshotconfig)
 - [com.oveduumnakal.charactersnapshot.CharacterSnapshotPlugin](#comoveduumnakalcharactersnapshotcharactersnapshotplugin)
+- [com.oveduumnakal.charactersnapshot.ChatCounts](#comoveduumnakalcharactersnapshotchatcounts)
 - [com.oveduumnakal.charactersnapshot.DiaryTasks](#comoveduumnakalcharactersnapshotdiarytasks)
 - [com.oveduumnakal.charactersnapshot.DiaryTasks.Task](#comoveduumnakalcharactersnapshotdiarytaskstask)
 - [com.oveduumnakal.charactersnapshot.SlayerInfo](#comoveduumnakalcharactersnapshotslayerinfo)
@@ -66,6 +67,7 @@ for each category of data written to the export file.
 | `default boolean` | `syncGrandExchange()` |  |
 | `default int` | `syncIntervalSeconds()` |  |
 | `default boolean` | `syncInventory()` |  |
+| `default boolean` | `syncKillCounts()` |  |
 | `default boolean` | `syncLocation()` |  |
 | `default boolean` | `syncQuests()` |  |
 | `default boolean` | `syncRunePouch()` |  |
@@ -157,6 +159,12 @@ Storage section: where and how often data is written.
 
 - **Returns:** whether to include the current inventory contents
 
+#### syncKillCounts
+
+`default boolean syncKillCounts()`
+
+- **Returns:** whether to include boss kill counts
+
 #### syncLocation
 
 `default boolean syncLocation()`
@@ -220,6 +228,7 @@ makes no network calls of any kind.
 | `Client` | `client` |  |
 | `SnapshotCollector` | `collector` |  |
 | `CharacterSnapshotConfig` | `config` |  |
+| `ConfigManager` | `configManager` |  |
 | `File` | `defaultDir` | Default export folder; replaced in tests so they never touch the real RuneLite directory. |
 | `private volatile boolean` | `dirty` |  |
 | `ScheduledExecutorService` | `executor` |  |
@@ -239,6 +248,7 @@ makes no network calls of any kind.
 | `private void` | `doFullCollection()` | Runs a one-off full collection of every enabled data source after login. |
 | `private void` | `doSave()` | Builds a snapshot on the client thread and writes it off-thread. |
 | `private static boolean` | `isUsableDirectory(String path)` | Checks that a folder exists (creating it if absent) and is writable. |
+| `public void` | `onChatMessage(ChatMessage event)` | Reads kill-count lines from game messages. |
 | `public void` | `onConfigChanged(ConfigChanged event)` | Recomputes the save interval when this plugin's configuration changes. |
 | `public void` | `onGameStateChanged(GameStateChanged event)` | Schedules the initial collection on login and clears state on logout or world hop so one character's data cannot leak into another's file. |
 | `public void` | `onGameTick(GameTick event)` | Drives the initial collection, periodic polling, and interval-gated saves. |
@@ -275,6 +285,10 @@ makes no network calls of any kind.
 #### config
 
 `CharacterSnapshotConfig config`
+
+#### configManager
+
+`ConfigManager configManager`
 
 #### defaultDir
 
@@ -347,6 +361,14 @@ Checks that a folder exists (creating it if absent) and is writable.
 
 - **Parameter** `path` — the folder path
 - **Returns:** whether exports can be written there
+
+#### onChatMessage
+
+`public void onChatMessage(ChatMessage event)`
+
+Reads kill-count lines from game messages.
+
+- **Parameter** `event` — the chat-message event
 
 #### onConfigChanged
 
@@ -456,6 +478,77 @@ Writes a final snapshot when still logged in, then releases resources.
 `protected void startUp()`
 
 Initializes the collector and writer and computes the save interval.
+
+---
+
+## com.oveduumnakal.charactersnapshot.ChatCounts
+
+_class_
+
+`final class ChatCounts`
+
+Parses the chat lines that report running totals: boss kill counts. The kill-count pattern and the
+boss-name normalisation match RuneLite's Chat Commands plugin, so a count parsed here lands under the
+same key that plugin stores it under.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `static final String` | `KILLCOUNT_GROUP` | Config group in which the Chat Commands plugin stores kill counts (RuneScape-profile scoped). |
+| `private static final Pattern` | `KILLCOUNT_PATTERN` |  |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `ChatCounts()` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `static String` | `killCountKey(String boss)` | Normalises a boss name to the key the Chat Commands plugin stores it under: the Barrows rename applied, colons removed (the config service rejects them), then lower-cased. |
+| `static Map.Entry<String,Integer>` | `parseKillCount(String message)` | Parses a kill-count line such as `Your Zulrah kill count is: 12.` |
+
+### Field Detail
+
+#### KILLCOUNT_GROUP
+
+`static final String KILLCOUNT_GROUP`
+
+Config group in which the Chat Commands plugin stores kill counts (RuneScape-profile scoped).
+
+#### KILLCOUNT_PATTERN
+
+`private static final Pattern KILLCOUNT_PATTERN`
+
+### Constructor Detail
+
+#### ChatCounts
+
+`private ChatCounts()`
+
+### Method Detail
+
+#### killCountKey
+
+`static String killCountKey(String boss)`
+
+Normalises a boss name to the key the Chat Commands plugin stores it under: the Barrows rename
+applied, colons removed (the config service rejects them), then lower-cased.
+
+- **Parameter** `boss` — the boss name as shown in chat
+- **Returns:** the config key
+
+#### parseKillCount
+
+`static Map.Entry<String,Integer> parseKillCount(String message)`
+
+Parses a kill-count line such as `Your Zulrah kill count is: 12.`
+
+- **Parameter** `message` — the raw chat message, colour tags included
+- **Returns:** the normalised boss key and its count, or `null` when the line is not a kill count
 
 ---
 
@@ -1031,12 +1124,14 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private Instant` | `clogUpdated` |  |
 | `private CombatAchievementData` | `combatAchievements` |  |
 | `private final CharacterSnapshotConfig` | `config` |  |
+| `private final ConfigManager` | `configManager` |  |
 | `private Map<String,DiaryRegion>` | `diaries` |  |
 | `private Map<String,ItemEntry>` | `equipment` |  |
 | `private Instant` | `equipmentUpdated` |  |
 | `private final Map<Integer,GeOffer>` | `geOffers` |  |
 | `private List<InventoryItem>` | `inventory` |  |
 | `private Instant` | `inventoryUpdated` |  |
+| `private final Map<String,Integer>` | `killCounts` |  |
 | `private LocationData` | `lastLocation` | Location captured by the last snapshot built with a live local player; cleared by `#reset()`. |
 | `private PlayerInfo` | `lastPlayer` | Identity captured by the last snapshot built with a live local player; cleared by `#reset()`. |
 | `private Integer` | `polledEnergy` |  |
@@ -1056,7 +1151,8 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 
 | Constructor | Description |
 |---|---|
-| `SnapshotCollector(Client client, CharacterSnapshotConfig config)` |  |
+| `SnapshotCollector(Client client, CharacterSnapshotConfig config)` | Creates a collector that cannot read other plugins' stored data. |
+| `SnapshotCollector(Client client, CharacterSnapshotConfig config, ConfigManager configManager)` |  |
 
 ### Method Summary
 
@@ -1076,11 +1172,13 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private String` | `getItemName(int itemId)` | Resolves an item id to its display name. |
 | `private boolean` | `hasRunePouch()` |  |
 | `private Map<Integer,CombatAchievementTask>` | `loadCombatAchievementMeta()` | Reads task names, tiers, and monsters from the game cache: each tier enum lists task structs, and each struct carries the task id, name, and monster category as params. |
+| `public boolean` | `onChatMessage(String message)` | Reads a kill-count line from chat. |
 | `private static Instant` | `parseInstant(String value)` | Parses an ISO-8601 instant, tolerating a missing or malformed value. |
 | `public void` | `pollAllGeOffers()` | Rebuilds the Grand Exchange cache from the client's current offer array. |
 | `public void` | `pollAllSkills()` | Reads every skill from the client, plus a computed `OVERALL` total. |
 | `public boolean` | `pollCombatAchievements()` | Polls the six combat-achievement tier varbits and the per-task completion bits. |
 | `public boolean` | `pollDiaries()` | Polls achievement-diary completion for every region via named RuneLite varbits, and each mapped task via `DiaryTasks`. |
+| `public boolean` | `pollKillCounts()` | Merges the kill counts RuneLite's Chat Commands plugin stored in the RuneScape-profile config (group `killcount`, key = lower-cased boss name) into the cache, keeping the larger of the stored and cached value since kill counts only grow. |
 | `public boolean` | `pollMovement()` | Compares the character's real-world location and run energy against the previous call. |
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
 | `public boolean` | `pollRunePouch()` | Polls the rune pouch contents. |
@@ -1272,6 +1370,10 @@ Cached task metadata by task id (completed flag unset); empty until resolved fro
 
 `private final CharacterSnapshotConfig config`
 
+#### configManager
+
+`private final ConfigManager configManager`
+
 #### diaries
 
 `private Map<String,DiaryRegion> diaries`
@@ -1295,6 +1397,10 @@ Cached task metadata by task id (completed flag unset); empty until resolved fro
 #### inventoryUpdated
 
 `private Instant inventoryUpdated`
+
+#### killCounts
+
+`private final Map<String,Integer> killCounts`
 
 #### lastLocation
 
@@ -1362,8 +1468,19 @@ Identity captured by the last snapshot built with a live local player; cleared b
 
 `public SnapshotCollector(Client client, CharacterSnapshotConfig config)`
 
+Creates a collector that cannot read other plugins' stored data.
+
 - **Parameter** `client` — the RuneLite client
 - **Parameter** `config` — the plugin configuration
+
+#### SnapshotCollector
+
+`public SnapshotCollector(Client client, CharacterSnapshotConfig config, ConfigManager configManager)`
+
+- **Parameter** `client` — the RuneLite client
+- **Parameter** `config` — the plugin configuration
+- **Parameter** `configManager` — read-only source of data other built-in plugins store in the RuneScape-profile
+                     config, may be `null`
 
 ### Method Detail
 
@@ -1506,6 +1623,16 @@ and each struct carries the task id, name, and monster category as params.
 - **Returns:** the metadata by task id, or empty if the cache is not readable yet; also sets
         `#caMetaPartial`
 
+#### onChatMessage
+
+`public boolean onChatMessage(String message)`
+
+Reads a kill-count line from chat. A chat count is current by definition, so it replaces the cached
+value even when lower.
+
+- **Parameter** `message` — the raw chat message
+- **Returns:** whether the cached counts changed
+
 #### parseInstant
 
 `private static Instant parseInstant(String value)`
@@ -1543,6 +1670,17 @@ Polls achievement-diary completion for every region via named RuneLite varbits, 
 task via `DiaryTasks`.
 
 - **Returns:** whether any diary completion changed since the last poll
+
+#### pollKillCounts
+
+`public boolean pollKillCounts()`
+
+Merges the kill counts RuneLite's Chat Commands plugin stored in the RuneScape-profile config
+(group `killcount`, key = lower-cased boss name) into the cache, keeping the larger of the
+stored and cached value since kill counts only grow. If that plugin is disabled its stored counts
+go stale, but counts parsed from chat by `#onChatMessage` stay current.
+
+- **Returns:** whether any cached count changed
 
 #### pollMovement
 
@@ -1943,6 +2081,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | `public Map<String,ItemEntry>` | `equipment` | Worn equipment keyed by slot name. |
 | `public List<GeOffer>` | `grandExchange` | Active Grand Exchange offers by slot. |
 | `public List<InventoryItem>` | `inventory` | Inventory contents, one entry per slot (empty slots have item id -1). |
+| `public Map<String,Integer>` | `killCounts` | Boss kill counts keyed by lower-case boss name, sorted by name. |
 | `public String` | `lastUpdated` | ISO-8601 instant at which this snapshot was built. |
 | `public LocationData` | `location` | Current world location of the character. |
 | `public PlayerInfo` | `player` | Identity and account context of the logged-in character. |
@@ -2000,6 +2139,13 @@ Active Grand Exchange offers by slot.
 `public List<InventoryItem> inventory`
 
 Inventory contents, one entry per slot (empty slots have item id -1).
+
+#### killCounts
+
+`public Map<String,Integer> killCounts`
+
+Boss kill counts keyed by lower-case boss name, sorted by name. Absent when the toggle is off or no
+count is known yet.
 
 #### lastUpdated
 

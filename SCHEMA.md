@@ -32,6 +32,7 @@ missing sections as "not exported", not "empty".
 | `location` | object | Region and world coordinates. |
 | `grandExchange` | array | Active GE offers, by slot. |
 | `collectionLog` | object | Collection log captured while the log is open, carried over between sessions. |
+| `killCounts` | object | Boss kill counts keyed by lower-case boss name. |
 
 ## player
 
@@ -194,6 +195,24 @@ been viewed.
 - `pages`: map of page title (e.g. `Abyssal Sire`) to `{ total, obtained, items[] }`, where `total` is
   the number of item slots on the page and `items` its obtained items. Only pages the player has opened
   are present, so `items` can hold fewer entries than `obtained` until every page has been viewed.
+## killCounts
+
+`{ "<boss>": count }` — a JSON object of integers, sorted by key. The key is the boss name as RuneLite's
+Chat Commands plugin stores it: lower-cased, colons removed, `Barrows chest` renamed to `barrows chests`
+(e.g. `zulrah`, `vorkath`, `chambers of xeric`, `theatre of blood`). Raid keys hold completion counts.
+The section is omitted until at least one count is known, and when the "Boss kill counts" toggle is off.
+
+Sources, merged per boss:
+
+1. The counts the built-in Chat Commands plugin keeps in the RuneScape-profile config (group `killcount`),
+   read through `ConfigManager`. If that plugin is disabled its stored counts stop updating and go stale.
+2. Kill-count lines in the game chat ("Your Zulrah kill count is: N"), parsed with the same pattern. A chat
+   line always replaces the cached value, so counts stay current even when Chat Commands is disabled.
+3. The previous export of the same character, loaded on login.
+
+When merging a stored or previous value with the cache the larger wins (kill counts only grow). Only
+bosses whose count the game has printed in chat since the account first ran either plugin appear; a boss
+never killed (or never checked) is simply absent.
 
 ## Versioning
 
