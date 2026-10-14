@@ -7,6 +7,7 @@ package com.oveduumnakal.charactersnapshot.model;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -53,6 +54,12 @@ public class CharacterSnapshot
 	/** Worn equipment keyed by slot name. */
 	public Map<String, ItemEntry> equipment;
 
+	/**
+	 * Runes held in the rune pouch, present only while the inventory holds a rune pouch (any variant).
+	 * Empty when the pouch holds nothing.
+	 */
+	public List<ItemEntry> runePouch;
+
 	/** Quest completion state, one entry per quest. */
 	public List<QuestEntry> quests;
 
@@ -65,7 +72,7 @@ public class CharacterSnapshot
 	/** Combat-achievement tier progress. */
 	public CombatAchievementData combatAchievements;
 
-	/** Current slayer task, or {@code null} when no task is assigned. */
+	/** Slayer state; points and streak always set once polled, task fields null/0 when no task. */
 	public SlayerData slayer;
 
 	/** Current world location of the character. */
@@ -73,6 +80,27 @@ public class CharacterSnapshot
 
 	/** Active Grand Exchange offers by slot. */
 	public List<GeOffer> grandExchange;
+
+	/** Collection log contents captured while the log was open, carried over between sessions. */
+	public CollectionLogData collectionLog;
+
+	/**
+	 * Boss kill counts keyed by lower-case boss name, sorted by name. Absent when the toggle is off or no
+	 * count is known yet.
+	 */
+	public Map<String, Integer> killCounts;
+
+	/**
+	 * Completed treasure trails per tier ({@code beginner} to {@code master}), in tier order. Only tiers whose
+	 * count has been seen are present. Absent when the toggle is off or no tier is known yet.
+	 */
+	public Map<String, Integer> clueCounts;
+
+	/**
+	 * Farming patch and birdhouse timers decoded from RuneLite's Time Tracking data. Only as fresh as the
+	 * player's last visit to each patch. Absent when the toggle is off or Time Tracking has no data.
+	 */
+	public TimersData timers;
 
 	/**
 	 * Identity and account context of the logged-in character.
@@ -91,8 +119,27 @@ public class CharacterSnapshot
 		/** Account type, e.g. {@code NORMAL}, {@code IRONMAN}, {@code HARDCORE_IRONMAN}. */
 		public String accountType;
 
-		/** Whether the current world is a members' world. */
-		public boolean members;
+		/** Whether the current world is a members' world; {@code null} when account info is not exported. */
+		public Boolean members;
+
+		/** Active spellbook: {@code STANDARD}, {@code ANCIENT}, {@code LUNAR} or {@code ARCEUUS}; null if unknown. */
+		public String spellbook;
+
+		/**
+		 * @param username    display name
+		 * @param combatLevel combat level
+		 * @param world       current world
+		 * @param accountType account-type name
+		 * @param members     whether on a members' world, or {@code null} when not exported
+		 */
+		public PlayerInfo(String username, int combatLevel, int world, String accountType, Boolean members)
+		{
+			this.username = username;
+			this.combatLevel = combatLevel;
+			this.world = world;
+			this.accountType = accountType;
+			this.members = members;
+		}
 
 		/**
 		 * @param username    display name
@@ -100,14 +147,13 @@ public class CharacterSnapshot
 		 * @param world       current world
 		 * @param accountType account-type name
 		 * @param members     whether on a members' world
+		 * @param spellbook   active spellbook name, may be {@code null}
 		 */
-		public PlayerInfo(String username, int combatLevel, int world, String accountType, boolean members)
+		public PlayerInfo(String username, int combatLevel, int world, String accountType, Boolean members,
+			String spellbook)
 		{
-			this.username = username;
-			this.combatLevel = combatLevel;
-			this.world = world;
-			this.accountType = accountType;
-			this.members = members;
+			this(username, combatLevel, world, accountType, members);
+			this.spellbook = spellbook;
 		}
 	}
 
@@ -179,6 +225,7 @@ public class CharacterSnapshot
 	/**
 	 * One stack of items: id, resolved name, and quantity.
 	 */
+	@EqualsAndHashCode
 	public static class ItemEntry
 	{
 		/** Item id. */
@@ -206,6 +253,7 @@ public class CharacterSnapshot
 	/**
 	 * An inventory item, carrying its slot index in addition to the item stack.
 	 */
+	@EqualsAndHashCode(callSuper = true)
 	public static class InventoryItem extends ItemEntry
 	{
 		/** Zero-based inventory slot. */
@@ -221,6 +269,103 @@ public class CharacterSnapshot
 		{
 			super(itemId, name, quantity);
 			this.slot = slot;
+		}
+	}
+
+	/**
+	 * Collection log: the account-wide obtained and total counts, the flat list of obtained items, and
+	 * the obtained items grouped by the log page they were seen on.
+	 */
+	public static class CollectionLogData
+	{
+		/** Obtained-item count shown by the game; 0 when it was not readable. */
+		public int obtained;
+
+		/** Total collectable-item count shown by the game; 0 when it was not readable. */
+		public int total;
+
+		/** Every obtained item seen so far, one entry per item id. */
+		public List<ItemEntry> items;
+
+		/** Per-page captures keyed by page title; only pages the player has opened are present. */
+		public Map<String, CollectionLogPage> pages;
+
+		/**
+		 * @param obtained obtained-item count
+		 * @param total    total item count
+		 * @param items    obtained items
+		 * @param pages    captured pages by title
+		 */
+		public CollectionLogData(int obtained, int total, List<ItemEntry> items,
+			Map<String, CollectionLogPage> pages)
+		{
+			this.obtained = obtained;
+			this.total = total;
+			this.items = items;
+			this.pages = pages;
+		}
+	}
+
+	/**
+	 * One collection log page as last seen: how many of its slots there are and which are obtained.
+	 */
+	public static class CollectionLogPage
+	{
+		/** Number of item slots on the page, obtained or not. */
+		public int total;
+
+		/** Number of obtained items on the page. */
+		public int obtained;
+
+		/** The obtained items on the page. */
+		public List<ItemEntry> items;
+
+		/**
+		 * @param total    slot count
+		 * @param obtained obtained count
+		 * @param items    obtained items
+		 */
+		public CollectionLogPage(int total, int obtained, List<ItemEntry> items)
+		{
+			this.total = total;
+			this.obtained = obtained;
+			this.items = items;
+		}
+
+		/**
+		 * Compares by counts and by item id, name and quantity in order.
+		 *
+		 * @param o the other object
+		 * @return whether the pages hold the same capture
+		 */
+		@Override
+		public boolean equals(Object o)
+		{
+			if (!(o instanceof CollectionLogPage))
+				return false;
+
+			CollectionLogPage other = (CollectionLogPage) o;
+			if (total != other.total || obtained != other.obtained || items.size() != other.items.size())
+				return false;
+
+			for (int i = 0; i < items.size(); i++)
+			{
+				ItemEntry a = items.get(i);
+				ItemEntry c = other.items.get(i);
+				if (a.itemId != c.itemId || a.quantity != c.quantity)
+					return false;
+			}
+
+			return true;
+		}
+
+		/**
+		 * @return a hash consistent with {@link #equals(Object)}
+		 */
+		@Override
+		public int hashCode()
+		{
+			return 31 * total + obtained;
 		}
 	}
 
@@ -443,6 +588,18 @@ public class CharacterSnapshot
 		public List<CombatAchievementTask> tasks;
 
 		/**
+		 * Total combat-achievement points. Read from the game's points varbit when it is non-zero; otherwise
+		 * the sum of completed task points, or null when a completed task's tier is unresolved.
+		 */
+		public Integer points;
+
+		/**
+		 * Completed and total task counts per tier, keyed {@code EASY} to {@code GRANDMASTER}. Null when no
+		 * task tier could be resolved from the game cache.
+		 */
+		public Map<String, TierCount> tierCounts;
+
+		/**
 		 * @param tierEasy        easy varbit value
 		 * @param tierMedium      medium varbit value
 		 * @param tierHard        hard varbit value
@@ -479,6 +636,23 @@ public class CharacterSnapshot
 		public CombatAchievementData(int tierEasy, int tierMedium, int tierHard, int tierElite,
 			int tierMaster, int tierGrandmaster, List<CombatAchievementTask> tasks)
 		{
+			this(tierEasy, tierMedium, tierHard, tierElite, tierMaster, tierGrandmaster, tasks, 0);
+		}
+
+		/**
+		 * @param tierEasy        easy varbit value
+		 * @param tierMedium      medium varbit value
+		 * @param tierHard        hard varbit value
+		 * @param tierElite       elite varbit value
+		 * @param tierMaster      master varbit value
+		 * @param tierGrandmaster grandmaster varbit value
+		 * @param tasks           per-task detail; {@code completedTasks}, {@code tierCounts} and the fallback
+		 *                        {@code points} are derived from it
+		 * @param pointsVarbit    the game's combat-achievement points varbit; used when non-zero
+		 */
+		public CombatAchievementData(int tierEasy, int tierMedium, int tierHard, int tierElite,
+			int tierMaster, int tierGrandmaster, List<CombatAchievementTask> tasks, int pointsVarbit)
+		{
 			this(tierEasy, tierMedium, tierHard, tierElite, tierMaster, tierGrandmaster);
 			this.tasks = tasks;
 			List<String> names = new ArrayList<>();
@@ -487,6 +661,111 @@ public class CharacterSnapshot
 					names.add(t.name);
 
 			this.completedTasks = names;
+			this.tierCounts = countTiers(tasks);
+			this.points = pointsVarbit > 0 ? Integer.valueOf(pointsVarbit) : computePoints(tasks);
+		}
+
+		/**
+		 * Points one completed task of the given tier is worth: easy 1, medium 2, hard 3, elite 4, master 5,
+		 * grandmaster 6. Source: https://oldschool.runescape.wiki/w/Combat_Achievements (points per task
+		 * table, checked 2026-10-14).
+		 *
+		 * @param tier the tier name, {@code EASY} to {@code GRANDMASTER}
+		 * @return the points, or 0 for an unknown tier
+		 */
+		static int pointsPerTask(String tier)
+		{
+			switch (tier)
+			{
+				case "EASY":
+					return 1;
+				case "MEDIUM":
+					return 2;
+				case "HARD":
+					return 3;
+				case "ELITE":
+					return 4;
+				case "MASTER":
+					return 5;
+				case "GRANDMASTER":
+					return 6;
+				default:
+					return 0;
+			}
+		}
+
+		/**
+		 * Sums the points of completed tasks.
+		 *
+		 * @param tasks the tasks
+		 * @return the total, or null when a completed task has no resolved tier
+		 */
+		private static Integer computePoints(List<CombatAchievementTask> tasks)
+		{
+			int total = 0;
+			for (CombatAchievementTask t : tasks)
+			{
+				if (!t.completed)
+					continue;
+
+				if (t.tier == null)
+					return null;
+
+				total += pointsPerTask(t.tier);
+			}
+
+			return total;
+		}
+
+		/**
+		 * Counts completed and total tasks per tier, ignoring tasks with no resolved tier.
+		 *
+		 * @param tasks the tasks
+		 * @return the counts for all six tiers in order, or null when no task has a tier
+		 */
+		private static Map<String, TierCount> countTiers(List<CombatAchievementTask> tasks)
+		{
+			Map<String, TierCount> counts = new LinkedHashMap<>();
+			for (String tier : new String[] {"EASY", "MEDIUM", "HARD", "ELITE", "MASTER", "GRANDMASTER"})
+				counts.put(tier, new TierCount(0, 0));
+
+			boolean any = false;
+			for (CombatAchievementTask t : tasks)
+			{
+				TierCount count = t.tier != null ? counts.get(t.tier) : null;
+				if (count == null)
+					continue;
+
+				any = true;
+				count.total++;
+				if (t.completed)
+					count.completed++;
+			}
+
+			return any ? counts : null;
+		}
+	}
+
+	/**
+	 * Completed and total task counts for one combat-achievement tier.
+	 */
+	@EqualsAndHashCode
+	public static class TierCount
+	{
+		/** Number of completed tasks in the tier. */
+		public int completed;
+
+		/** Number of tasks in the tier. */
+		public int total;
+
+		/**
+		 * @param completed completed task count
+		 * @param total     total task count
+		 */
+		public TierCount(int completed, int total)
+		{
+			this.completed = completed;
+			this.total = total;
 		}
 	}
 
@@ -529,7 +808,8 @@ public class CharacterSnapshot
 	}
 
 	/**
-	 * The current slayer task. The creature is exported as its game id plus, when resolvable, its name.
+	 * The slayer state. With no task assigned, the creature id and amount are 0 and the names are null, while
+	 * points and streak stay. The creature is exported as its game id plus, when resolvable, its name.
 	 */
 	@EqualsAndHashCode
 	public static class SlayerData
@@ -552,6 +832,21 @@ public class CharacterSnapshot
 		/** Current task-completion streak. */
 		public int streak;
 
+		/** Id of the current slayer master, 0 when unknown. Null in files written before this field existed. */
+		public Integer masterId;
+
+		/** Name of the current slayer master, or null when unresolved. */
+		public String masterName;
+
+		/** Blocked tasks across all masters, or null in files written before this field existed. */
+		public List<BlockedTask> blockedTasks;
+
+		/** Keys of purchased task-assignment unlocks, or null in files written before this field existed. */
+		public List<String> unlockedTasks;
+
+		/** Keys of tasks whose extension is purchased, or null in files written before this field existed. */
+		public List<String> extendedTasks;
+
 		/**
 		 * @param creatureId   assigned-creature id
 		 * @param creatureName assigned-creature name, or null
@@ -572,6 +867,34 @@ public class CharacterSnapshot
 	}
 
 	/**
+	 * One blocked slayer task slot.
+	 */
+	@EqualsAndHashCode
+	public static class BlockedTask
+	{
+		/** Slayer task id (same id space as the slayer creature id). */
+		public int taskId;
+
+		/** Task name, or null when it could not be resolved. */
+		public String name;
+
+		/** Name of the slayer master whose block list holds this task, or null for the legacy shared list. */
+		public String master;
+
+		/**
+		 * @param taskId slayer task id
+		 * @param name   task name, or null
+		 * @param master master name, or null
+		 */
+		public BlockedTask(int taskId, String name, String master)
+		{
+			this.taskId = taskId;
+			this.name = name;
+			this.master = master;
+		}
+	}
+
+	/**
 	 * World location of the character.
 	 */
 	public static class LocationData
@@ -588,6 +911,9 @@ public class CharacterSnapshot
 		/** Plane (height level), 0–3. */
 		public int plane;
 
+		/** Whether the character is in an instanced region; x and y are then the template area's coordinates. */
+		public boolean instanced;
+
 		/**
 		 * @param regionId map region id
 		 * @param x        world x
@@ -596,10 +922,23 @@ public class CharacterSnapshot
 		 */
 		public LocationData(int regionId, int x, int y, int plane)
 		{
+			this(regionId, x, y, plane, false);
+		}
+
+		/**
+		 * @param regionId  map region id
+		 * @param x         world x
+		 * @param y         world y
+		 * @param plane     plane
+		 * @param instanced whether the character is in an instanced region
+		 */
+		public LocationData(int regionId, int x, int y, int plane, boolean instanced)
+		{
 			this.regionId = regionId;
 			this.x = x;
 			this.y = y;
 			this.plane = plane;
+			this.instanced = instanced;
 		}
 	}
 
@@ -654,6 +993,132 @@ public class CharacterSnapshot
 			this.totalQuantity = totalQuantity;
 			this.price = price;
 			this.spent = spent;
+		}
+	}
+
+	/**
+	 * Last known contents of storage containers that are only readable when opened, keyed by storage
+	 * ({@code lootingBag}, {@code seedVault}, {@code groupStorage}); a storage never opened is absent.
+	 */
+	public Map<String, List<ItemEntry>> storages;
+
+	/**
+	 * Farming and birdhouse timers.
+	 */
+	@EqualsAndHashCode
+	public static class TimersData
+	{
+		/** Farming patches with stored data; patches never visited are not listed. */
+		public List<FarmingTimer> farming;
+
+		/** Birdhouse spaces with stored data. */
+		public List<BirdhouseTimer> birdhouses;
+
+		/**
+		 * @param farming    farming patch timers
+		 * @param birdhouses birdhouse timers
+		 */
+		public TimersData(List<FarmingTimer> farming, List<BirdhouseTimer> birdhouses)
+		{
+			this.farming = farming;
+			this.birdhouses = birdhouses;
+		}
+	}
+
+	/**
+	 * The projected state of one farming patch or compost bin.
+	 */
+	@EqualsAndHashCode
+	public static class FarmingTimer
+	{
+		/** Human-readable patch, e.g. {@code Catherby herb}. */
+		public String patch;
+
+		/** Region the patch is in, e.g. {@code Catherby}. */
+		public String region;
+
+		/** Patch type, e.g. {@code herb}, {@code fruit tree}, {@code compost}. */
+		public String type;
+
+		/** Crop name, e.g. {@code Ranarr}; {@code Weeds} for an empty patch. */
+		public String crop;
+
+		/** One of GROWING, HARVESTABLE, DISEASED, DEAD, EMPTY, FILLING. */
+		public String state;
+
+		/** Projected growth stage. */
+		public int stage;
+
+		/** Number of stages in the current phase. */
+		public int stages;
+
+		/** ISO-8601 instant the crop finishes (or finished) growing; null when it is not growing. */
+		public String readyAt;
+
+		/** ISO-8601 instant of the last time the patch state was stored, i.e. the last visit. */
+		public String lastChecked;
+
+		/**
+		 * @param patch       patch label
+		 * @param region      region name
+		 * @param type        patch type
+		 * @param crop        crop name
+		 * @param state       projected state
+		 * @param stage       projected stage
+		 * @param stages      stage count
+		 * @param readyAt     completion instant, or null
+		 * @param lastChecked last-visit instant
+		 */
+		public FarmingTimer(String patch, String region, String type, String crop, String state, int stage,
+			int stages, String readyAt, String lastChecked)
+		{
+			this.patch = patch;
+			this.region = region;
+			this.type = type;
+			this.crop = crop;
+			this.state = state;
+			this.stage = stage;
+			this.stages = stages;
+			this.readyAt = readyAt;
+			this.lastChecked = lastChecked;
+		}
+	}
+
+	/**
+	 * The projected state of one birdhouse space.
+	 */
+	@EqualsAndHashCode
+	public static class BirdhouseTimer
+	{
+		/** Space name, e.g. {@code Mushroom Meadow (North)}. */
+		public String space;
+
+		/** Birdhouse type, e.g. {@code Oak Bird House}; null when the space is empty. */
+		public String house;
+
+		/** One of EMPTY, BUILT, SEEDED, READY, UNKNOWN. */
+		public String state;
+
+		/** ISO-8601 instant the birdhouse finishes (or finished); null unless seeded. */
+		public String readyAt;
+
+		/** ISO-8601 instant of the last time the state was stored, i.e. the last visit. */
+		public String lastChecked;
+
+		/**
+		 * @param space       space name
+		 * @param house       birdhouse type, or null
+		 * @param state       projected state
+		 * @param readyAt     completion instant, or null
+		 * @param lastChecked last-visit instant
+		 */
+		public BirdhouseTimer(String space, String house, String state, String readyAt, String lastChecked)
+		{
+			this.space = space;
+			this.house = house;
+			this.state = state;
+			this.readyAt = readyAt;
+			this.lastChecked = lastChecked;
 		}
 	}
 }

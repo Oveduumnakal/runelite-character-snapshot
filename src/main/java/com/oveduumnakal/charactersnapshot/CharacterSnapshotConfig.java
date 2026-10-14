@@ -251,4 +251,97 @@ public interface CharacterSnapshotConfig extends Config
 	{
 		return true;
 	}
+
+	/**
+	 * @return whether to include the rune pouch contents
+	 */
+	@ConfigItem(
+		keyName = "syncRunePouch",
+		name = "Rune pouch",
+		description = "Include the runes held in your rune pouch (only while you carry one)",
+		section = dataSection,
+		position = 12
+	)
+	default boolean syncRunePouch()
+	{
+		return true;
+	}
+
+	/**
+	 * @return whether to include looting bag, seed vault and group storage contents
+	 */
+	@ConfigItem(
+		keyName = "syncStorages",
+		name = "Storage containers",
+		description = "Include the last known contents of the looting bag, seed vault and group storage "
+			+ "(captured when opened)",
+		section = dataSection,
+		position = 13
+	)
+	default boolean syncStorages()
+	{
+		return true;
+	}
+
+	/**
+	 * @return whether to include the collection log
+	 */
+	@ConfigItem(
+		keyName = "syncCollectionLog",
+		name = "Collection log",
+		description = "Include the collection log, captured as pages are viewed in the log interface",
+		section = dataSection,
+		position = 14
+	)
+	default boolean syncCollectionLog()
+	{
+		return true;
+	}
+
+	/**
+	 * @return whether to include boss kill counts
+	 */
+	@ConfigItem(
+		keyName = "syncKillCounts",
+		name = "Boss kill counts",
+		description = "Include boss kill counts (read from the Chat Commands plugin's stored counts and from "
+			+ "kill-count chat messages)",
+		section = dataSection,
+		position = 15
+	)
+	default boolean syncKillCounts()
+	{
+		return true;
+	}
+
+	/**
+	 * @return whether to include completed clue scroll counts
+	 */
+	@ConfigItem(
+		keyName = "syncClueCounts",
+		name = "Clue scroll counts",
+		description = "Include completed clue scroll counts per tier (read from completion messages in chat)",
+		section = dataSection,
+		position = 16
+	)
+	default boolean syncClueCounts()
+	{
+		return true;
+	}
+
+	/**
+	 * @return whether to include farming patch and birdhouse timers
+	 */
+	@ConfigItem(
+		keyName = "syncTimers",
+		name = "Farming and birdhouse timers",
+		description = "Include farming patch and birdhouse timers read from the Time Tracking plugin's data "
+			+ "(only as fresh as your last visit to each patch)",
+		section = dataSection,
+		position = 17
+	)
+	default boolean syncTimers()
+	{
+		return true;
+	}
 }
