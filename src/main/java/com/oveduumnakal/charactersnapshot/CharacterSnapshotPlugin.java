@@ -49,20 +49,20 @@ public class CharacterSnapshotPlugin extends Plugin
 	private static final int POLL_INTERVAL_TICKS = 30;
 
 	@Inject
-	private Client client;
+	Client client;
 
 	@Inject
-	private CharacterSnapshotConfig config;
+	CharacterSnapshotConfig config;
 
 	@Inject
-	private ScheduledExecutorService executor;
+	ScheduledExecutorService executor;
 
 	@Inject
-	private Gson gson;
+	Gson gson;
 
-	private SnapshotCollector collector;
+	SnapshotCollector collector;
 
-	private SnapshotWriter writer;
+	SnapshotWriter writer;
 
 	private volatile boolean dirty = false;
 

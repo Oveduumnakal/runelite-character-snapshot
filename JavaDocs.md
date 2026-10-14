@@ -191,17 +191,17 @@ makes no network calls of any kind.
 |---|---|---|
 | `private static final int` | `INITIAL_DELAY_TICKS` |  |
 | `private static final int` | `POLL_INTERVAL_TICKS` |  |
-| `private Client` | `client` |  |
-| `private SnapshotCollector` | `collector` |  |
-| `private CharacterSnapshotConfig` | `config` |  |
+| `Client` | `client` |  |
+| `SnapshotCollector` | `collector` |  |
+| `CharacterSnapshotConfig` | `config` |  |
 | `private volatile boolean` | `dirty` |  |
-| `private ScheduledExecutorService` | `executor` |  |
-| `private Gson` | `gson` |  |
+| `ScheduledExecutorService` | `executor` |  |
+| `Gson` | `gson` |  |
 | `private boolean` | `initialCollectionDone` |  |
 | `private String` | `lastPlayerName` |  |
 | `private int` | `syncTickThreshold` |  |
 | `private int` | `tickCounter` |  |
-| `private SnapshotWriter` | `writer` |  |
+| `SnapshotWriter` | `writer` |  |
 
 ### Method Summary
 
@@ -234,15 +234,15 @@ makes no network calls of any kind.
 
 #### client
 
-`private Client client`
+`Client client`
 
 #### collector
 
-`private SnapshotCollector collector`
+`SnapshotCollector collector`
 
 #### config
 
-`private CharacterSnapshotConfig config`
+`CharacterSnapshotConfig config`
 
 #### dirty
 
@@ -250,11 +250,11 @@ makes no network calls of any kind.
 
 #### executor
 
-`private ScheduledExecutorService executor`
+`ScheduledExecutorService executor`
 
 #### gson
 
-`private Gson gson`
+`Gson gson`
 
 #### initialCollectionDone
 
@@ -274,7 +274,7 @@ makes no network calls of any kind.
 
 #### writer
 
-`private SnapshotWriter writer`
+`SnapshotWriter writer`
 
 ### Method Detail
 
