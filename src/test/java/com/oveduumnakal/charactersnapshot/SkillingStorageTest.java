@@ -43,6 +43,8 @@ public class SkillingStorageTest
 	{
 		assertEquals("seedBox", SnapshotCollector.storageKey(InventoryID.SEED_BOX));
 		assertEquals("tackleBox", SnapshotCollector.storageKey(InventoryID.TACKLE_BOX));
+		assertEquals("gravestone", SnapshotCollector.storageKey(InventoryID.GRAVESTONE));
+		assertEquals("deathsOffice", SnapshotCollector.storageKey(InventoryID.DEATH_PERMANENT));
 
 		Client client = loggedInClient();
 		SnapshotCollector collector = new SnapshotCollector(client, config(true));

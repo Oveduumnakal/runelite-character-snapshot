@@ -36,7 +36,7 @@ assistant. The plugin makes **no network calls of any kind** — nothing leaves 
   status, active spellbook, unlocked reward prayers (Rigour, Augury...), quick prayers, and autocast spell.
 
 - **Items.** Bank contents split into your real bank tabs, inventory, worn equipment, rune pouch, and the
-  looting bag, seed vault, group storage, seed box, tackle box, plank sack and tool leprechaun. Containers the game only shows when opened are captured
+  looting bag, seed vault, group storage, seed box, tackle box, plank sack, tool leprechaun, and your gravestone and Death's office items after a death. Containers the game only shows when opened are captured
   then and kept from your last session until you open them again.
 
 - **Progress.** Skill levels and experience, quests and total quest points, achievement diaries down to
