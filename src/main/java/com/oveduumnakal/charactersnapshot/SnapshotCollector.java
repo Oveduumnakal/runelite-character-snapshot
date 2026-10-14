@@ -1626,7 +1626,8 @@ public class SnapshotCollector
 
 	/**
 	 * Records one obtained item from the game's per-item collection log script, which runs for every
-	 * obtained item while the player opens the log's Search. Only merges into the item map; the pass is
+	 * obtained item while the player opens the log's Search. An event with no quantity is ignored rather than
+	 * counted as obtained. Only merges into the item map; the pass is
 	 * closed by {@link #finishCollectionLogSearch()} so the caller marks the data dirty once per pass.
 	 *
 	 * @param args the script arguments, including the script id at index 0
@@ -1641,7 +1642,10 @@ public class SnapshotCollector
 		if (itemId <= 0)
 			return;
 
-		int quantity = Math.max(1, (Integer) args[CLOG_ITEM_ARG_QUANTITY]);
+		int quantity = (Integer) args[CLOG_ITEM_ARG_QUANTITY];
+		if (quantity <= 0)
+			return;
+
 		clogSearchActive = true;
 		clogSearchChanged |= mergeClogItem(new ItemEntry(itemId, getItemName(itemId), quantity));
 	}

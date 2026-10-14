@@ -2563,7 +2563,8 @@ Reads the display name column of one slayer task table row.
 `public void recordCollectionLogItem(Object[] args)`
 
 Records one obtained item from the game's per-item collection log script, which runs for every
-obtained item while the player opens the log's Search. Only merges into the item map; the pass is
+obtained item while the player opens the log's Search. An event with no quantity is ignored rather than
+counted as obtained. Only merges into the item map; the pass is
 closed by `#finishCollectionLogSearch()` so the caller marks the data dirty once per pass.
 
 - **Parameter** `args` — the script arguments, including the script id at index 0
