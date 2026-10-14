@@ -191,12 +191,12 @@ makes no network calls of any kind.
 |---|---|---|
 | `private static final int` | `INITIAL_DELAY_TICKS` |  |
 | `private static final int` | `POLL_INTERVAL_TICKS` |  |
-| `private Client` | `client` |  |
+| `Client` | `client` |  |
 | `private SnapshotCollector` | `collector` |  |
-| `private CharacterSnapshotConfig` | `config` |  |
+| `CharacterSnapshotConfig` | `config` |  |
 | `private volatile boolean` | `dirty` |  |
-| `private ScheduledExecutorService` | `executor` |  |
-| `private Gson` | `gson` |  |
+| `ScheduledExecutorService` | `executor` |  |
+| `Gson` | `gson` |  |
 | `private boolean` | `initialCollectionDone` |  |
 | `private String` | `lastPlayerName` |  |
 | `private int` | `syncTickThreshold` |  |
@@ -234,7 +234,7 @@ makes no network calls of any kind.
 
 #### client
 
-`private Client client`
+`Client client`
 
 #### collector
 
@@ -242,7 +242,7 @@ makes no network calls of any kind.
 
 #### config
 
-`private CharacterSnapshotConfig config`
+`CharacterSnapshotConfig config`
 
 #### dirty
 
@@ -250,11 +250,11 @@ makes no network calls of any kind.
 
 #### executor
 
-`private ScheduledExecutorService executor`
+`ScheduledExecutorService executor`
 
 #### gson
 
-`private Gson gson`
+`Gson gson`
 
 #### initialCollectionDone
 
@@ -862,6 +862,8 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private final Map<Integer,GeOffer>` | `geOffers` |  |
 | `private List<InventoryItem>` | `inventory` |  |
 | `private Instant` | `inventoryUpdated` |  |
+| `private LocationData` | `lastLocation` | Location captured by the last snapshot built with a live local player; cleared by `#reset()`. |
+| `private PlayerInfo` | `lastPlayer` | Identity captured by the last snapshot built with a live local player; cleared by `#reset()`. |
 | `private Integer` | `questPoints` |  |
 | `private List<QuestEntry>` | `quests` |  |
 | `private final Map<String,SkillEntry>` | `skills` |  |
@@ -897,6 +899,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollDiaries()` | Polls achievement-diary completion for every region via named RuneLite varbits, and each mapped task via `DiaryTasks`. |
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
 | `public boolean` | `pollSlayer()` | Polls the current slayer task, clearing it when no task is assigned. |
+| `private PlayerInfo` | `readPlayerInfo(Player localPlayer)` | Reads the live player's identity and account context. |
 | `private String` | `readTaskRowName(int row)` | Reads the display name column of one slayer task table row. |
 | `public void` | `reset()` | Clears every cache. |
 | `private String` | `resolveBossName(int bossId)` | Resolves a boss-task boss id to the boss name via the slayer task sublist table. |
@@ -1028,6 +1031,18 @@ Cached task metadata by task id (completed flag unset); empty until resolved fro
 
 `private Instant inventoryUpdated`
 
+#### lastLocation
+
+`private LocationData lastLocation`
+
+Location captured by the last snapshot built with a live local player; cleared by `#reset()`.
+
+#### lastPlayer
+
+`private PlayerInfo lastPlayer`
+
+Identity captured by the last snapshot built with a live local player; cleared by `#reset()`.
+
 #### questPoints
 
 `private Integer questPoints`
@@ -1095,9 +1110,11 @@ Collects the capture time of each item section present in the snapshot.
 `public CharacterSnapshot buildSnapshot()`
 
 Assembles the export snapshot from the caches and cheap client reads, honouring the config
-toggles. Owned collections are copied so the writer thread reads a stable graph.
+toggles. Owned collections are copied so the writer thread reads a stable graph. The local
+player may already be gone when the client reaches the login screen, so identity and location
+are remembered from the last live build and used for the final write of a session.
 
-- **Returns:** the snapshot, or `null` when no character is logged in
+- **Returns:** the snapshot, or `null` when no character is logged in and none was seen this session
 
 #### buildVitals
 
@@ -1225,6 +1242,15 @@ Polls quest completion state and total quest points.
 Polls the current slayer task, clearing it when no task is assigned.
 
 - **Returns:** whether the slayer task changed since the last poll
+
+#### readPlayerInfo
+
+`private PlayerInfo readPlayerInfo(Player localPlayer)`
+
+Reads the live player's identity and account context.
+
+- **Parameter** `localPlayer` — the local player
+- **Returns:** the player info
 
 #### readTaskRowName
 

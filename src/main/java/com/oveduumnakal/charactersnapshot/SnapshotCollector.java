@@ -153,6 +153,12 @@ public class SnapshotCollector
 
 	private SlayerData slayer = null;
 
+	/** Identity captured by the last snapshot built with a live local player; cleared by {@link #reset()}. */
+	private PlayerInfo lastPlayer = null;
+
+	/** Location captured by the last snapshot built with a live local player; cleared by {@link #reset()}. */
+	private LocationData lastLocation = null;
+
 	/**
 	 * @param client the RuneLite client
 	 * @param config the plugin configuration
@@ -184,6 +190,8 @@ public class SnapshotCollector
 		diaries = null;
 		combatAchievements = null;
 		slayer = null;
+		lastPlayer = null;
+		lastLocation = null;
 	}
 
 	/**
@@ -712,35 +720,32 @@ public class SnapshotCollector
 
 	/**
 	 * Assembles the export snapshot from the caches and cheap client reads, honouring the config
-	 * toggles. Owned collections are copied so the writer thread reads a stable graph.
+	 * toggles. Owned collections are copied so the writer thread reads a stable graph. The local
+	 * player may already be gone when the client reaches the login screen, so identity and location
+	 * are remembered from the last live build and used for the final write of a session.
 	 *
-	 * @return the snapshot, or {@code null} when no character is logged in
+	 * @return the snapshot, or {@code null} when no character is logged in and none was seen this session
 	 */
 	@SuppressWarnings("deprecation")
 	public CharacterSnapshot buildSnapshot()
 	{
 		Player localPlayer = client.getLocalPlayer();
-		if (localPlayer == null || localPlayer.getName() == null)
+		boolean live = localPlayer != null && localPlayer.getName() != null;
+		if (!live && lastPlayer == null)
 			return null;
 
 		CharacterSnapshot data = new CharacterSnapshot();
 		data.lastUpdated = Instant.now().toString();
 
-		String accountType = null;
-		boolean members = false;
-		if (config.syncAccountInfo())
-		{
-			AccountType type = client.getAccountType();
-			accountType = type != null ? type.name() : null;
-			members = client.getWorldType().contains(WorldType.MEMBERS);
-		}
+		if (live)
+			lastPlayer = readPlayerInfo(localPlayer);
 
 		data.player = new PlayerInfo(
-			localPlayer.getName(),
-			localPlayer.getCombatLevel(),
-			client.getWorld(),
-			accountType,
-			members);
+			lastPlayer.username,
+			lastPlayer.combatLevel,
+			lastPlayer.world,
+			lastPlayer.accountType,
+			lastPlayer.members);
 
 		if (config.syncSkills() && !skills.isEmpty())
 			data.skills = new LinkedHashMap<>(skills);
@@ -775,7 +780,12 @@ public class SnapshotCollector
 			data.slayer = slayer;
 
 		if (config.syncLocation())
-			data.location = buildLocation(localPlayer);
+		{
+			if (live)
+				lastLocation = buildLocation(localPlayer);
+
+			data.location = lastLocation;
+		}
 
 		if (config.syncGrandExchange() && !geOffers.isEmpty())
 			data.grandExchange = new ArrayList<>(geOffers.values());
@@ -884,6 +894,32 @@ public class SnapshotCollector
 			client.getVarbitValue(hard) >= doneValue,
 			client.getVarbitValue(elite) == 1,
 			tasks.isEmpty() ? null : tasks);
+	}
+
+	/**
+	 * Reads the live player's identity and account context.
+	 *
+	 * @param localPlayer the local player
+	 * @return the player info
+	 */
+	@SuppressWarnings("deprecation")
+	private PlayerInfo readPlayerInfo(Player localPlayer)
+	{
+		String accountType = null;
+		boolean members = false;
+		if (config.syncAccountInfo())
+		{
+			AccountType type = client.getAccountType();
+			accountType = type != null ? type.name() : null;
+			members = client.getWorldType().contains(WorldType.MEMBERS);
+		}
+
+		return new PlayerInfo(
+			localPlayer.getName(),
+			localPlayer.getCombatLevel(),
+			client.getWorld(),
+			accountType,
+			members);
 	}
 
 	/**
