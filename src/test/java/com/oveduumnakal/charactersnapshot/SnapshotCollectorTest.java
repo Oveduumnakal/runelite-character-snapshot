@@ -28,6 +28,7 @@ import net.runelite.api.Item;
 import net.runelite.api.ItemComposition;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.Player;
+import net.runelite.api.Varbits;
 import net.runelite.api.WorldType;
 import net.runelite.api.gameval.DBTableID;
 import net.runelite.api.gameval.VarPlayerID;
@@ -460,6 +461,31 @@ public class SnapshotCollectorTest
 		assertEquals("Abyssal demons", slayer.creatureName);
 		assertNull(slayer.bossName);
 		assertEquals(40, slayer.amount);
+	}
+
+	/**
+	 * With no task assigned, points and streak are still exported and the task fields are empty.
+	 */
+	@Test
+	@SuppressWarnings("deprecation")
+	public void slayerPointsAndStreakSurviveWithoutTask()
+	{
+		Client client = loggedInClient("Zezima");
+		when(client.getVarpValue(VarPlayerID.SLAYER_COUNT)).thenReturn(0);
+		when(client.getVarbitValue(Varbits.SLAYER_POINTS)).thenReturn(264);
+		when(client.getVarbitValue(Varbits.SLAYER_TASK_STREAK)).thenReturn(49);
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		assertTrue(collector.pollSlayer());
+		SlayerData slayer = collector.buildSnapshot().slayer;
+
+		assertNotNull(slayer);
+		assertEquals(264, slayer.points);
+		assertEquals(49, slayer.streak);
+		assertEquals(0, slayer.amount);
+		assertEquals(0, slayer.creatureId);
+		assertNull(slayer.creatureName);
+		assertNull(slayer.bossName);
 	}
 
 	/**

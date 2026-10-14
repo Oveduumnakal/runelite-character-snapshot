@@ -65,7 +65,7 @@ public class CharacterSnapshot
 	/** Combat-achievement tier progress. */
 	public CombatAchievementData combatAchievements;
 
-	/** Current slayer task, or {@code null} when no task is assigned. */
+	/** Slayer state; points and streak always set once polled, task fields null/0 when no task. */
 	public SlayerData slayer;
 
 	/** Current world location of the character. */
@@ -529,7 +529,8 @@ public class CharacterSnapshot
 	}
 
 	/**
-	 * The current slayer task. The creature is exported as its game id plus, when resolvable, its name.
+	 * The slayer state. With no task assigned, the creature id and amount are 0 and the names are null, while
+	 * points and streak stay. The creature is exported as its game id plus, when resolvable, its name.
 	 */
 	@EqualsAndHashCode
 	public static class SlayerData
