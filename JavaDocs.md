@@ -17,6 +17,7 @@
 - [com.oveduumnakal.charactersnapshot.FarmingTimers.Decoded](#comoveduumnakalcharactersnapshotfarmingtimersdecoded)
 - [com.oveduumnakal.charactersnapshot.FarmingTimers.PatchDef](#comoveduumnakalcharactersnapshotfarmingtimerspatchdef)
 - [com.oveduumnakal.charactersnapshot.FarmingTimers.Range](#comoveduumnakalcharactersnapshotfarmingtimersrange)
+- [com.oveduumnakal.charactersnapshot.KillCountVarps](#comoveduumnakalcharactersnapshotkillcountvarps)
 - [com.oveduumnakal.charactersnapshot.SlayerInfo](#comoveduumnakalcharactersnapshotslayerinfo)
 - [com.oveduumnakal.charactersnapshot.SnapshotCollector](#comoveduumnakalcharactersnapshotsnapshotcollector)
 - [com.oveduumnakal.charactersnapshot.SnapshotWriter](#comoveduumnakalcharactersnapshotsnapshotwriter)
@@ -519,6 +520,7 @@ same key that plugin stores it under.
 
 | Modifier and Type | Field | Description |
 |---|---|---|
+| `private static final Set<String>` | `ACTIVITY_KEYS` |  |
 | `static final String` | `KILLCOUNT_GROUP` | Config group in which the Chat Commands plugin stores kill counts (RuneScape-profile scoped). |
 | `private static final Pattern` | `KILLCOUNT_PATTERN` |  |
 
@@ -532,10 +534,15 @@ same key that plugin stores it under.
 
 | Modifier and Type | Method | Description |
 |---|---|---|
+| `static boolean` | `isActivityKey(String key)` | Tells agility laps and other non-boss counts (chests, rumours, challenges) from boss kill counts. |
 | `static String` | `killCountKey(String boss)` | Normalises a boss name to the key the Chat Commands plugin stores it under: the Barrows rename applied, colons removed (the config service rejects them), then lower-cased. |
 | `static Map.Entry<String,Integer>` | `parseKillCount(String message)` | Parses a kill-count line such as `Your Zulrah kill count is: 12.` |
 
 ### Field Detail
+
+#### ACTIVITY_KEYS
+
+`private static final Set<String> ACTIVITY_KEYS`
 
 #### KILLCOUNT_GROUP
 
@@ -554,6 +561,15 @@ Config group in which the Chat Commands plugin stores kill counts (RuneScape-pro
 `private ChatCounts()`
 
 ### Method Detail
+
+#### isActivityKey
+
+`static boolean isActivityKey(String key)`
+
+Tells agility laps and other non-boss counts (chests, rumours, challenges) from boss kill counts.
+
+- **Parameter** `key` — a key from `#killCountKey(String)`
+- **Returns:** whether the count belongs under `activityCounts` rather than `killCounts`
 
 #### killCountKey
 
@@ -1649,6 +1665,46 @@ Crop state enum name.
 
 ---
 
+## com.oveduumnakal.charactersnapshot.KillCountVarps
+
+_class_
+
+`final class KillCountVarps`
+
+The game's per-boss kill-count varps and the export key each one is stored under. Keys follow the OSRS
+hiscores / Chat Commands boss names, lower-cased, so a chat-sourced count for the same boss lands on the
+same key. Skipped on purpose because their meaning could not be verified: `TOTAL_CATA_BOSS_KILLS`,
+`TOTAL_GRYPHON_BOSS_KILLS`, `TOTAL_MAGGOT_KING_KILLS`, `TOTAL_MAD_ANGEL_KILLS`; and
+`SOUL_WARS_TOTAL_KILLS`, which is not a boss.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `static final Map<Integer,String>` | `BOSSES` | Varp id to export key, in varp order. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `KillCountVarps()` |  |
+
+### Field Detail
+
+#### BOSSES
+
+`static final Map<Integer,String> BOSSES`
+
+Varp id to export key, in varp order.
+
+### Constructor Detail
+
+#### KillCountVarps
+
+`private KillCountVarps()`
+
+---
+
 ## com.oveduumnakal.charactersnapshot.SlayerInfo
 
 _class_
@@ -1771,6 +1827,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private static final int` | `SLAYER_BOSS_TASK_ID` |  |
 | `private static final String[]` | `SPELLBOOK_NAMES` | Spellbook varbit values 0 to 3, in order; any other value is reported as unknown. |
 | `private static final Map<Integer,String>` | `STORAGE_KEYS` | Storage containers captured when opened, keyed by container id to export key. |
+| `private final Map<String,Integer>` | `activityCounts` |  |
 | `private List<ItemEntry>` | `bankItems` |  |
 | `private List<BankTab>` | `bankTabs` |  |
 | `private int` | `bankTotal` |  |
@@ -1809,6 +1866,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private final Map<String,Instant>` | `storageUpdated` |  |
 | `private final Map<String,List<ItemEntry>>` | `storages` |  |
 | `private TimersData` | `timers` |  |
+| `private final Map<String,Integer>` | `varpKillCounts` |  |
 
 ### Constructor Summary
 
@@ -1829,12 +1887,15 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private VitalsData` | `buildVitals()` | Reads current combat vitals from boosted and real skill levels and run energy. |
 | `public boolean` | `captureCollectionLog()` | Captures the collection log page currently drawn. |
 | `private List<BankTab>` | `copyBankTabs()` | Copies the cached bank tabs so a built snapshot does not share lists with the cache. |
+| `private Map<String,Integer>` | `countsFor(String key)` |  |
 | `private DiaryRegion` | `diaryRegion(String region, int easy, int medium, int hard, int elite)` | Reads a diary region whose four tier varbits are 0/1 completion flags. |
 | `private DiaryRegion` | `diaryRegion(String region, int easy, int medium, int hard, int elite, int doneValue)` | Reads a diary region's four tiers and its mapped tasks. |
 | `private List<ItemEntry>` | `filterBankSlice(Item[] raw, int start, int end)` | Converts a slice of raw bank slots to item entries, dropping empty slots and placeholders. |
 | `private String` | `getItemName(int itemId)` | Resolves an item id to its display name. |
 | `private boolean` | `hasRunePouch()` |  |
+| `private boolean` | `isVarpBoss(String key)` |  |
 | `private Map<Integer,CombatAchievementTask>` | `loadCombatAchievementMeta()` | Reads task names, tiers, and monsters from the game cache: each tier enum lists task structs, and each struct carries the task id, name, and monster category as params. |
+| `private Map<String,Integer>` | `mergedKillCounts()` |  |
 | `public boolean` | `onChatMessage(String message)` | Reads a kill-count line from chat. |
 | `public boolean` | `onClueMessage(String message)` | Reads a treasure-trail completion line from chat. |
 | `private Map<String,Integer>` | `orderedClueCounts()` | Copies the known clue counts in tier order, beginner first. |
@@ -1843,7 +1904,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public void` | `pollAllSkills()` | Reads every skill from the client, plus a computed `OVERALL` total. |
 | `public boolean` | `pollCombatAchievements()` | Polls the six combat-achievement tier varbits and the per-task completion bits. |
 | `public boolean` | `pollDiaries()` | Polls achievement-diary completion for every region via named RuneLite varbits, and each mapped task via `DiaryTasks`. |
-| `public boolean` | `pollKillCounts()` | Merges the kill counts RuneLite's Chat Commands plugin stored in the RuneScape-profile config (group `killcount`, key = lower-cased boss name) into the cache, keeping the larger of the stored and cached value since kill counts only grow. |
+| `public boolean` | `pollKillCounts()` | Reads every boss kill-count varp (authoritative, exact and current), then merges the counts the Chat Commands plugin stored in the RuneScape-profile config (group `killcount`, key = lower-cased name) as a fallback for bosses without a varp. |
 | `public boolean` | `pollMovement()` | Compares the character's real-world location and run energy against the previous call. |
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
 | `public boolean` | `pollRunePouch()` | Polls the rune pouch contents. |
@@ -1974,6 +2035,10 @@ Spellbook varbit values 0 to 3, in order; any other value is reported as unknown
 Storage containers captured when opened, keyed by container id to export key. The group storage id is the
 one the legacy `InventoryID.GROUP_STORAGE` constant held; the current API names it
 `INV_GROUP_TEMP`.
+
+#### activityCounts
+
+`private final Map<String,Integer> activityCounts`
 
 #### bankItems
 
@@ -2137,6 +2202,10 @@ Identity captured by the last snapshot built with a live local player; cleared b
 
 `private TimersData timers`
 
+#### varpKillCounts
+
+`private final Map<String,Integer> varpKillCounts`
+
 ### Constructor Detail
 
 #### SnapshotCollector
@@ -2234,6 +2303,10 @@ Copies the cached bank tabs so a built snapshot does not share lists with the ca
 
 - **Returns:** a deep copy of the cached tabs
 
+#### countsFor
+
+`private Map<String,Integer> countsFor(String key)`
+
 #### diaryRegion
 
 `private DiaryRegion diaryRegion(String region, int easy, int medium, int hard, int elite)`
@@ -2288,6 +2361,10 @@ Resolves an item id to its display name.
 
 - **Returns:** whether the live inventory holds any rune pouch variant
 
+#### isVarpBoss
+
+`private boolean isVarpBoss(String key)`
+
 #### loadCombatAchievementMeta
 
 `private Map<Integer,CombatAchievementTask> loadCombatAchievementMeta()`
@@ -2298,15 +2375,19 @@ and each struct carries the task id, name, and monster category as params.
 - **Returns:** the metadata by task id, or empty if the cache is not readable yet; also sets
         `#caMetaPartial`
 
+#### mergedKillCounts
+
+`private Map<String,Integer> mergedKillCounts()`
+
 #### onChatMessage
 
 `public boolean onChatMessage(String message)`
 
 Reads a kill-count line from chat. A chat count is current by definition, so it replaces the cached
-value even when lower.
+value even when lower, but it never overrides a varp-backed boss count.
 
 - **Parameter** `message` — the raw chat message
-- **Returns:** whether the cached counts changed
+- **Returns:** whether the exported counts changed
 
 #### onClueMessage
 
@@ -2368,10 +2449,10 @@ task via `DiaryTasks`.
 
 `public boolean pollKillCounts()`
 
-Merges the kill counts RuneLite's Chat Commands plugin stored in the RuneScape-profile config
-(group `killcount`, key = lower-cased boss name) into the cache, keeping the larger of the
-stored and cached value since kill counts only grow. If that plugin is disabled its stored counts
-go stale, but counts parsed from chat by `#onChatMessage` stay current.
+Reads every boss kill-count varp (authoritative, exact and current), then merges the counts the
+Chat Commands plugin stored in the RuneScape-profile config (group `killcount`, key = lower-cased
+name) as a fallback for bosses without a varp. Non-boss counts such as agility laps go to
+`activityCounts`. A stored count never lowers a cached one and never overrides a varp value.
 
 - **Returns:** whether any cached count changed
 
@@ -2788,6 +2869,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | Modifier and Type | Field | Description |
 |---|---|---|
 | `public Map<String,DiaryRegion>` | `achievementDiaries` | Achievement diary completion keyed by region name. |
+| `public Map<String,Integer>` | `activityCounts` | Agility laps and other non-boss running totals (chests, rumours, challenges) keyed by lower-case activity name, sorted by name. |
 | `public BankData` | `bank` | Bank contents as a flat item list, captured when the bank is opened and carried over from the previous session until then. |
 | `public Map<String,Integer>` | `clueCounts` | Completed treasure trails per tier (`beginner` to `master`), in tier order. |
 | `public CollectionLogData` | `collectionLog` | Collection log contents captured while the log was open, carried over between sessions. |
@@ -2817,6 +2899,13 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 `public Map<String,DiaryRegion> achievementDiaries`
 
 Achievement diary completion keyed by region name.
+
+#### activityCounts
+
+`public Map<String,Integer> activityCounts`
+
+Agility laps and other non-boss running totals (chests, rumours, challenges) keyed by lower-case
+activity name, sorted by name. Absent when the toggle is off or none is known yet.
 
 #### bank
 
