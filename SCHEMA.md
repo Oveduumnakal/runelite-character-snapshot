@@ -46,8 +46,11 @@ missing sections as "not exported", not "empty".
 | `world` | int | |
 | `accountType` | string | `NORMAL`, `IRONMAN`, `ULTIMATE_IRONMAN`, `HARDCORE_IRONMAN`, `GROUP_IRONMAN`, `HARDCORE_GROUP_IRONMAN`; null when Account info is off. |
 | `members` | boolean or null | Whether the current world is members'; null when Account info is off. |
-| `members` | boolean | Whether the current world is members'. |
 | `spellbook` | string | Active spellbook: `STANDARD`, `ANCIENT`, `LUNAR`, `ARCEUUS`; null when unknown or Account info is off. |
+| `unlockedPrayers` | string[] | Unlocked reward prayers: `RIGOUR`, `AUGURY`, `PRESERVE`, `DEADEYE`, `MYSTIC_VIGOUR`; `[]` when none; null when Account info is off. |
+| `quickPrayers` | string[] | Prayers selected as quick prayers, by RuneLite `Prayer` name (e.g. `PROTECT_FROM_MELEE`, `PIETY`); ruinous prayers are not covered; null when Account info is off. |
+| `autocastSpell` | string or null | Name of the autocast spell (e.g. `Fire Surge`); null when nothing is autocast or Account info is off. |
+| `autocastDefensive` | boolean or null | Whether the autocast is defensive; null when nothing is autocast. |
 
 ## skills (map value) and vitals
 

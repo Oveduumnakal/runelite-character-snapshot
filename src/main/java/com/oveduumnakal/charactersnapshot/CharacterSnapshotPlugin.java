@@ -365,7 +365,10 @@ public class CharacterSnapshotPlugin extends Plugin
 			changed |= collector.pollRunePouch();
 
 		if (config.syncAccountInfo())
+		{
 			changed |= collector.pollSpellbook();
+			changed |= collector.pollPrayerMagic();
+		}
 
 		if (config.syncKillCounts())
 			changed |= collector.pollKillCounts();
@@ -430,7 +433,10 @@ public class CharacterSnapshotPlugin extends Plugin
 			collector.pollSlayer();
 
 		if (config.syncAccountInfo())
+		{
 			collector.pollSpellbook();
+			collector.pollPrayerMagic();
+		}
 
 		if (config.syncGrandExchange())
 			collector.pollAllGeOffers();

@@ -223,12 +223,13 @@ public interface CharacterSnapshotConfig extends Config
 	}
 
 	/**
-	 * @return whether to include account type, membership, and world
+	 * @return whether to include account type, membership, spellbook and prayer/magic setup
 	 */
 	@ConfigItem(
 		keyName = "syncAccountInfo",
 		name = "Account info",
-		description = "Include account type and membership status",
+		description = "Include account type, membership status, spellbook, unlocked prayers, quick prayers and "
+			+ "autocast spell",
 		section = dataSection,
 		position = 10
 	)
