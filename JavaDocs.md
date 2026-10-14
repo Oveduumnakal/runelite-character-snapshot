@@ -217,16 +217,18 @@ makes no network calls of any kind.
 |---|---|---|
 | `private static final int` | `INITIAL_DELAY_TICKS` |  |
 | `private static final int` | `POLL_INTERVAL_TICKS` |  |
-| `private Client` | `client` |  |
+| `Client` | `client` |  |
 | `private SnapshotCollector` | `collector` |  |
-| `private CharacterSnapshotConfig` | `config` |  |
+| `CharacterSnapshotConfig` | `config` |  |
+| `File` | `defaultDir` | Default export folder; replaced in tests so they never touch the real RuneLite directory. |
 | `private volatile boolean` | `dirty` |  |
-| `private ScheduledExecutorService` | `executor` |  |
-| `private Gson` | `gson` |  |
+| `ScheduledExecutorService` | `executor` |  |
+| `Gson` | `gson` |  |
 | `private boolean` | `initialCollectionDone` |  |
 | `private String` | `lastPlayerName` |  |
 | `private int` | `syncTickThreshold` |  |
 | `private int` | `tickCounter` |  |
+| `private String` | `warnedInvalidDir` | The last invalid custom folder a warning was logged for, so the warning is not repeated. |
 | `private SnapshotWriter` | `writer` |  |
 
 ### Method Summary
@@ -235,6 +237,7 @@ makes no network calls of any kind.
 |---|---|---|
 | `private void` | `doFullCollection()` | Runs a one-off full collection of every enabled data source after login. |
 | `private void` | `doSave()` | Builds a snapshot on the client thread and writes it off-thread. |
+| `private static boolean` | `isUsableDirectory(String path)` | Checks that a folder exists (creating it if absent) and is writable. |
 | `public void` | `onConfigChanged(ConfigChanged event)` | Recomputes the save interval when this plugin's configuration changes. |
 | `public void` | `onGameStateChanged(GameStateChanged event)` | Schedules the initial collection on login and clears state on logout or world hop so one character's data cannot leak into another's file. |
 | `public void` | `onGameTick(GameTick event)` | Drives the initial collection, periodic polling, and interval-gated saves. |
@@ -245,7 +248,7 @@ makes no network calls of any kind.
 | `private void` | `pollPeriodic()` | Polls the data sources that are not event-driven, marking the snapshot dirty on any change. |
 | `CharacterSnapshotConfig` | `provideConfig(ConfigManager configManager)` | Provides the plugin configuration. |
 | `private void` | `recalcSyncThreshold()` | Recomputes the save threshold in game ticks (one tick is about 0.6 seconds). |
-| `private File` | `resolveSyncDir()` | Resolves the export directory: the configured folder if set, else the default under the RuneLite directory. |
+| `File` | `resolveSyncDir()` | Resolves the export directory: the configured folder if it can be created and written to, else the default under the RuneLite directory. |
 | `protected void` | `shutDown()` | Writes a final snapshot when still logged in, then releases resources. |
 | `protected void` | `startUp()` | Initializes the collector and writer and computes the save interval. |
 
@@ -261,7 +264,7 @@ makes no network calls of any kind.
 
 #### client
 
-`private Client client`
+`Client client`
 
 #### collector
 
@@ -269,7 +272,13 @@ makes no network calls of any kind.
 
 #### config
 
-`private CharacterSnapshotConfig config`
+`CharacterSnapshotConfig config`
+
+#### defaultDir
+
+`File defaultDir`
+
+Default export folder; replaced in tests so they never touch the real RuneLite directory.
 
 #### dirty
 
@@ -277,11 +286,11 @@ makes no network calls of any kind.
 
 #### executor
 
-`private ScheduledExecutorService executor`
+`ScheduledExecutorService executor`
 
 #### gson
 
-`private Gson gson`
+`Gson gson`
 
 #### initialCollectionDone
 
@@ -298,6 +307,12 @@ makes no network calls of any kind.
 #### tickCounter
 
 `private int tickCounter`
+
+#### warnedInvalidDir
+
+`private String warnedInvalidDir`
+
+The last invalid custom folder a warning was logged for, so the warning is not repeated.
 
 #### writer
 
@@ -317,6 +332,15 @@ Runs a one-off full collection of every enabled data source after login.
 
 Builds a snapshot on the client thread and writes it off-thread. Clears the dirty flag
 optimistically and re-sets it if the write fails, so a failed write is retried.
+
+#### isUsableDirectory
+
+`private static boolean isUsableDirectory(String path)`
+
+Checks that a folder exists (creating it if absent) and is writable.
+
+- **Parameter** `path` — the folder path
+- **Returns:** whether exports can be written there
 
 #### onConfigChanged
 
@@ -399,10 +423,10 @@ Recomputes the save threshold in game ticks (one tick is about 0.6 seconds).
 
 #### resolveSyncDir
 
-`private File resolveSyncDir()`
+`File resolveSyncDir()`
 
-Resolves the export directory: the configured folder if set, else the default under the
-RuneLite directory.
+Resolves the export directory: the configured folder if it can be created and written to, else
+the default under the RuneLite directory. An unusable folder is logged once, not per save.
 
 - **Returns:** the directory to write export files into
 
