@@ -5,6 +5,7 @@
  */
 package com.oveduumnakal.charactersnapshot.model;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -373,8 +374,17 @@ public class CharacterSnapshot
 		/** Compatibility flag: whether the elite tier has any progress. */
 		public boolean eliteComplete;
 
-		/** Compatibility field: always empty; individual tasks are not enumerated. */
+		/**
+		 * Compatibility field: names of completed tasks whose name resolved from the game cache. Always a
+		 * list of strings; external consumers depend on that.
+		 */
 		public List<String> completedTasks;
+
+		/**
+		 * Every combat-achievement task with its completion flag. When the cache metadata cannot be
+		 * resolved, holds only the completed task ids with null name, tier, and monster.
+		 */
+		public List<CombatAchievementTask> tasks;
 
 		/**
 		 * @param tierEasy        easy varbit value
@@ -398,6 +408,67 @@ public class CharacterSnapshot
 			this.hardComplete = tierHard > 0;
 			this.eliteComplete = tierElite > 0;
 			this.completedTasks = Collections.emptyList();
+			this.tasks = Collections.emptyList();
+		}
+
+		/**
+		 * @param tierEasy        easy varbit value
+		 * @param tierMedium      medium varbit value
+		 * @param tierHard        hard varbit value
+		 * @param tierElite       elite varbit value
+		 * @param tierMaster      master varbit value
+		 * @param tierGrandmaster grandmaster varbit value
+		 * @param tasks           per-task detail; {@code completedTasks} is derived from it
+		 */
+		public CombatAchievementData(int tierEasy, int tierMedium, int tierHard, int tierElite,
+			int tierMaster, int tierGrandmaster, List<CombatAchievementTask> tasks)
+		{
+			this(tierEasy, tierMedium, tierHard, tierElite, tierMaster, tierGrandmaster);
+			this.tasks = tasks;
+			List<String> names = new ArrayList<>();
+			for (CombatAchievementTask t : tasks)
+				if (t.completed && t.name != null)
+					names.add(t.name);
+
+			this.completedTasks = names;
+		}
+	}
+
+	/**
+	 * A single combat-achievement task and whether it is complete.
+	 */
+	@EqualsAndHashCode
+	public static class CombatAchievementTask
+	{
+		/** Task id; completion is bit {@code id % 32} of the {@code id / 32}th completion varp. */
+		public int id;
+
+		/** Task name from the game cache, or null if unresolved. */
+		public String name;
+
+		/** Tier name (EASY to GRANDMASTER), or null if unresolved. */
+		public String tier;
+
+		/** Monster or category name from the game cache, or null if unresolved. */
+		public String monster;
+
+		/** Whether the task is complete. */
+		public boolean completed;
+
+		/**
+		 * @param id        task id
+		 * @param name      task name, or null
+		 * @param tier      tier name, or null
+		 * @param monster   monster name, or null
+		 * @param completed whether the task is complete
+		 */
+		public CombatAchievementTask(int id, String name, String tier, String monster, boolean completed)
+		{
+			this.id = id;
+			this.name = name;
+			this.tier = tier;
+			this.monster = monster;
+			this.completed = completed;
 		}
 	}
 
