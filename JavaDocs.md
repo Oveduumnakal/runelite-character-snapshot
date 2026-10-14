@@ -18,6 +18,7 @@
 - [com.oveduumnakal.charactersnapshot.FarmingTimers.Decoded](#comoveduumnakalcharactersnapshotfarmingtimersdecoded)
 - [com.oveduumnakal.charactersnapshot.FarmingTimers.PatchDef](#comoveduumnakalcharactersnapshotfarmingtimerspatchdef)
 - [com.oveduumnakal.charactersnapshot.FarmingTimers.Range](#comoveduumnakalcharactersnapshotfarmingtimersrange)
+- [com.oveduumnakal.charactersnapshot.House](#comoveduumnakalcharactersnapshothouse)
 - [com.oveduumnakal.charactersnapshot.KillCountVarps](#comoveduumnakalcharactersnapshotkillcountvarps)
 - [com.oveduumnakal.charactersnapshot.MinigamePoints](#comoveduumnakalcharactersnapshotminigamepoints)
 - [com.oveduumnakal.charactersnapshot.PrayerMagic](#comoveduumnakalcharactersnapshotprayermagic)
@@ -40,6 +41,7 @@
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryTask](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiarytask)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.FarmingTimer](#comoveduumnakalcharactersnapshotmodelcharactersnapshotfarmingtimer)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.GeOffer](#comoveduumnakalcharactersnapshotmodelcharactersnapshotgeoffer)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.HouseData](#comoveduumnakalcharactersnapshotmodelcharactersnapshothousedata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.InventoryItem](#comoveduumnakalcharactersnapshotmodelcharactersnapshotinventoryitem)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry](#comoveduumnakalcharactersnapshotmodelcharactersnapshotitementry)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.LocationData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotlocationdata)
@@ -86,6 +88,7 @@ for each category of data written to the export file.
 | `default boolean` | `syncDiaries()` |  |
 | `default boolean` | `syncEquipment()` |  |
 | `default boolean` | `syncGrandExchange()` |  |
+| `default boolean` | `syncHouse()` |  |
 | `default int` | `syncIntervalSeconds()` |  |
 | `default boolean` | `syncInventory()` |  |
 | `default boolean` | `syncKillCounts()` |  |
@@ -182,6 +185,12 @@ Storage section: where and how often data is written.
 `default boolean syncGrandExchange()`
 
 - **Returns:** whether to include active Grand Exchange offers
+
+#### syncHouse
+
+`default boolean syncHouse()`
+
+- **Returns:** whether to include player-owned house fields
 
 #### syncIntervalSeconds
 
@@ -1847,6 +1856,61 @@ Crop state enum name.
 
 ---
 
+## com.oveduumnakal.charactersnapshot.House
+
+_class_
+
+`final class House`
+
+Reads the player-owned house fields the game keeps in varbits. Room contents (portals, pool, altar) are
+not in varbits and are not read. Values are the game's raw varbit values; see `SCHEMA.md`. Every
+read runs on the client thread.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `static final int[]` | `NEXUS_TELEPORTS` | Portal nexus teleport slot varbits; slot `n` is element `n - 1`. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `House()` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `static HouseData` | `read(Client client)` | Reads the house. |
+
+### Field Detail
+
+#### NEXUS_TELEPORTS
+
+`static final int[] NEXUS_TELEPORTS`
+
+Portal nexus teleport slot varbits; slot `n` is element `n - 1`.
+
+### Constructor Detail
+
+#### House
+
+`private House()`
+
+### Method Detail
+
+#### read
+
+`static HouseData read(Client client)`
+
+Reads the house.
+
+- **Parameter** `client` — the client
+- **Returns:** the house state, or `null` when the player owns no house
+
+---
+
 ## com.oveduumnakal.charactersnapshot.KillCountVarps
 
 _class_
@@ -2263,6 +2327,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private Map<String,ItemEntry>` | `equipment` |  |
 | `private Instant` | `equipmentUpdated` |  |
 | `private final Map<Integer,GeOffer>` | `geOffers` |  |
+| `private HouseData` | `house` |  |
 | `private List<InventoryItem>` | `inventory` |  |
 | `private Instant` | `inventoryUpdated` |  |
 | `private final Map<String,Integer>` | `killCounts` |  |
@@ -2329,6 +2394,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollCombatAchievements()` | Polls the six combat-achievement tier varbits and the per-task completion bits. |
 | `public boolean` | `pollDailies()` | Polls the daily rewards and the Kingdom of Miscellania state. |
 | `public boolean` | `pollDiaries()` | Polls achievement-diary completion for every region via named RuneLite varbits, and each mapped task via `DiaryTasks`. |
+| `public boolean` | `pollHouse()` | Polls the player-owned house fields. |
 | `public boolean` | `pollKillCounts()` | Reads every boss kill-count varp (authoritative, exact and current), then merges the counts the Chat Commands plugin stored in the RuneScape-profile config (group `killcount`, key = lower-cased name) as a fallback for bosses without a varp. |
 | `public boolean` | `pollMinigamePoints()` | Polls the minigame reward-shop currencies. |
 | `public boolean` | `pollMovement()` | Compares the character's real-world location and run energy against the previous call. |
@@ -2601,6 +2667,10 @@ Cached task metadata by task id (completed flag unset); empty until resolved fro
 #### geOffers
 
 `private final Map<Integer,GeOffer> geOffers`
+
+#### house
+
+`private HouseData house`
 
 #### inventory
 
@@ -2982,6 +3052,14 @@ Polls achievement-diary completion for every region via named RuneLite varbits, 
 task via `DiaryTasks`.
 
 - **Returns:** whether any diary completion changed since the last poll
+
+#### pollHouse
+
+`public boolean pollHouse()`
+
+Polls the player-owned house fields.
+
+- **Returns:** whether they changed since the last poll
 
 #### pollKillCounts
 
@@ -3509,6 +3587,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | _class_ [`DiaryTask`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiarytask) | One achievement-diary task and whether it is complete. |
 | _class_ [`FarmingTimer`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotfarmingtimer) | The projected state of one farming patch or compost bin. |
 | _class_ [`GeOffer`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotgeoffer) | One active Grand Exchange offer. |
+| _class_ [`HouseData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshothousedata) | Player-owned house fields kept in game variables. |
 | _class_ [`InventoryItem`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotinventoryitem) | An inventory item, carrying its slot index in addition to the item stack. |
 | _class_ [`ItemEntry`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotitementry) | One stack of items: id, resolved name, and quantity. |
 | _class_ [`LocationData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotlocationdata) | World location of the character. |
@@ -3535,6 +3614,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | `public Map<String,DailyTask>` | `dailies` | Claimable daily rewards keyed by name (`herbBoxes`, `battlestaves`, ...), whether each is unlocked and whether today's is already claimed. |
 | `public Map<String,ItemEntry>` | `equipment` | Worn equipment keyed by slot name. |
 | `public List<GeOffer>` | `grandExchange` | Active Grand Exchange offers by slot. |
+| `public HouseData` | `house` | Player-owned house fields kept in game variables, raw values; absent with no house or the toggle off. |
 | `public List<InventoryItem>` | `inventory` | Inventory contents, one entry per slot (empty slots have item id -1). |
 | `public Map<String,Integer>` | `killCounts` | Boss kill counts keyed by lower-case boss name, sorted by name. |
 | `public String` | `lastUpdated` | ISO-8601 instant at which this snapshot was built. |
@@ -3615,6 +3695,12 @@ Worn equipment keyed by slot name.
 `public List<GeOffer> grandExchange`
 
 Active Grand Exchange offers by slot.
+
+#### house
+
+`public HouseData house`
+
+Player-owned house fields kept in game variables, raw values; absent with no house or the toggle off.
 
 #### inventory
 
@@ -4776,6 +4862,84 @@ Total quantity of the offer.
 - **Parameter** `totalQuantity` — total quantity
 - **Parameter** `price` — per-item price
 - **Parameter** `spent` — coins moved
+
+---
+
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.HouseData
+
+_class_
+
+`public static class HouseData`
+
+Player-owned house fields kept in game variables. All values are the game's raw varbit values.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public int` | `jewelleryBox` | Jewellery box state, 0 when none is built (raw `POH_JEWELLERYBOX_MULTI`). |
+| `public int` | `location` | House location id (raw `POH_HOUSE_LOCATION`). |
+| `public List<Integer>` | `nexusTeleports` | Portal nexus teleport slots (1 to 45) whose varbit is set. |
+| `public int` | `servant` | Servant id, 0 for none (raw `POH_SERVANT_TYPE`). |
+| `public int` | `size` | Raw `POH_HOUSE_SIZE`. |
+| `public int` | `style` | House style id (raw `POH_HOUSE_STYLE`). |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `HouseData(int location, int style, int size, int servant, int jewelleryBox, List<Integer> nexusTeleports)` |  |
+
+### Field Detail
+
+#### jewelleryBox
+
+`public int jewelleryBox`
+
+Jewellery box state, 0 when none is built (raw `POH_JEWELLERYBOX_MULTI`).
+
+#### location
+
+`public int location`
+
+House location id (raw `POH_HOUSE_LOCATION`).
+
+#### nexusTeleports
+
+`public List<Integer> nexusTeleports`
+
+Portal nexus teleport slots (1 to 45) whose varbit is set.
+
+#### servant
+
+`public int servant`
+
+Servant id, 0 for none (raw `POH_SERVANT_TYPE`).
+
+#### size
+
+`public int size`
+
+Raw `POH_HOUSE_SIZE`.
+
+#### style
+
+`public int style`
+
+House style id (raw `POH_HOUSE_STYLE`).
+
+### Constructor Detail
+
+#### HouseData
+
+`public HouseData(int location, int style, int size, int servant, int jewelleryBox, List<Integer> nexusTeleports)`
+
+- **Parameter** `location` — house location id
+- **Parameter** `style` — house style id
+- **Parameter** `size` — raw house size
+- **Parameter** `servant` — servant id
+- **Parameter** `jewelleryBox` — jewellery box state
+- **Parameter** `nexusTeleports` — set nexus teleport slots
 
 ---
 

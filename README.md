@@ -60,6 +60,9 @@ assistant. The plugin makes **no network calls of any kind** — nothing leaves 
 - **Transport unlocks.** Fairy ring access and the codes in your travel log, and which quetzal landing
   sites you can fly to.
 
+- **Player-owned house.** House location, style, servant, jewellery box and portal nexus teleports, as
+  the game's raw values.
+
 ### Yours to tune
 
 - **Toggle every category** so you export only what you want.

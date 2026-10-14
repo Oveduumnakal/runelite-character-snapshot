@@ -32,6 +32,7 @@ import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DailyTask;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryTask;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.GeOffer;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.HouseData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.InventoryItem;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.LocationData;
@@ -284,6 +285,7 @@ public class SnapshotCollector
 		minigamePoints = null;
 		toolLeprechaun = null;
 		transport = null;
+		house = null;
 	}
 
 	/**
@@ -1246,6 +1248,12 @@ public class SnapshotCollector
 				new ArrayList<>(transport.quetzalSites));
 		}
 
+		if (config.syncHouse() && house != null)
+		{
+			data.house = new HouseData(house.location, house.style, house.size, house.servant, house.jewelleryBox,
+				new ArrayList<>(house.nexusTeleports));
+		}
+
 		return data;
 	}
 
@@ -1987,6 +1995,21 @@ public class SnapshotCollector
 		TransportData fresh = Transport.read(client);
 		boolean changed = !fresh.equals(transport);
 		transport = fresh;
+		return changed;
+	}
+
+	private HouseData house = null;
+
+	/**
+	 * Polls the player-owned house fields.
+	 *
+	 * @return whether they changed since the last poll
+	 */
+	public boolean pollHouse()
+	{
+		HouseData fresh = House.read(client);
+		boolean changed = !Objects.equals(fresh, house);
+		house = fresh;
 		return changed;
 	}
 }
