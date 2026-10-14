@@ -183,6 +183,9 @@ public class CharacterSnapshotPlugin extends Plugin
 		else if (id == InventoryID.INV && config.syncInventory())
 		{
 			collector.updateInventory(event.getItemContainer());
+			if (config.syncRunePouch())
+				collector.pollRunePouch();
+
 			dirty = true;
 		}
 		else if (id == InventoryID.WORN && config.syncEquipment())
@@ -276,6 +279,9 @@ public class CharacterSnapshotPlugin extends Plugin
 		if (config.syncSlayer())
 			changed |= collector.pollSlayer();
 
+		if (config.syncRunePouch())
+			changed |= collector.pollRunePouch();
+
 		if (changed)
 			dirty = true;
 	}
@@ -333,6 +339,9 @@ public class CharacterSnapshotPlugin extends Plugin
 
 		if (config.syncGrandExchange())
 			collector.pollAllGeOffers();
+
+		if (config.syncRunePouch())
+			collector.pollRunePouch();
 	}
 
 	/**
