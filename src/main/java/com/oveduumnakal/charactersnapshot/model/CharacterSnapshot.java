@@ -552,6 +552,21 @@ public class CharacterSnapshot
 		/** Current task-completion streak. */
 		public int streak;
 
+		/** Id of the current slayer master, 0 when unknown. Null in files written before this field existed. */
+		public Integer masterId;
+
+		/** Name of the current slayer master, or null when unresolved. */
+		public String masterName;
+
+		/** Blocked tasks across all masters, or null in files written before this field existed. */
+		public List<BlockedTask> blockedTasks;
+
+		/** Keys of purchased task-assignment unlocks, or null in files written before this field existed. */
+		public List<String> unlockedTasks;
+
+		/** Keys of tasks whose extension is purchased, or null in files written before this field existed. */
+		public List<String> extendedTasks;
+
 		/**
 		 * @param creatureId   assigned-creature id
 		 * @param creatureName assigned-creature name, or null
@@ -568,6 +583,34 @@ public class CharacterSnapshot
 			this.amount = amount;
 			this.points = points;
 			this.streak = streak;
+		}
+	}
+
+	/**
+	 * One blocked slayer task slot.
+	 */
+	@EqualsAndHashCode
+	public static class BlockedTask
+	{
+		/** Slayer task id (same id space as the slayer creature id). */
+		public int taskId;
+
+		/** Task name, or null when it could not be resolved. */
+		public String name;
+
+		/** Name of the slayer master whose block list holds this task, or null for the legacy shared list. */
+		public String master;
+
+		/**
+		 * @param taskId slayer task id
+		 * @param name   task name, or null
+		 * @param master master name, or null
+		 */
+		public BlockedTask(int taskId, String name, String master)
+		{
+			this.taskId = taskId;
+			this.name = name;
+			this.master = master;
 		}
 	}
 
