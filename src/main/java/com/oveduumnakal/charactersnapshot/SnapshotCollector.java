@@ -77,6 +77,9 @@ public class SnapshotCollector
 	/** Cache enums listing the task struct ids per tier, easy to grandmaster. Not in the RuneLite API. */
 	private static final int[] CA_TIER_ENUMS = {3981, 3982, 3983, 3984, 3985, 3986};
 
+	/** Most reloads attempted after a partial metadata load, so a permanently missing struct is not re-read forever. */
+	private static final int CA_META_MAX_RETRIES = 10;
+
 	private static final String[] CA_TIER_NAMES = {"EASY", "MEDIUM", "HARD", "ELITE", "MASTER", "GRANDMASTER"};
 
 	/** Cache enum mapping monster category id to display name. */
@@ -151,6 +154,12 @@ public class SnapshotCollector
 	/** Cached task metadata by task id (completed flag unset); empty until resolved from the cache. */
 	private Map<Integer, CombatAchievementTask> caTaskMeta = new TreeMap<>();
 
+	/** Whether the last metadata load skipped a tier enum or task struct the cache did not return. */
+	private boolean caMetaPartial = false;
+
+	/** How many times a partial metadata load has been retried. */
+	private int caMetaRetries = 0;
+
 	private SlayerData slayer = null;
 
 	/**
@@ -196,7 +205,35 @@ public class SnapshotCollector
 	 */
 	public void updateSkill(Skill skill, int level, int xp, int boostedLevel)
 	{
+		if ("OVERALL".equals(skill.name()))
+			return;
+
 		skills.put(skill.name(), new SkillEntry(level, xp, boostedLevel));
+		refreshOverall();
+	}
+
+	/**
+	 * Recomputes the {@code OVERALL} entry from the cached skills. Does nothing until every real skill is
+	 * cached, so a partial total is never exported.
+	 */
+	private void refreshOverall()
+	{
+		int totalLevel = 0;
+		long totalXp = 0;
+		for (Skill skill : Skill.values())
+		{
+			if ("OVERALL".equals(skill.name()))
+				continue;
+
+			SkillEntry entry = skills.get(skill.name());
+			if (entry == null)
+				return;
+
+			totalLevel += entry.level;
+			totalXp += entry.xp;
+		}
+
+		skills.put("OVERALL", new SkillEntry(totalLevel, totalXp, totalLevel));
 	}
 
 	/**
@@ -494,7 +531,8 @@ public class SnapshotCollector
 			client.getVarbitValue(Varbits.COMBAT_ACHIEVEMENT_TIER_ELITE),
 			client.getVarbitValue(Varbits.COMBAT_ACHIEVEMENT_TIER_MASTER),
 			client.getVarbitValue(Varbits.COMBAT_ACHIEVEMENT_TIER_GRANDMASTER),
-			buildCombatAchievementTasks());
+			buildCombatAchievementTasks(),
+			client.getVarbitValue(VarbitID.CA_POINTS));
 		boolean changed = !ca.equals(combatAchievements);
 		combatAchievements = ca;
 		return changed;
@@ -508,8 +546,7 @@ public class SnapshotCollector
 	 */
 	private List<CombatAchievementTask> buildCombatAchievementTasks()
 	{
-		if (caTaskMeta.isEmpty())
-			caTaskMeta = loadCombatAchievementMeta();
+		reloadCombatAchievementMetaIfNeeded();
 
 		Map<Integer, CombatAchievementTask> byId = new TreeMap<>();
 		for (CombatAchievementTask meta : caTaskMeta.values())
@@ -534,14 +571,35 @@ public class SnapshotCollector
 	}
 
 	/**
+	 * Loads the task metadata when none is cached, and retries (at most {@link #CA_META_MAX_RETRIES} times)
+	 * while the last load was partial, i.e. some tier enum or task struct was not returned by the cache.
+	 * A retry never replaces the cached metadata with a smaller set.
+	 */
+	private void reloadCombatAchievementMetaIfNeeded()
+	{
+		boolean empty = caTaskMeta.isEmpty();
+		if (!empty && (!caMetaPartial || caMetaRetries >= CA_META_MAX_RETRIES))
+			return;
+
+		if (!empty)
+			caMetaRetries++;
+
+		Map<Integer, CombatAchievementTask> loaded = loadCombatAchievementMeta();
+		if (loaded.size() >= caTaskMeta.size())
+			caTaskMeta = loaded;
+	}
+
+	/**
 	 * Reads task names, tiers, and monsters from the game cache: each tier enum lists task structs,
 	 * and each struct carries the task id, name, and monster category as params.
 	 *
-	 * @return the metadata by task id, or empty if the cache is not readable yet
+	 * @return the metadata by task id, or empty if the cache is not readable yet; also sets
+	 *         {@link #caMetaPartial}
 	 */
 	private Map<Integer, CombatAchievementTask> loadCombatAchievementMeta()
 	{
 		Map<Integer, CombatAchievementTask> out = new TreeMap<>();
+		boolean partial = false;
 		EnumComposition monsterEnum = client.getEnum(CA_MONSTER_ENUM);
 		Map<Integer, String> monsters = new LinkedHashMap<>();
 		if (monsterEnum != null && monsterEnum.getKeys() != null && monsterEnum.getStringVals() != null)
@@ -556,17 +614,26 @@ public class SnapshotCollector
 		{
 			EnumComposition tierEnum = client.getEnum(CA_TIER_ENUMS[t]);
 			if (tierEnum == null || tierEnum.getIntVals() == null)
+			{
+				partial = true;
 				continue;
+			}
 
 			for (int structId : tierEnum.getIntVals())
 			{
 				StructComposition struct = client.getStructComposition(structId);
 				if (struct == null)
+				{
+					partial = true;
 					continue;
+				}
 
 				String name = struct.getStringValue(CA_PARAM_NAME);
 				if (name == null || name.isEmpty() || "null".equals(name))
+				{
+					partial = true;
 					continue;
+				}
 
 				int id = struct.getIntValue(CA_PARAM_ID);
 				String monster = monsters.get(struct.getIntValue(CA_PARAM_MONSTER));
@@ -574,6 +641,7 @@ public class SnapshotCollector
 			}
 		}
 
+		caMetaPartial = partial;
 		return out;
 	}
 
@@ -730,7 +798,7 @@ public class SnapshotCollector
 		data.lastUpdated = Instant.now().toString();
 
 		String accountType = null;
-		boolean members = false;
+		Boolean members = null;
 		if (config.syncAccountInfo())
 		{
 			AccountType type = client.getAccountType();
@@ -757,7 +825,7 @@ public class SnapshotCollector
 		if (config.syncInventory())
 			data.inventory = new ArrayList<>(inventory);
 
-		if (config.syncEquipment() && !equipment.isEmpty())
+		if (config.syncEquipment() && equipmentUpdated != null)
 			data.equipment = new LinkedHashMap<>(equipment);
 
 		data.sectionUpdated = buildSectionUpdated(data);

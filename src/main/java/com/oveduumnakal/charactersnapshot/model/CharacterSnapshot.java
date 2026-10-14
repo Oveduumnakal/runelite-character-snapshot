@@ -7,6 +7,7 @@ package com.oveduumnakal.charactersnapshot.model;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -91,17 +92,17 @@ public class CharacterSnapshot
 		/** Account type, e.g. {@code NORMAL}, {@code IRONMAN}, {@code HARDCORE_IRONMAN}. */
 		public String accountType;
 
-		/** Whether the current world is a members' world. */
-		public boolean members;
+		/** Whether the current world is a members' world; {@code null} when account info is not exported. */
+		public Boolean members;
 
 		/**
 		 * @param username    display name
 		 * @param combatLevel combat level
 		 * @param world       current world
 		 * @param accountType account-type name
-		 * @param members     whether on a members' world
+		 * @param members     whether on a members' world, or {@code null} when not exported
 		 */
-		public PlayerInfo(String username, int combatLevel, int world, String accountType, boolean members)
+		public PlayerInfo(String username, int combatLevel, int world, String accountType, Boolean members)
 		{
 			this.username = username;
 			this.combatLevel = combatLevel;
@@ -443,6 +444,18 @@ public class CharacterSnapshot
 		public List<CombatAchievementTask> tasks;
 
 		/**
+		 * Total combat-achievement points. Read from the game's points varbit when it is non-zero; otherwise
+		 * the sum of completed task points, or null when a completed task's tier is unresolved.
+		 */
+		public Integer points;
+
+		/**
+		 * Completed and total task counts per tier, keyed {@code EASY} to {@code GRANDMASTER}. Null when no
+		 * task tier could be resolved from the game cache.
+		 */
+		public Map<String, TierCount> tierCounts;
+
+		/**
 		 * @param tierEasy        easy varbit value
 		 * @param tierMedium      medium varbit value
 		 * @param tierHard        hard varbit value
@@ -479,6 +492,23 @@ public class CharacterSnapshot
 		public CombatAchievementData(int tierEasy, int tierMedium, int tierHard, int tierElite,
 			int tierMaster, int tierGrandmaster, List<CombatAchievementTask> tasks)
 		{
+			this(tierEasy, tierMedium, tierHard, tierElite, tierMaster, tierGrandmaster, tasks, 0);
+		}
+
+		/**
+		 * @param tierEasy        easy varbit value
+		 * @param tierMedium      medium varbit value
+		 * @param tierHard        hard varbit value
+		 * @param tierElite       elite varbit value
+		 * @param tierMaster      master varbit value
+		 * @param tierGrandmaster grandmaster varbit value
+		 * @param tasks           per-task detail; {@code completedTasks}, {@code tierCounts} and the fallback
+		 *                        {@code points} are derived from it
+		 * @param pointsVarbit    the game's combat-achievement points varbit; used when non-zero
+		 */
+		public CombatAchievementData(int tierEasy, int tierMedium, int tierHard, int tierElite,
+			int tierMaster, int tierGrandmaster, List<CombatAchievementTask> tasks, int pointsVarbit)
+		{
 			this(tierEasy, tierMedium, tierHard, tierElite, tierMaster, tierGrandmaster);
 			this.tasks = tasks;
 			List<String> names = new ArrayList<>();
@@ -487,6 +517,111 @@ public class CharacterSnapshot
 					names.add(t.name);
 
 			this.completedTasks = names;
+			this.tierCounts = countTiers(tasks);
+			this.points = pointsVarbit > 0 ? Integer.valueOf(pointsVarbit) : computePoints(tasks);
+		}
+
+		/**
+		 * Points one completed task of the given tier is worth: easy 1, medium 2, hard 3, elite 4, master 5,
+		 * grandmaster 6. Source: https://oldschool.runescape.wiki/w/Combat_Achievements (points per task
+		 * table, checked 2026-10-14).
+		 *
+		 * @param tier the tier name, {@code EASY} to {@code GRANDMASTER}
+		 * @return the points, or 0 for an unknown tier
+		 */
+		static int pointsPerTask(String tier)
+		{
+			switch (tier)
+			{
+				case "EASY":
+					return 1;
+				case "MEDIUM":
+					return 2;
+				case "HARD":
+					return 3;
+				case "ELITE":
+					return 4;
+				case "MASTER":
+					return 5;
+				case "GRANDMASTER":
+					return 6;
+				default:
+					return 0;
+			}
+		}
+
+		/**
+		 * Sums the points of completed tasks.
+		 *
+		 * @param tasks the tasks
+		 * @return the total, or null when a completed task has no resolved tier
+		 */
+		private static Integer computePoints(List<CombatAchievementTask> tasks)
+		{
+			int total = 0;
+			for (CombatAchievementTask t : tasks)
+			{
+				if (!t.completed)
+					continue;
+
+				if (t.tier == null)
+					return null;
+
+				total += pointsPerTask(t.tier);
+			}
+
+			return total;
+		}
+
+		/**
+		 * Counts completed and total tasks per tier, ignoring tasks with no resolved tier.
+		 *
+		 * @param tasks the tasks
+		 * @return the counts for all six tiers in order, or null when no task has a tier
+		 */
+		private static Map<String, TierCount> countTiers(List<CombatAchievementTask> tasks)
+		{
+			Map<String, TierCount> counts = new LinkedHashMap<>();
+			for (String tier : new String[] {"EASY", "MEDIUM", "HARD", "ELITE", "MASTER", "GRANDMASTER"})
+				counts.put(tier, new TierCount(0, 0));
+
+			boolean any = false;
+			for (CombatAchievementTask t : tasks)
+			{
+				TierCount count = t.tier != null ? counts.get(t.tier) : null;
+				if (count == null)
+					continue;
+
+				any = true;
+				count.total++;
+				if (t.completed)
+					count.completed++;
+			}
+
+			return any ? counts : null;
+		}
+	}
+
+	/**
+	 * Completed and total task counts for one combat-achievement tier.
+	 */
+	@EqualsAndHashCode
+	public static class TierCount
+	{
+		/** Number of completed tasks in the tier. */
+		public int completed;
+
+		/** Number of tasks in the tier. */
+		public int total;
+
+		/**
+		 * @param completed completed task count
+		 * @param total     total task count
+		 */
+		public TierCount(int completed, int total)
+		{
+			this.completed = completed;
+			this.total = total;
 		}
 	}
 

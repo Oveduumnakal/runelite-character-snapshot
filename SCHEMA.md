@@ -38,7 +38,7 @@ missing sections as "not exported", not "empty".
 | `combatLevel` | int | |
 | `world` | int | |
 | `accountType` | string | `NORMAL`, `IRONMAN`, `ULTIMATE_IRONMAN`, `HARDCORE_IRONMAN`, `GROUP_IRONMAN`, `HARDCORE_GROUP_IRONMAN`; null when Account info is off. |
-| `members` | boolean | Whether the current world is members'. |
+| `members` | boolean or null | Whether the current world is members'; null when Account info is off. |
 
 ## skills (map value) and vitals
 
@@ -69,7 +69,7 @@ An **item entry** is `{ itemId, name, quantity }`; `name` is null for an unresol
 - `inventory`: array of item entries with an extra `slot` (0–27); empty slots are included with
   `itemId` -1 so slot indices stay meaningful.
 - `equipment`: map of slot name (`HEAD`, `CAPE`, `AMULET`, `WEAPON`, `BODY`, `SHIELD`, `LEGS`,
-  `GLOVES`, `BOOTS`, `RING`, `AMMO`) → item entry; empty slots are omitted.
+  `GLOVES`, `BOOTS`, `RING`, `AMMO`) → item entry; empty slots are omitted. A character wearing nothing exports `{}`; the field is absent only when equipment is toggled off or not yet captured.
 
 ### Carried-over sections and `sectionUpdated`
 
@@ -114,6 +114,16 @@ integers are the source of truth.
 `name`, `tier` (`EASY` to `GRANDMASTER`) and `monster` are read from the game cache at runtime and are
 `null` when unresolved. If the cache metadata cannot be read, `tasks` holds only the completed ids with
 null `name`/`tier`/`monster`.
+
+`points` (additive, int or null) is the total combat-achievement points. It is read from the game's points
+varbit (`VarbitID.CA_POINTS`) when that is non-zero; otherwise it is computed as the sum of completed task
+points (easy 1, medium 2, hard 3, elite 4, master 5, grandmaster 6, per
+https://oldschool.runescape.wiki/w/Combat_Achievements), and is null if a completed task's tier is unresolved.
+
+`tierCounts` (additive, object or null) maps each of `EASY`, `MEDIUM`, `HARD`, `ELITE`, `MASTER`,
+`GRANDMASTER` to `{ completed, total }`, counted from `tasks` (so `total` is only complete once the cache
+metadata has fully loaded; the full game has 41 / 64 / 89 / 166 / 173 / 122 tasks). It is null when no task
+tier could be resolved.
 
 Cache ids relied on (from the community cache dump tooling, e.g. ReinhardtR/runeprofile
 `scripts/ts-scripts/lib/combat-achievements.ts`; not in the RuneLite API and NOT verified in-client):
