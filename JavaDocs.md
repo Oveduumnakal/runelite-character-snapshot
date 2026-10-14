@@ -901,6 +901,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
 | `public boolean` | `pollSlayer()` | Polls the current slayer task, clearing it when no task is assigned. |
 | `private String` | `readTaskRowName(int row)` | Reads the display name column of one slayer task table row. |
+| `private void` | `refreshOverall()` | Recomputes the `OVERALL` entry from the cached skills. |
 | `private void` | `reloadCombatAchievementMetaIfNeeded()` | Loads the task metadata when none is cached, and retries (at most `#CA_META_MAX_RETRIES` times) while the last load was partial, i.e. |
 | `public void` | `reset()` | Clears every cache. |
 | `private String` | `resolveBossName(int bossId)` | Resolves a boss-task boss id to the boss name via the slayer task sublist table. |
@@ -1257,6 +1258,13 @@ Reads the display name column of one slayer task table row.
 
 - **Parameter** `row` — the slayer task table row id
 - **Returns:** the name, or null when absent
+
+#### refreshOverall
+
+`private void refreshOverall()`
+
+Recomputes the `OVERALL` entry from the cached skills. Does nothing until every real skill is
+cached, so a partial total is never exported.
 
 #### reloadCombatAchievementMetaIfNeeded
 
@@ -2338,7 +2346,7 @@ Identity and account context of the logged-in character.
 |---|---|---|
 | `public String` | `accountType` | Account type, e.g. |
 | `public int` | `combatLevel` | Combat level. |
-| `public boolean` | `members` | Whether the current world is a members' world. |
+| `public Boolean` | `members` | Whether the current world is a members' world; `null` when account info is not exported. |
 | `public String` | `username` | In-game display name. |
 | `public int` | `world` | World the character is logged into. |
 
@@ -2346,7 +2354,7 @@ Identity and account context of the logged-in character.
 
 | Constructor | Description |
 |---|---|
-| `PlayerInfo(String username, int combatLevel, int world, String accountType, boolean members)` |  |
+| `PlayerInfo(String username, int combatLevel, int world, String accountType, Boolean members)` |  |
 
 ### Field Detail
 
@@ -2364,9 +2372,9 @@ Combat level.
 
 #### members
 
-`public boolean members`
+`public Boolean members`
 
-Whether the current world is a members' world.
+Whether the current world is a members' world; `null` when account info is not exported.
 
 #### username
 
@@ -2384,13 +2392,13 @@ World the character is logged into.
 
 #### PlayerInfo
 
-`public PlayerInfo(String username, int combatLevel, int world, String accountType, boolean members)`
+`public PlayerInfo(String username, int combatLevel, int world, String accountType, Boolean members)`
 
 - **Parameter** `username` — display name
 - **Parameter** `combatLevel` — combat level
 - **Parameter** `world` — current world
 - **Parameter** `accountType` — account-type name
-- **Parameter** `members` — whether on a members' world
+- **Parameter** `members` — whether on a members' world, or `null` when not exported
 
 ---
 
