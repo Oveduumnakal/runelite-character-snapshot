@@ -1,6 +1,11 @@
 /*
  * Copyright (c) 2026, isaac
  * Copyright (c) 2026, Oveduumnakal
+ * Diary task data derived from Quest Helper (https://github.com/Zoinkwiz/quest-helper), BSD 2-Clause:
+ * Copyright (c) 2021, Zoinkwiz <https://github.com/Zoinkwiz>
+ * Copyright (c) 2021, 2022, Obasill <https://github.com/Obasill>
+ * Copyright (c) 2021, Kerpackie <https://github.com/Kerpackie/>
+ * Copyright (c) 2022, rileyyy <https://github.com/rileyyy/>
  * All rights reserved.
  */
 package com.oveduumnakal.charactersnapshot;
