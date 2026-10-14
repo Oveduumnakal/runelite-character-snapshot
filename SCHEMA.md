@@ -62,9 +62,10 @@ missing sections as "not exported", not "empty".
 
 An **item entry** is `{ itemId, name, quantity }`; `name` is null for an unresolved or empty item.
 
-- `bank`: `{ totalItems, items[], tabs[] }` — `items` is the canonical flat list. `tabs` is a
-  compatibility view: the same items wrapped in a single tab (`[{ tabIndex: 0, items: [...] }]`) for
-  consumers that expect the tabbed shape. Individual bank tabs are not modelled.
+- `bank`: `{ totalItems, items[], tabs[] }` — `items` is the canonical flat list. `tabs` holds the
+  real bank tabs, `[{ tabIndex, items: [...] }]`: `tabIndex` 0 is the main tab (always present), 1 to 9
+  are the numbered tabs (present only if the tab exists). The flat `items` keeps game container order
+  (tabs 1 to 9, then the main tab). A bank restored from an older file has a single tab 0 until the bank is opened again.
 - `inventory`: array of item entries with an extra `slot` (0–27); empty slots are included with
   `itemId` -1 so slot indices stay meaningful.
 - `equipment`: map of slot name (`HEAD`, `CAPE`, `AMULET`, `WEAPON`, `BODY`, `SHIELD`, `LEGS`,
@@ -104,8 +105,20 @@ of the corresponding RuneLite combat-achievement tier varbit. A tier's value is 
 tier is claimed; treat the exact number as opaque and compare `> 0` for "claimed".
 
 Compatibility fields (derived, for the osrs-companion MCP server): `easyComplete`, `mediumComplete`,
-`hardComplete`, `eliteComplete` — booleans equal to `tier* > 0` — and `completedTasks`, always an
-empty array (individual tasks are not enumerated). The `tier*` integers are the source of truth.
+`hardComplete`, `eliteComplete` — booleans equal to `tier* > 0` — and `completedTasks`, an array of
+strings: the names of completed tasks (only tasks whose name resolved; never invented). The `tier*`
+integers are the source of truth.
+
+`tasks` is an array of `{ id, name, tier, monster, completed }` covering every task, completed or not.
+`id` is the task id (bit `id % 32` of the `id / 32`th `VarPlayerID.CA_TASK_COMPLETED_n` varp, n = 0..20).
+`name`, `tier` (`EASY` to `GRANDMASTER`) and `monster` are read from the game cache at runtime and are
+`null` when unresolved. If the cache metadata cannot be read, `tasks` holds only the completed ids with
+null `name`/`tier`/`monster`.
+
+Cache ids relied on (from the community cache dump tooling, e.g. ReinhardtR/runeprofile
+`scripts/ts-scripts/lib/combat-achievements.ts`; not in the RuneLite API and NOT verified in-client):
+tier enums 3981 to 3986 (easy to grandmaster; values are task struct ids), monster enum 3971
+(monster category id to name), struct params 1306 (task id), 1308 (name), 1312 (monster category id).
 
 ## slayer
 
@@ -113,7 +126,9 @@ Present only when a task is assigned:
 
 | Field | Type | Notes |
 |---|---|---|
-| `creatureId` | int | Assigned-creature game id; map to a name consumer-side. |
+| `creatureId` | int | Assigned-creature game id (98 is the generic boss task). |
+| `creatureName` | string or null | Assigned-creature name, e.g. `Abyssal demons`. Null when it could not be resolved. |
+| `bossName` | string or null | Specific boss for boss tasks. Null for every other task or when unresolved. |
 | `amount` | int | Remaining kills. |
 | `points` | int | Slayer reward points. |
 | `streak` | int | Task-completion streak. |

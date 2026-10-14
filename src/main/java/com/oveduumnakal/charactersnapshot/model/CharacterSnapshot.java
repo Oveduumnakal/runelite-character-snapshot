@@ -5,6 +5,7 @@
  */
 package com.oveduumnakal.charactersnapshot.model;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -235,30 +236,42 @@ public class CharacterSnapshot
 		public List<ItemEntry> items;
 
 		/**
-		 * Compatibility view: the flat list wrapped in a single tab, for consumers that expect the
-		 * tabbed shape (e.g. the osrs-companion MCP server). Individual tabs are not modelled.
+		 * The bank split into its real tabs: the main tab is {@code tabIndex} 0 and the numbered tabs
+		 * are 1 to 9. Never null when the bank is present; an export from before tabs were modelled
+		 * holds a single tab 0 wrapping the flat list.
 		 */
 		public List<BankTab> tabs;
 
 		/**
+		 * Creates bank data whose only tab is the main tab holding every item.
+		 *
 		 * @param totalItems distinct stack count
 		 * @param items      flat item list
 		 */
 		public BankData(int totalItems, List<ItemEntry> items)
 		{
+			this(totalItems, items, Collections.singletonList(new BankTab(0, items)));
+		}
+
+		/**
+		 * @param totalItems distinct stack count
+		 * @param items      flat item list
+		 * @param tabs       the real bank tabs
+		 */
+		public BankData(int totalItems, List<ItemEntry> items, List<BankTab> tabs)
+		{
 			this.totalItems = totalItems;
 			this.items = items;
-			this.tabs = Collections.singletonList(new BankTab(0, items));
+			this.tabs = tabs;
 		}
 	}
 
 	/**
-	 * A bank tab: an index and the items it holds. The exporter emits a single tab wrapping the flat
-	 * item list; it is a compatibility view, not a faithful per-tab breakdown.
+	 * A bank tab: an index (0 for the main tab, 1 to 9 for the numbered tabs) and the items it holds.
 	 */
 	public static class BankTab
 	{
-		/** Zero-based tab index. */
+		/** Tab index: 0 is the main tab, 1 to 9 are the numbered tabs. */
 		public int tabIndex;
 
 		/** Items in this tab. */
@@ -417,8 +430,17 @@ public class CharacterSnapshot
 		/** Compatibility flag: whether the elite tier has any progress. */
 		public boolean eliteComplete;
 
-		/** Compatibility field: always empty; individual tasks are not enumerated. */
+		/**
+		 * Compatibility field: names of completed tasks whose name resolved from the game cache. Always a
+		 * list of strings; external consumers depend on that.
+		 */
 		public List<String> completedTasks;
+
+		/**
+		 * Every combat-achievement task with its completion flag. When the cache metadata cannot be
+		 * resolved, holds only the completed task ids with null name, tier, and monster.
+		 */
+		public List<CombatAchievementTask> tasks;
 
 		/**
 		 * @param tierEasy        easy varbit value
@@ -442,17 +464,84 @@ public class CharacterSnapshot
 			this.hardComplete = tierHard > 0;
 			this.eliteComplete = tierElite > 0;
 			this.completedTasks = Collections.emptyList();
+			this.tasks = Collections.emptyList();
+		}
+
+		/**
+		 * @param tierEasy        easy varbit value
+		 * @param tierMedium      medium varbit value
+		 * @param tierHard        hard varbit value
+		 * @param tierElite       elite varbit value
+		 * @param tierMaster      master varbit value
+		 * @param tierGrandmaster grandmaster varbit value
+		 * @param tasks           per-task detail; {@code completedTasks} is derived from it
+		 */
+		public CombatAchievementData(int tierEasy, int tierMedium, int tierHard, int tierElite,
+			int tierMaster, int tierGrandmaster, List<CombatAchievementTask> tasks)
+		{
+			this(tierEasy, tierMedium, tierHard, tierElite, tierMaster, tierGrandmaster);
+			this.tasks = tasks;
+			List<String> names = new ArrayList<>();
+			for (CombatAchievementTask t : tasks)
+				if (t.completed && t.name != null)
+					names.add(t.name);
+
+			this.completedTasks = names;
 		}
 	}
 
 	/**
-	 * The current slayer task. The creature is exported as its game id; consumers map it to a name.
+	 * A single combat-achievement task and whether it is complete.
+	 */
+	@EqualsAndHashCode
+	public static class CombatAchievementTask
+	{
+		/** Task id; completion is bit {@code id % 32} of the {@code id / 32}th completion varp. */
+		public int id;
+
+		/** Task name from the game cache, or null if unresolved. */
+		public String name;
+
+		/** Tier name (EASY to GRANDMASTER), or null if unresolved. */
+		public String tier;
+
+		/** Monster or category name from the game cache, or null if unresolved. */
+		public String monster;
+
+		/** Whether the task is complete. */
+		public boolean completed;
+
+		/**
+		 * @param id        task id
+		 * @param name      task name, or null
+		 * @param tier      tier name, or null
+		 * @param monster   monster name, or null
+		 * @param completed whether the task is complete
+		 */
+		public CombatAchievementTask(int id, String name, String tier, String monster, boolean completed)
+		{
+			this.id = id;
+			this.name = name;
+			this.tier = tier;
+			this.monster = monster;
+			this.completed = completed;
+		}
+	}
+
+	/**
+	 * The current slayer task. The creature is exported as its game id plus, when resolvable, its name.
 	 */
 	@EqualsAndHashCode
 	public static class SlayerData
 	{
 		/** Game id of the assigned creature. */
 		public int creatureId;
+
+		/** Display name of the assigned creature, or null when it could not be resolved. */
+		public String creatureName;
+
+		/** Specific boss name for boss tasks, or null for any other task. */
+		public String bossName;
 
 		/** Remaining kill count. */
 		public int amount;
@@ -464,14 +553,18 @@ public class CharacterSnapshot
 		public int streak;
 
 		/**
-		 * @param creatureId assigned-creature id
-		 * @param amount     remaining kills
-		 * @param points     reward points
-		 * @param streak     completion streak
+		 * @param creatureId   assigned-creature id
+		 * @param creatureName assigned-creature name, or null
+		 * @param bossName     boss name for boss tasks, or null
+		 * @param amount       remaining kills
+		 * @param points       reward points
+		 * @param streak       completion streak
 		 */
-		public SlayerData(int creatureId, int amount, int points, int streak)
+		public SlayerData(int creatureId, String creatureName, String bossName, int amount, int points, int streak)
 		{
 			this.creatureId = creatureId;
+			this.creatureName = creatureName;
+			this.bossName = bossName;
 			this.amount = amount;
 			this.points = points;
 			this.streak = streak;
