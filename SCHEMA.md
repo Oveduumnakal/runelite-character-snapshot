@@ -115,6 +115,16 @@ integers are the source of truth.
 `null` when unresolved. If the cache metadata cannot be read, `tasks` holds only the completed ids with
 null `name`/`tier`/`monster`.
 
+`points` (additive, int or null) is the total combat-achievement points. It is read from the game's points
+varbit (`VarbitID.CA_POINTS`) when that is non-zero; otherwise it is computed as the sum of completed task
+points (easy 1, medium 2, hard 3, elite 4, master 5, grandmaster 6, per
+https://oldschool.runescape.wiki/w/Combat_Achievements), and is null if a completed task's tier is unresolved.
+
+`tierCounts` (additive, object or null) maps each of `EASY`, `MEDIUM`, `HARD`, `ELITE`, `MASTER`,
+`GRANDMASTER` to `{ completed, total }`, counted from `tasks` (so `total` is only complete once the cache
+metadata has fully loaded; the full game has 41 / 64 / 89 / 166 / 173 / 122 tasks). It is null when no task
+tier could be resolved.
+
 Cache ids relied on (from the community cache dump tooling, e.g. ReinhardtR/runeprofile
 `scripts/ts-scripts/lib/combat-achievements.ts`; not in the RuneLite API and NOT verified in-client):
 tier enums 3981 to 3986 (easy to grandmaster; values are task struct ids), monster enum 3971

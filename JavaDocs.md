@@ -26,6 +26,7 @@
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.QuestEntry](#comoveduumnakalcharactersnapshotmodelcharactersnapshotquestentry)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SkillEntry](#comoveduumnakalcharactersnapshotmodelcharactersnapshotskillentry)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SlayerData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotslayerdata)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.TierCount](#comoveduumnakalcharactersnapshotmodelcharactersnapshottiercount)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.VitalsData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotvitalsdata)
 
 ---
@@ -1509,6 +1510,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | _class_ [`QuestEntry`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotquestentry) | Completion state of one quest. |
 | _class_ [`SkillEntry`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotskillentry) | Real level and experience for one skill, plus the current boosted level. |
 | _class_ [`SlayerData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotslayerdata) | The current slayer task. |
+| _class_ [`TierCount`](#comoveduumnakalcharactersnapshotmodelcharactersnapshottiercount) | Completed and total task counts for one combat-achievement tier. |
 | _class_ [`VitalsData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotvitalsdata) | Current combat vitals: hitpoints, prayer, and run energy. |
 
 ### Field Summary
@@ -1765,7 +1767,9 @@ Combat-achievement tier progress. Each field is the raw value of the correspondi
 | `public boolean` | `eliteComplete` | Compatibility flag: whether the elite tier has any progress. |
 | `public boolean` | `hardComplete` | Compatibility flag: whether the hard tier has any progress. |
 | `public boolean` | `mediumComplete` | Compatibility flag: whether the medium tier has any progress. |
+| `public Integer` | `points` | Total combat-achievement points. |
 | `public List<CombatAchievementTask>` | `tasks` | Every combat-achievement task with its completion flag. |
+| `public Map<String,TierCount>` | `tierCounts` | Completed and total task counts per tier, keyed `EASY` to `GRANDMASTER`. |
 | `public int` | `tierEasy` | Raw easy-tier varbit value. |
 | `public int` | `tierElite` | Raw elite-tier varbit value. |
 | `public int` | `tierGrandmaster` | Raw grandmaster-tier varbit value. |
@@ -1779,6 +1783,15 @@ Combat-achievement tier progress. Each field is the raw value of the correspondi
 |---|---|
 | `CombatAchievementData(int tierEasy, int tierMedium, int tierHard, int tierElite, int tierMaster, int tierGrandmaster)` |  |
 | `CombatAchievementData(int tierEasy, int tierMedium, int tierHard, int tierElite, int tierMaster, int tierGrandmaster, List<CombatAchievementTask> tasks)` |  |
+| `CombatAchievementData(int tierEasy, int tierMedium, int tierHard, int tierElite, int tierMaster, int tierGrandmaster, List<CombatAchievementTask> tasks, int pointsVarbit)` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `private static Integer` | `computePoints(List<CombatAchievementTask> tasks)` | Sums the points of completed tasks. |
+| `private static Map<String,TierCount>` | `countTiers(List<CombatAchievementTask> tasks)` | Counts completed and total tasks per tier, ignoring tasks with no resolved tier. |
+| `static int` | `pointsPerTask(String tier)` | Points one completed task of the given tier is worth: easy 1, medium 2, hard 3, elite 4, master 5, grandmaster 6. |
 
 ### Field Detail
 
@@ -1813,12 +1826,26 @@ Compatibility flag: whether the hard tier has any progress.
 
 Compatibility flag: whether the medium tier has any progress.
 
+#### points
+
+`public Integer points`
+
+Total combat-achievement points. Read from the game's points varbit when it is non-zero; otherwise
+the sum of completed task points, or null when a completed task's tier is unresolved.
+
 #### tasks
 
 `public List<CombatAchievementTask> tasks`
 
 Every combat-achievement task with its completion flag. When the cache metadata cannot be
 resolved, holds only the completed task ids with null name, tier, and monster.
+
+#### tierCounts
+
+`public Map<String,TierCount> tierCounts`
+
+Completed and total task counts per tier, keyed `EASY` to `GRANDMASTER`. Null when no
+task tier could be resolved from the game cache.
 
 #### tierEasy
 
@@ -1880,6 +1907,51 @@ Raw medium-tier varbit value.
 - **Parameter** `tierMaster` — master varbit value
 - **Parameter** `tierGrandmaster` — grandmaster varbit value
 - **Parameter** `tasks` — per-task detail; `completedTasks` is derived from it
+
+#### CombatAchievementData
+
+`public CombatAchievementData(int tierEasy, int tierMedium, int tierHard, int tierElite, int tierMaster, int tierGrandmaster, List<CombatAchievementTask> tasks, int pointsVarbit)`
+
+- **Parameter** `tierEasy` — easy varbit value
+- **Parameter** `tierMedium` — medium varbit value
+- **Parameter** `tierHard` — hard varbit value
+- **Parameter** `tierElite` — elite varbit value
+- **Parameter** `tierMaster` — master varbit value
+- **Parameter** `tierGrandmaster` — grandmaster varbit value
+- **Parameter** `tasks` — per-task detail; `completedTasks`, `tierCounts` and the fallback
+                       `points` are derived from it
+- **Parameter** `pointsVarbit` — the game's combat-achievement points varbit; used when non-zero
+
+### Method Detail
+
+#### computePoints
+
+`private static Integer computePoints(List<CombatAchievementTask> tasks)`
+
+Sums the points of completed tasks.
+
+- **Parameter** `tasks` — the tasks
+- **Returns:** the total, or null when a completed task has no resolved tier
+
+#### countTiers
+
+`private static Map<String,TierCount> countTiers(List<CombatAchievementTask> tasks)`
+
+Counts completed and total tasks per tier, ignoring tasks with no resolved tier.
+
+- **Parameter** `tasks` — the tasks
+- **Returns:** the counts for all six tiers in order, or null when no task has a tier
+
+#### pointsPerTask
+
+`static int pointsPerTask(String tier)`
+
+Points one completed task of the given tier is worth: easy 1, medium 2, hard 3, elite 4, master 5,
+grandmaster 6. Source: https://oldschool.runescape.wiki/w/Combat_Achievements (points per task
+table, checked 2026-10-14).
+
+- **Parameter** `tier` — the tier name, `EASY` to `GRANDMASTER`
+- **Returns:** the points, or 0 for an unknown tier
 
 ---
 
@@ -2585,6 +2657,52 @@ Current task-completion streak.
 - **Parameter** `amount` — remaining kills
 - **Parameter** `points` — reward points
 - **Parameter** `streak` — completion streak
+
+---
+
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.TierCount
+
+_class_
+
+`public static class TierCount`
+
+Completed and total task counts for one combat-achievement tier.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public int` | `completed` | Number of completed tasks in the tier. |
+| `public int` | `total` | Number of tasks in the tier. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `TierCount(int completed, int total)` |  |
+
+### Field Detail
+
+#### completed
+
+`public int completed`
+
+Number of completed tasks in the tier.
+
+#### total
+
+`public int total`
+
+Number of tasks in the tier.
+
+### Constructor Detail
+
+#### TierCount
+
+`public TierCount(int completed, int total)`
+
+- **Parameter** `completed` — completed task count
+- **Parameter** `total` — total task count
 
 ---
 

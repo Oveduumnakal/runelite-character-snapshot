@@ -19,6 +19,7 @@ import net.runelite.api.Player;
 import net.runelite.api.StructComposition;
 import net.runelite.api.WorldType;
 import net.runelite.api.gameval.VarPlayerID;
+import net.runelite.api.gameval.VarbitID;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -229,5 +230,78 @@ public class CombatAchievementTasksTest
 			collector.pollCombatAchievements();
 
 		verify(client, times(11)).getStructComposition(102);
+	}
+
+	/**
+	 * Without a points varbit value, points are summed from completed tasks by tier, and per-tier
+	 * completed and total counts are exported for all six tiers.
+	 */
+	@Test
+	public void pointsComputedAndTierCountsExported()
+	{
+		Client client = clientWithCache();
+		when(client.getVarpValue(VarPlayerID.CA_TASK_COMPLETED_0)).thenReturn(1 | (1 << 5));
+		SnapshotCollector collector = collector(client);
+
+		collector.pollCombatAchievements();
+		CombatAchievementData ca = collector.buildSnapshot().combatAchievements;
+
+		assertEquals(Integer.valueOf(4), ca.points);
+		assertEquals(6, ca.tierCounts.size());
+		assertEquals(1, ca.tierCounts.get("EASY").completed);
+		assertEquals(2, ca.tierCounts.get("EASY").total);
+		assertEquals(1, ca.tierCounts.get("HARD").completed);
+		assertEquals(1, ca.tierCounts.get("HARD").total);
+		assertEquals(0, ca.tierCounts.get("MASTER").total);
+	}
+
+	/**
+	 * A non-zero points varbit wins over the computed sum.
+	 */
+	@Test
+	public void pointsVarbitIsPreferred()
+	{
+		Client client = clientWithCache();
+		when(client.getVarpValue(VarPlayerID.CA_TASK_COMPLETED_0)).thenReturn(1);
+		when(client.getVarbitValue(VarbitID.CA_POINTS)).thenReturn(29);
+		SnapshotCollector collector = collector(client);
+
+		collector.pollCombatAchievements();
+
+		assertEquals(Integer.valueOf(29), collector.buildSnapshot().combatAchievements.points);
+	}
+
+	/**
+	 * With no tier metadata and a completed task, points cannot be computed and tier counts are absent.
+	 */
+	@Test
+	public void unresolvedTiersGiveNullPointsAndCounts()
+	{
+		Client client = bareClient();
+		when(client.getVarpValue(VarPlayerID.CA_TASK_COMPLETED_1)).thenReturn(1 << 4);
+		SnapshotCollector collector = collector(client);
+
+		collector.pollCombatAchievements();
+		CombatAchievementData ca = collector.buildSnapshot().combatAchievements;
+
+		assertNull(ca.points);
+		assertNull(ca.tierCounts);
+	}
+
+	/**
+	 * Per-point values are 1 to 6 from easy to grandmaster.
+	 */
+	@Test
+	public void tierPointValues()
+	{
+		List<CombatAchievementTask> tasks = Arrays.asList(
+			new CombatAchievementTask(0, "a", "EASY", null, true),
+			new CombatAchievementTask(1, "b", "MEDIUM", null, true),
+			new CombatAchievementTask(2, "c", "HARD", null, true),
+			new CombatAchievementTask(3, "d", "ELITE", null, true),
+			new CombatAchievementTask(4, "e", "MASTER", null, true),
+			new CombatAchievementTask(5, "f", "GRANDMASTER", null, true));
+
+		assertEquals(Integer.valueOf(21), new CombatAchievementData(1, 1, 1, 1, 1, 1, tasks).points);
 	}
 }
