@@ -494,7 +494,8 @@ public class SnapshotCollector
 			client.getVarbitValue(Varbits.COMBAT_ACHIEVEMENT_TIER_ELITE),
 			client.getVarbitValue(Varbits.COMBAT_ACHIEVEMENT_TIER_MASTER),
 			client.getVarbitValue(Varbits.COMBAT_ACHIEVEMENT_TIER_GRANDMASTER),
-			buildCombatAchievementTasks());
+			buildCombatAchievementTasks(),
+			client.getVarbitValue(VarbitID.CA_POINTS));
 		boolean changed = !ca.equals(combatAchievements);
 		combatAchievements = ca;
 		return changed;
