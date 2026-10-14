@@ -38,7 +38,7 @@ missing sections as "not exported", not "empty".
 | `combatLevel` | int | |
 | `world` | int | |
 | `accountType` | string | `NORMAL`, `IRONMAN`, `ULTIMATE_IRONMAN`, `HARDCORE_IRONMAN`, `GROUP_IRONMAN`, `HARDCORE_GROUP_IRONMAN`; null when Account info is off. |
-| `members` | boolean | Whether the current world is members'. |
+| `members` | boolean or null | Whether the current world is members'; null when Account info is off. |
 
 ## skills (map value) and vitals
 
@@ -69,7 +69,7 @@ An **item entry** is `{ itemId, name, quantity }`; `name` is null for an unresol
 - `inventory`: array of item entries with an extra `slot` (0–27); empty slots are included with
   `itemId` -1 so slot indices stay meaningful.
 - `equipment`: map of slot name (`HEAD`, `CAPE`, `AMULET`, `WEAPON`, `BODY`, `SHIELD`, `LEGS`,
-  `GLOVES`, `BOOTS`, `RING`, `AMMO`) → item entry; empty slots are omitted.
+  `GLOVES`, `BOOTS`, `RING`, `AMMO`) → item entry; empty slots are omitted. A character wearing nothing exports `{}`; the field is absent only when equipment is toggled off or not yet captured.
 
 ### Carried-over sections and `sectionUpdated`
 
