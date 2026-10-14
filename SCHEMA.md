@@ -38,7 +38,7 @@ missing sections as "not exported", not "empty".
 | `combatLevel` | int | |
 | `world` | int | |
 | `accountType` | string | `NORMAL`, `IRONMAN`, `ULTIMATE_IRONMAN`, `HARDCORE_IRONMAN`, `GROUP_IRONMAN`, `HARDCORE_GROUP_IRONMAN`; null when Account info is off. |
-| `members` | boolean | Whether the current world is members'. |
+| `members` | boolean or null | Whether the current world is members'; null when Account info is off. |
 
 ## skills (map value) and vitals
 

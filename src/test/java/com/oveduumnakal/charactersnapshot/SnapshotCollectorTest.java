@@ -668,4 +668,34 @@ public class SnapshotCollectorTest
 
 		assertNull(collector.buildSnapshot().equipment);
 	}
+
+	/**
+	 * With account info off, accountType and members are both null rather than members being false.
+	 */
+	@Test
+	public void accountInfoOffExportsNullMembers()
+	{
+		Client client = loggedInClient("Zezima");
+		CharacterSnapshotConfig config = allEnabled();
+		when(config.syncAccountInfo()).thenReturn(false);
+		SnapshotCollector collector = new SnapshotCollector(client, config);
+
+		PlayerInfo player = collector.buildSnapshot().player;
+
+		assertNull(player.accountType);
+		assertNull(player.members);
+	}
+
+	/**
+	 * With account info on, members reflects the world type.
+	 */
+	@Test
+	public void accountInfoOnExportsMembers()
+	{
+		Client client = loggedInClient("Zezima");
+		when(client.getWorldType()).thenReturn(EnumSet.of(WorldType.MEMBERS));
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		assertEquals(Boolean.TRUE, collector.buildSnapshot().player.members);
+	}
 }

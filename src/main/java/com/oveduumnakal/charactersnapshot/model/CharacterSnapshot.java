@@ -91,17 +91,17 @@ public class CharacterSnapshot
 		/** Account type, e.g. {@code NORMAL}, {@code IRONMAN}, {@code HARDCORE_IRONMAN}. */
 		public String accountType;
 
-		/** Whether the current world is a members' world. */
-		public boolean members;
+		/** Whether the current world is a members' world; {@code null} when account info is not exported. */
+		public Boolean members;
 
 		/**
 		 * @param username    display name
 		 * @param combatLevel combat level
 		 * @param world       current world
 		 * @param accountType account-type name
-		 * @param members     whether on a members' world
+		 * @param members     whether on a members' world, or {@code null} when not exported
 		 */
-		public PlayerInfo(String username, int combatLevel, int world, String accountType, boolean members)
+		public PlayerInfo(String username, int combatLevel, int world, String accountType, Boolean members)
 		{
 			this.username = username;
 			this.combatLevel = combatLevel;
