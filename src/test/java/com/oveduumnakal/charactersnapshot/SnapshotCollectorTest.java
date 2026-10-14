@@ -30,8 +30,10 @@ import net.runelite.api.ItemContainer;
 import net.runelite.api.Player;
 import net.runelite.api.WorldType;
 import net.runelite.api.gameval.DBTableID;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
+import net.runelite.api.widgets.Widget;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -443,6 +445,91 @@ public class SnapshotCollectorTest
 	}
 
 	/**
+	 * Obtained items (opacity 0) are captured per page, merged across pages, and persisted via restore.
+	 */
+	@Test
+	public void collectionLogCapturesObtainedItemsPerPage()
+	{
+		Client client = loggedInClient("Zezima");
+		when(client.getVarpValue(VarPlayerID.COLLECTION_COUNT)).thenReturn(3);
+		when(client.getVarpValue(VarPlayerID.COLLECTION_COUNT_MAX)).thenReturn(1500);
+		ItemComposition whip = named("Abyssal whip");
+		when(client.getItemDefinition(11)).thenReturn(whip);
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		logPage(client, "Abyssal Sire", clogItem(11, 1, 0), clogItem(12, 0, 175));
+		assertTrue(collector.captureCollectionLog());
+		assertTrue(!collector.captureCollectionLog());
+		logPage(client, "Barrows", clogItem(11, 2, 0), clogItem(13, 5, 0));
+		assertTrue(collector.captureCollectionLog());
+
+		CharacterSnapshot snap = collector.buildSnapshot();
+		assertEquals(3, snap.collectionLog.obtained);
+		assertEquals(1500, snap.collectionLog.total);
+		assertEquals(2, snap.collectionLog.items.size());
+		assertEquals("Abyssal whip", snap.collectionLog.items.get(0).name);
+		assertEquals(2, snap.collectionLog.pages.get("Abyssal Sire").total);
+		assertEquals(1, snap.collectionLog.pages.get("Abyssal Sire").obtained);
+		assertNotNull(snap.sectionUpdated.get("collectionLog"));
+
+		SnapshotCollector fresh = new SnapshotCollector(loggedInClient("Zezima"), allEnabled());
+		CharacterSnapshot previous = previous("Zezima", "x");
+		previous.collectionLog = snap.collectionLog;
+		fresh.restore(previous);
+		assertEquals(2, fresh.buildSnapshot().collectionLog.pages.size());
+	}
+
+	/**
+	 * Nothing is captured when the log interface is not open, and no section is exported.
+	 */
+	@Test
+	public void collectionLogNeedsOpenInterface()
+	{
+		Client client = loggedInClient("Zezima");
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		assertTrue(!collector.captureCollectionLog());
+		assertNull(collector.buildSnapshot().collectionLog);
+	}
+
+	/**
+	 * Stubs the open collection log interface with a page title and item widgets.
+	 *
+	 * @param client the mock client
+	 * @param title  the page title
+	 * @param items  the item widgets
+	 */
+	private static void logPage(Client client, String title, Widget... items)
+	{
+		Widget titleWidget = mock(Widget.class);
+		when(titleWidget.getText()).thenReturn(title);
+		Widget header = mock(Widget.class);
+		when(header.getChildren()).thenReturn(new Widget[] {titleWidget});
+		when(header.getChild(0)).thenReturn(titleWidget);
+		Widget content = mock(Widget.class);
+		when(content.getChildren()).thenReturn(items);
+		when(client.getWidget(InterfaceID.Collection.HEADER_TEXT)).thenReturn(header);
+		when(client.getWidget(InterfaceID.Collection.ITEMS_CONTENTS)).thenReturn(content);
+	}
+
+	/**
+	 * Builds a collection log item widget.
+	 *
+	 * @param id       the item id
+	 * @param quantity the shown quantity
+	 * @param opacity  0 when obtained, greater otherwise
+	 * @return the mock widget
+	 */
+	private static Widget clogItem(int id, int quantity, int opacity)
+	{
+		Widget w = mock(Widget.class);
+		when(w.getItemId()).thenReturn(id);
+		when(w.getItemQuantity()).thenReturn(quantity);
+		when(w.getOpacity()).thenReturn(opacity);
+		return w;
+	}
+
+	/**
 	 * A regular slayer task resolves its creature name from the slayer task table.
 	 */
 	@Test
@@ -546,6 +633,7 @@ public class SnapshotCollectorTest
 		when(config.syncLocation()).thenReturn(true);
 		when(config.syncAccountInfo()).thenReturn(true);
 		when(config.syncGrandExchange()).thenReturn(true);
+		when(config.syncCollectionLog()).thenReturn(true);
 		return config;
 	}
 

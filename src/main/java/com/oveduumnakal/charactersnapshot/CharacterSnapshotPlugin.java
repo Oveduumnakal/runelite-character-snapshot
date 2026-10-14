@@ -18,10 +18,12 @@ import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.Player;
+import net.runelite.api.ScriptID;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.GrandExchangeOfferChanged;
 import net.runelite.api.events.ItemContainerChanged;
+import net.runelite.api.events.ScriptPostFired;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.client.RuneLite;
@@ -190,6 +192,22 @@ public class CharacterSnapshotPlugin extends Plugin
 			collector.updateEquipment(event.getItemContainer());
 			dirty = true;
 		}
+	}
+
+	/**
+	 * Captures the collection log page whenever the log redraws its item list.
+	 *
+	 * @param event the script-post-fired event
+	 */
+	@Subscribe
+	public void onScriptPostFired(ScriptPostFired event)
+	{
+		if (event.getScriptId() != ScriptID.COLLECTION_DRAW_LIST || collector == null
+				|| !config.syncCollectionLog())
+			return;
+
+		if (collector.captureCollectionLog())
+			dirty = true;
 	}
 
 	/**

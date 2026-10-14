@@ -251,4 +251,19 @@ public interface CharacterSnapshotConfig extends Config
 	{
 		return true;
 	}
+
+	/**
+	 * @return whether to include the collection log
+	 */
+	@ConfigItem(
+		keyName = "syncCollectionLog",
+		name = "Collection log",
+		description = "Include the collection log, captured as pages are viewed in the log interface",
+		section = dataSection,
+		position = 12
+	)
+	default boolean syncCollectionLog()
+	{
+		return true;
+	}
 }
