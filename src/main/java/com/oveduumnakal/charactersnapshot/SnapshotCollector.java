@@ -19,6 +19,7 @@ import java.util.TreeMap;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankTab;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BlockedTask;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementTask;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion;
@@ -35,6 +36,7 @@ import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.VitalsData;
 
 import net.runelite.api.Client;
 import net.runelite.api.EnumComposition;
+import net.runelite.api.EnumID;
 import net.runelite.api.EquipmentInventorySlot;
 import net.runelite.api.GrandExchangeOffer;
 import net.runelite.api.GrandExchangeOfferState;
@@ -51,6 +53,8 @@ import net.runelite.api.Varbits;
 import net.runelite.api.WorldType;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.gameval.DBTableID;
+import net.runelite.api.gameval.InventoryID;
+import net.runelite.api.gameval.ItemID;
 import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.api.vars.AccountType;
@@ -76,6 +80,9 @@ public class SnapshotCollector
 
 	/** Cache enums listing the task struct ids per tier, easy to grandmaster. Not in the RuneLite API. */
 	private static final int[] CA_TIER_ENUMS = {3981, 3982, 3983, 3984, 3985, 3986};
+
+	/** Most reloads attempted after a partial metadata load, so a permanently missing struct is not re-read forever. */
+	private static final int CA_META_MAX_RETRIES = 10;
 
 	private static final String[] CA_TIER_NAMES = {"EASY", "MEDIUM", "HARD", "ELITE", "MASTER", "GRANDMASTER"};
 
@@ -112,8 +119,21 @@ public class SnapshotCollector
 		VarbitID.BANK_TAB_9
 	};
 
-	/** Spellbook varbit values 0 to 3, in order; any other value is reported as unknown. */
-	private static final String[] SPELLBOOK_NAMES = {"STANDARD", "ANCIENT", "LUNAR", "ARCEUUS"};
+	private static final int[] RUNE_POUCH_TYPE_VARBITS = {
+		VarbitID.RUNE_POUCH_TYPE_1, VarbitID.RUNE_POUCH_TYPE_2, VarbitID.RUNE_POUCH_TYPE_3,
+		VarbitID.RUNE_POUCH_TYPE_4, VarbitID.RUNE_POUCH_TYPE_5, VarbitID.RUNE_POUCH_TYPE_6
+	};
+
+	private static final int[] RUNE_POUCH_QUANTITY_VARBITS = {
+		VarbitID.RUNE_POUCH_QUANTITY_1, VarbitID.RUNE_POUCH_QUANTITY_2, VarbitID.RUNE_POUCH_QUANTITY_3,
+		VarbitID.RUNE_POUCH_QUANTITY_4, VarbitID.RUNE_POUCH_QUANTITY_5, VarbitID.RUNE_POUCH_QUANTITY_6
+	};
+
+	/** Every rune pouch variant; the contents varbits are shared by all of them. */
+	private static final int[] RUNE_POUCH_ITEMS = {
+		ItemID.BH_RUNE_POUCH, ItemID.BH_RUNE_POUCH_TROUVER,
+		ItemID.DIVINE_RUNE_POUCH, ItemID.DIVINE_RUNE_POUCH_TROUVER
+	};
 
 	private final Client client;
 
@@ -154,9 +174,15 @@ public class SnapshotCollector
 	/** Cached task metadata by task id (completed flag unset); empty until resolved from the cache. */
 	private Map<Integer, CombatAchievementTask> caTaskMeta = new TreeMap<>();
 
+	/** Whether the last metadata load skipped a tier enum or task struct the cache did not return. */
+	private boolean caMetaPartial = false;
+
+	/** How many times a partial metadata load has been retried. */
+	private int caMetaRetries = 0;
+
 	private SlayerData slayer = null;
 
-	private String spellbook = null;
+	private List<ItemEntry> runePouch = null;
 
 	/**
 	 * @param client the RuneLite client
@@ -177,6 +203,8 @@ public class SnapshotCollector
 		skills.clear();
 		geOffers.clear();
 		equipment.clear();
+		storages.clear();
+		storageUpdated.clear();
 		bankItems = null;
 		bankTabs = null;
 		bankTotal = 0;
@@ -189,6 +217,7 @@ public class SnapshotCollector
 		diaries = null;
 		combatAchievements = null;
 		slayer = null;
+		runePouch = null;
 		spellbook = null;
 	}
 
@@ -202,7 +231,35 @@ public class SnapshotCollector
 	 */
 	public void updateSkill(Skill skill, int level, int xp, int boostedLevel)
 	{
+		if ("OVERALL".equals(skill.name()))
+			return;
+
 		skills.put(skill.name(), new SkillEntry(level, xp, boostedLevel));
+		refreshOverall();
+	}
+
+	/**
+	 * Recomputes the {@code OVERALL} entry from the cached skills. Does nothing until every real skill is
+	 * cached, so a partial total is never exported.
+	 */
+	private void refreshOverall()
+	{
+		int totalLevel = 0;
+		long totalXp = 0;
+		for (Skill skill : Skill.values())
+		{
+			if ("OVERALL".equals(skill.name()))
+				continue;
+
+			SkillEntry entry = skills.get(skill.name());
+			if (entry == null)
+				return;
+
+			totalLevel += entry.level;
+			totalXp += entry.xp;
+		}
+
+		skills.put("OVERALL", new SkillEntry(totalLevel, totalXp, totalLevel));
 	}
 
 	/**
@@ -358,7 +415,7 @@ public class SnapshotCollector
 	}
 
 	/**
-	 * Seeds the bank, inventory, and equipment caches from this character's previous export, so a
+	 * Seeds the bank, inventory, equipment, and storage caches from this character's previous export, so a
 	 * section not yet re-captured this session keeps its last known contents instead of vanishing. Only
 	 * sections not captured since the last {@link #reset()} are filled, so live data is never replaced,
 	 * and each restored section keeps its original capture time. A snapshot belonging to a different
@@ -402,6 +459,84 @@ public class SnapshotCollector
 			equipment = new LinkedHashMap<>(previous.equipment);
 			equipmentUpdated = equipmentTime;
 		}
+
+		if (previous.storages != null)
+		{
+			for (String key : STORAGE_KEYS.values())
+			{
+				List<ItemEntry> old = previous.storages.get(key);
+				Instant time = sectionTime(times, "storages." + key, fallback);
+				if (!storageUpdated.containsKey(key) && old != null && time != null)
+				{
+					storages.put(key, new ArrayList<>(old));
+					storageUpdated.put(key, time);
+				}
+			}
+		}
+	}
+
+	/**
+	 * Polls the rune pouch contents. The pouch is present only while the inventory holds one of its variants
+	 * (the same check RuneLite's rune pouch plugin makes); otherwise the cached contents are cleared. Each
+	 * of the six slots pairs a rune-type varbit with a quantity varbit, and the rune type maps to an item id
+	 * through the {@link EnumID#RUNEPOUCH_RUNE} cache enum. Empty slots and unresolvable runes are skipped.
+	 *
+	 * @return whether the pouch contents (or its presence) changed since the last poll
+	 */
+	public boolean pollRunePouch()
+	{
+		List<ItemEntry> contents = hasRunePouch() ? readRunePouch() : null;
+		boolean changed = !Objects.equals(contents, runePouch);
+		runePouch = contents;
+		return changed;
+	}
+
+	/**
+	 * @return whether the live inventory holds any rune pouch variant
+	 */
+	private boolean hasRunePouch()
+	{
+		ItemContainer inv = client.getItemContainer(InventoryID.INV);
+		if (inv == null)
+			return false;
+
+		for (Item item : inv.getItems())
+		{
+			for (int pouch : RUNE_POUCH_ITEMS)
+			{
+				if (item.getId() == pouch)
+					return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Reads the rune pouch slots from the client varbits.
+	 *
+	 * @return the runes held, possibly empty
+	 */
+	private List<ItemEntry> readRunePouch()
+	{
+		List<ItemEntry> runes = new ArrayList<>();
+		EnumComposition runeEnum = client.getEnum(EnumID.RUNEPOUCH_RUNE);
+		if (runeEnum == null)
+			return runes;
+
+		for (int slot = 0; slot < RUNE_POUCH_TYPE_VARBITS.length; slot++)
+		{
+			int type = client.getVarbitValue(RUNE_POUCH_TYPE_VARBITS[slot]);
+			int amount = client.getVarbitValue(RUNE_POUCH_QUANTITY_VARBITS[slot]);
+			if (type <= 0 || amount <= 0)
+				continue;
+
+			int itemId = runeEnum.getIntValue(type);
+			if (itemId > 0)
+				runes.add(new ItemEntry(itemId, getItemName(itemId), amount));
+		}
+
+		return runes;
 	}
 
 	/**
@@ -500,7 +635,8 @@ public class SnapshotCollector
 			client.getVarbitValue(Varbits.COMBAT_ACHIEVEMENT_TIER_ELITE),
 			client.getVarbitValue(Varbits.COMBAT_ACHIEVEMENT_TIER_MASTER),
 			client.getVarbitValue(Varbits.COMBAT_ACHIEVEMENT_TIER_GRANDMASTER),
-			buildCombatAchievementTasks());
+			buildCombatAchievementTasks(),
+			client.getVarbitValue(VarbitID.CA_POINTS));
 		boolean changed = !ca.equals(combatAchievements);
 		combatAchievements = ca;
 		return changed;
@@ -514,8 +650,7 @@ public class SnapshotCollector
 	 */
 	private List<CombatAchievementTask> buildCombatAchievementTasks()
 	{
-		if (caTaskMeta.isEmpty())
-			caTaskMeta = loadCombatAchievementMeta();
+		reloadCombatAchievementMetaIfNeeded();
 
 		Map<Integer, CombatAchievementTask> byId = new TreeMap<>();
 		for (CombatAchievementTask meta : caTaskMeta.values())
@@ -540,14 +675,35 @@ public class SnapshotCollector
 	}
 
 	/**
+	 * Loads the task metadata when none is cached, and retries (at most {@link #CA_META_MAX_RETRIES} times)
+	 * while the last load was partial, i.e. some tier enum or task struct was not returned by the cache.
+	 * A retry never replaces the cached metadata with a smaller set.
+	 */
+	private void reloadCombatAchievementMetaIfNeeded()
+	{
+		boolean empty = caTaskMeta.isEmpty();
+		if (!empty && (!caMetaPartial || caMetaRetries >= CA_META_MAX_RETRIES))
+			return;
+
+		if (!empty)
+			caMetaRetries++;
+
+		Map<Integer, CombatAchievementTask> loaded = loadCombatAchievementMeta();
+		if (loaded.size() >= caTaskMeta.size())
+			caTaskMeta = loaded;
+	}
+
+	/**
 	 * Reads task names, tiers, and monsters from the game cache: each tier enum lists task structs,
 	 * and each struct carries the task id, name, and monster category as params.
 	 *
-	 * @return the metadata by task id, or empty if the cache is not readable yet
+	 * @return the metadata by task id, or empty if the cache is not readable yet; also sets
+	 *         {@link #caMetaPartial}
 	 */
 	private Map<Integer, CombatAchievementTask> loadCombatAchievementMeta()
 	{
 		Map<Integer, CombatAchievementTask> out = new TreeMap<>();
+		boolean partial = false;
 		EnumComposition monsterEnum = client.getEnum(CA_MONSTER_ENUM);
 		Map<Integer, String> monsters = new LinkedHashMap<>();
 		if (monsterEnum != null && monsterEnum.getKeys() != null && monsterEnum.getStringVals() != null)
@@ -562,17 +718,26 @@ public class SnapshotCollector
 		{
 			EnumComposition tierEnum = client.getEnum(CA_TIER_ENUMS[t]);
 			if (tierEnum == null || tierEnum.getIntVals() == null)
+			{
+				partial = true;
 				continue;
+			}
 
 			for (int structId : tierEnum.getIntVals())
 			{
 				StructComposition struct = client.getStructComposition(structId);
 				if (struct == null)
+				{
+					partial = true;
 					continue;
+				}
 
 				String name = struct.getStringValue(CA_PARAM_NAME);
 				if (name == null || name.isEmpty() || "null".equals(name))
+				{
+					partial = true;
 					continue;
+				}
 
 				int id = struct.getIntValue(CA_PARAM_ID);
 				String monster = monsters.get(struct.getIntValue(CA_PARAM_MONSTER));
@@ -580,51 +745,42 @@ public class SnapshotCollector
 			}
 		}
 
+		caMetaPartial = partial;
 		return out;
 	}
 
 	/**
-	 * Polls the current slayer task, clearing it when no task is assigned.
+	 * Polls the slayer state. Points and streak are always exported; the task fields are null/0 when no task is
+	 * assigned.
 	 *
-	 * @return whether the slayer task changed since the last poll
+	 * @return whether the slayer state changed since the last poll
 	 */
 	@SuppressWarnings("deprecation")
 	public boolean pollSlayer()
 	{
-		int amount = client.getVarpValue(VarPlayerID.SLAYER_COUNT);
-		SlayerData task = null;
+		int amount = Math.max(0, client.getVarpValue(VarPlayerID.SLAYER_COUNT));
+		int creatureId = 0;
+		String creatureName = null;
+		String bossName = null;
 		if (amount > 0)
 		{
-			int creatureId = client.getVarpValue(VarPlayerID.SLAYER_TARGET);
-			String bossName = null;
+			creatureId = client.getVarpValue(VarPlayerID.SLAYER_TARGET);
+			creatureName = resolveTaskName(creatureId);
 			if (creatureId == SLAYER_BOSS_TASK_ID)
 				bossName = resolveBossName(client.getVarbitValue(VarbitID.SLAYER_TARGET_BOSSID));
-
-			task = new SlayerData(
-				creatureId,
-				resolveTaskName(creatureId),
-				bossName,
-				amount,
-				client.getVarbitValue(Varbits.SLAYER_POINTS),
-				client.getVarbitValue(Varbits.SLAYER_TASK_STREAK));
 		}
+
+		SlayerData task = new SlayerData(
+			creatureId,
+			creatureName,
+			bossName,
+			amount,
+			client.getVarbitValue(Varbits.SLAYER_POINTS),
+			client.getVarbitValue(Varbits.SLAYER_TASK_STREAK));
+		readSlayerDetails(task);
 
 		boolean changed = !Objects.equals(task, slayer);
 		slayer = task;
-		return changed;
-	}
-
-	/**
-	 * Polls the active spellbook from the spellbook varbit (0 standard, 1 ancient, 2 lunar, 3 arceuus).
-	 *
-	 * @return whether the spellbook changed since the last poll
-	 */
-	public boolean pollSpellbook()
-	{
-		int value = client.getVarbitValue(VarbitID.SPELLBOOK);
-		String book = value >= 0 && value < SPELLBOOK_NAMES.length ? SPELLBOOK_NAMES[value] : null;
-		boolean changed = !Objects.equals(book, spellbook);
-		spellbook = book;
 		return changed;
 	}
 
@@ -747,7 +903,7 @@ public class SnapshotCollector
 		data.lastUpdated = Instant.now().toString();
 
 		String accountType = null;
-		boolean members = false;
+		Boolean members = null;
 		String book = null;
 		if (config.syncAccountInfo())
 		{
@@ -777,10 +933,20 @@ public class SnapshotCollector
 		if (config.syncInventory())
 			data.inventory = new ArrayList<>(inventory);
 
-		if (config.syncEquipment() && !equipment.isEmpty())
+		if (config.syncEquipment() && equipmentUpdated != null)
 			data.equipment = new LinkedHashMap<>(equipment);
 
+		if (config.syncStorages() && !storages.isEmpty())
+		{
+			data.storages = new LinkedHashMap<>();
+			for (Map.Entry<String, List<ItemEntry>> entry : storages.entrySet())
+				data.storages.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+		}
+
 		data.sectionUpdated = buildSectionUpdated(data);
+
+		if (config.syncRunePouch() && runePouch != null)
+			data.runePouch = new ArrayList<>(runePouch);
 
 		if (config.syncQuests() && quests != null)
 		{
@@ -823,6 +989,16 @@ public class SnapshotCollector
 
 		if (data.equipment != null && equipmentUpdated != null)
 			times.put("equipment", equipmentUpdated.toString());
+
+		if (data.storages != null)
+		{
+			for (String key : data.storages.keySet())
+			{
+				Instant time = storageUpdated.get(key);
+				if (time != null)
+					times.put("storages." + key, time.toString());
+			}
+		}
 
 		return times.isEmpty() ? null : times;
 	}
@@ -988,5 +1164,148 @@ public class SnapshotCollector
 	{
 		ItemComposition def = client.getItemDefinition(itemId);
 		return def != null ? def.getName() : null;
+	}
+
+	/**
+	 * Fills in the slayer master, blocked tasks and reward unlocks of a task.
+	 *
+	 * @param task the slayer data to complete
+	 */
+	private void readSlayerDetails(SlayerData task)
+	{
+		int masterId = client.getVarbitValue(VarbitID.SLAYER_MASTER);
+		task.masterId = masterId;
+		task.masterName = SlayerInfo.masterName(masterId);
+		task.blockedTasks = readBlockedTasks();
+		task.unlockedTasks = readFlags(SlayerInfo.UNLOCK_VARBITS);
+		task.extendedTasks = readFlags(SlayerInfo.EXTEND_VARBITS);
+	}
+
+	/**
+	 * Reads every master's blocked task slots, falling back to the legacy shared block list when no
+	 * per-master slot is filled.
+	 *
+	 * @return the blocked tasks, never null
+	 */
+	private List<BlockedTask> readBlockedTasks()
+	{
+		List<BlockedTask> blocked = new ArrayList<>();
+		for (Map.Entry<String, int[]> entry : SlayerInfo.blockVarbits().entrySet())
+		{
+			for (int varbit : entry.getValue())
+			{
+				int taskId = client.getVarbitValue(varbit);
+				if (taskId > 0)
+					blocked.add(new BlockedTask(taskId, resolveTaskName(taskId), entry.getKey()));
+			}
+		}
+
+		if (!blocked.isEmpty())
+			return blocked;
+
+		for (int varbit : SlayerInfo.LEGACY_BLOCK_VARBITS)
+		{
+			int taskId = client.getVarbitValue(varbit);
+			if (taskId > 0)
+				blocked.add(new BlockedTask(taskId, resolveTaskName(taskId), null));
+		}
+
+		return blocked;
+	}
+
+	/**
+	 * Lists the keys whose varbit is non-zero.
+	 *
+	 * @param varbits key to varbit id
+	 * @return the keys of the set flags, in table order
+	 */
+	private List<String> readFlags(Map<String, Integer> varbits)
+	{
+		List<String> keys = new ArrayList<>();
+		for (Map.Entry<String, Integer> entry : varbits.entrySet())
+		{
+			if (client.getVarbitValue(entry.getValue()) != 0)
+				keys.add(entry.getKey());
+		}
+
+		return keys;
+	}
+
+	/**
+	 * Storage containers captured when opened, keyed by container id to export key. The group storage id is the
+	 * one the legacy {@code InventoryID.GROUP_STORAGE} constant held; the current API names it
+	 * {@code INV_GROUP_TEMP}.
+	 */
+	private static final Map<Integer, String> STORAGE_KEYS = new LinkedHashMap<>();
+
+	static
+	{
+		STORAGE_KEYS.put(InventoryID.LOOTING_BAG, "lootingBag");
+		STORAGE_KEYS.put(InventoryID.SEED_VAULT, "seedVault");
+		STORAGE_KEYS.put(InventoryID.INV_GROUP_TEMP, "groupStorage");
+	}
+
+	private final Map<String, List<ItemEntry>> storages = new LinkedHashMap<>();
+
+	private final Map<String, Instant> storageUpdated = new HashMap<>();
+
+	/**
+	 * Resolves the export key of a storage container.
+	 *
+	 * @param containerId the item container id
+	 * @return {@code lootingBag}, {@code seedVault} or {@code groupStorage}, or {@code null} for any other container
+	 */
+	public static String storageKey(int containerId)
+	{
+		return STORAGE_KEYS.get(containerId);
+	}
+
+	/**
+	 * @return the item container ids of every captured storage, in export order
+	 */
+	public static Iterable<Integer> storageContainerIds()
+	{
+		return STORAGE_KEYS.keySet();
+	}
+
+	/**
+	 * Replaces the cached contents of one storage container, dropping empty slots and placeholders.
+	 *
+	 * @param key       the storage export key, see {@link #storageKey(int)}
+	 * @param container the storage item container
+	 */
+	public void updateStorage(String key, ItemContainer container)
+	{
+		if (key == null || container == null)
+			return;
+
+		List<ItemEntry> items = new ArrayList<>();
+		for (Item item : container.getItems())
+		{
+			if (item.getId() > 0 && item.getQuantity() > 0)
+				items.add(new ItemEntry(item.getId(), getItemName(item.getId()), item.getQuantity()));
+		}
+
+		storages.put(key, items);
+		storageUpdated.put(key, Instant.now());
+	}
+
+	/** Spellbook varbit values 0 to 3, in order; any other value is reported as unknown. */
+	private static final String[] SPELLBOOK_NAMES = {"STANDARD", "ANCIENT", "LUNAR", "ARCEUUS"};
+
+	private String spellbook = null;
+
+	/**
+	 * Polls the active spellbook from the spellbook varbit (0 standard, 1 ancient, 2 lunar, 3 arceuus).
+	 *
+	 * @return whether the spellbook changed since the last poll
+	 */
+	public boolean pollSpellbook()
+	{
+		int value = client.getVarbitValue(VarbitID.SPELLBOOK);
+		String book = value >= 0 && value < SPELLBOOK_NAMES.length ? SPELLBOOK_NAMES[value] : null;
+		boolean changed = !Objects.equals(book, spellbook);
+		spellbook = book;
+		return changed;
 	}
 }

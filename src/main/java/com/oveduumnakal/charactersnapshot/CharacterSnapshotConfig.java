@@ -251,4 +251,35 @@ public interface CharacterSnapshotConfig extends Config
 	{
 		return true;
 	}
+
+	/**
+	 * @return whether to include the rune pouch contents
+	 */
+	@ConfigItem(
+		keyName = "syncRunePouch",
+		name = "Rune pouch",
+		description = "Include the runes held in your rune pouch (only while you carry one)",
+		section = dataSection,
+		position = 12
+	)
+	default boolean syncRunePouch()
+	{
+		return true;
+	}
+
+	/**
+	 * @return whether to include looting bag, seed vault and group storage contents
+	 */
+	@ConfigItem(
+		keyName = "syncStorages",
+		name = "Storage containers",
+		description = "Include the last known contents of the looting bag, seed vault and group storage "
+			+ "(captured when opened)",
+		section = dataSection,
+		position = 13
+	)
+	default boolean syncStorages()
+	{
+		return true;
+	}
 }

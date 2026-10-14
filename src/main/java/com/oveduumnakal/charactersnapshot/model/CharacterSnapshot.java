@@ -7,6 +7,7 @@ package com.oveduumnakal.charactersnapshot.model;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -53,6 +54,12 @@ public class CharacterSnapshot
 	/** Worn equipment keyed by slot name. */
 	public Map<String, ItemEntry> equipment;
 
+	/**
+	 * Runes held in the rune pouch, present only while the inventory holds a rune pouch (any variant).
+	 * Empty when the pouch holds nothing.
+	 */
+	public List<ItemEntry> runePouch;
+
 	/** Quest completion state, one entry per quest. */
 	public List<QuestEntry> quests;
 
@@ -65,7 +72,7 @@ public class CharacterSnapshot
 	/** Combat-achievement tier progress. */
 	public CombatAchievementData combatAchievements;
 
-	/** Current slayer task, or {@code null} when no task is assigned. */
+	/** Slayer state; points and streak always set once polled, task fields null/0 when no task. */
 	public SlayerData slayer;
 
 	/** Current world location of the character. */
@@ -91,8 +98,8 @@ public class CharacterSnapshot
 		/** Account type, e.g. {@code NORMAL}, {@code IRONMAN}, {@code HARDCORE_IRONMAN}. */
 		public String accountType;
 
-		/** Whether the current world is a members' world. */
-		public boolean members;
+		/** Whether the current world is a members' world; {@code null} when account info is not exported. */
+		public Boolean members;
 
 		/** Active spellbook: {@code STANDARD}, {@code ANCIENT}, {@code LUNAR} or {@code ARCEUUS}; null if unknown. */
 		public String spellbook;
@@ -102,9 +109,9 @@ public class CharacterSnapshot
 		 * @param combatLevel combat level
 		 * @param world       current world
 		 * @param accountType account-type name
-		 * @param members     whether on a members' world
+		 * @param members     whether on a members' world, or {@code null} when not exported
 		 */
-		public PlayerInfo(String username, int combatLevel, int world, String accountType, boolean members)
+		public PlayerInfo(String username, int combatLevel, int world, String accountType, Boolean members)
 		{
 			this.username = username;
 			this.combatLevel = combatLevel;
@@ -121,7 +128,7 @@ public class CharacterSnapshot
 		 * @param members     whether on a members' world
 		 * @param spellbook   active spellbook name, may be {@code null}
 		 */
-		public PlayerInfo(String username, int combatLevel, int world, String accountType, boolean members,
+		public PlayerInfo(String username, int combatLevel, int world, String accountType, Boolean members,
 			String spellbook)
 		{
 			this(username, combatLevel, world, accountType, members);
@@ -197,6 +204,7 @@ public class CharacterSnapshot
 	/**
 	 * One stack of items: id, resolved name, and quantity.
 	 */
+	@EqualsAndHashCode
 	public static class ItemEntry
 	{
 		/** Item id. */
@@ -224,6 +232,7 @@ public class CharacterSnapshot
 	/**
 	 * An inventory item, carrying its slot index in addition to the item stack.
 	 */
+	@EqualsAndHashCode(callSuper = true)
 	public static class InventoryItem extends ItemEntry
 	{
 		/** Zero-based inventory slot. */
@@ -461,6 +470,18 @@ public class CharacterSnapshot
 		public List<CombatAchievementTask> tasks;
 
 		/**
+		 * Total combat-achievement points. Read from the game's points varbit when it is non-zero; otherwise
+		 * the sum of completed task points, or null when a completed task's tier is unresolved.
+		 */
+		public Integer points;
+
+		/**
+		 * Completed and total task counts per tier, keyed {@code EASY} to {@code GRANDMASTER}. Null when no
+		 * task tier could be resolved from the game cache.
+		 */
+		public Map<String, TierCount> tierCounts;
+
+		/**
 		 * @param tierEasy        easy varbit value
 		 * @param tierMedium      medium varbit value
 		 * @param tierHard        hard varbit value
@@ -497,6 +518,23 @@ public class CharacterSnapshot
 		public CombatAchievementData(int tierEasy, int tierMedium, int tierHard, int tierElite,
 			int tierMaster, int tierGrandmaster, List<CombatAchievementTask> tasks)
 		{
+			this(tierEasy, tierMedium, tierHard, tierElite, tierMaster, tierGrandmaster, tasks, 0);
+		}
+
+		/**
+		 * @param tierEasy        easy varbit value
+		 * @param tierMedium      medium varbit value
+		 * @param tierHard        hard varbit value
+		 * @param tierElite       elite varbit value
+		 * @param tierMaster      master varbit value
+		 * @param tierGrandmaster grandmaster varbit value
+		 * @param tasks           per-task detail; {@code completedTasks}, {@code tierCounts} and the fallback
+		 *                        {@code points} are derived from it
+		 * @param pointsVarbit    the game's combat-achievement points varbit; used when non-zero
+		 */
+		public CombatAchievementData(int tierEasy, int tierMedium, int tierHard, int tierElite,
+			int tierMaster, int tierGrandmaster, List<CombatAchievementTask> tasks, int pointsVarbit)
+		{
 			this(tierEasy, tierMedium, tierHard, tierElite, tierMaster, tierGrandmaster);
 			this.tasks = tasks;
 			List<String> names = new ArrayList<>();
@@ -505,6 +543,111 @@ public class CharacterSnapshot
 					names.add(t.name);
 
 			this.completedTasks = names;
+			this.tierCounts = countTiers(tasks);
+			this.points = pointsVarbit > 0 ? Integer.valueOf(pointsVarbit) : computePoints(tasks);
+		}
+
+		/**
+		 * Points one completed task of the given tier is worth: easy 1, medium 2, hard 3, elite 4, master 5,
+		 * grandmaster 6. Source: https://oldschool.runescape.wiki/w/Combat_Achievements (points per task
+		 * table, checked 2026-10-14).
+		 *
+		 * @param tier the tier name, {@code EASY} to {@code GRANDMASTER}
+		 * @return the points, or 0 for an unknown tier
+		 */
+		static int pointsPerTask(String tier)
+		{
+			switch (tier)
+			{
+				case "EASY":
+					return 1;
+				case "MEDIUM":
+					return 2;
+				case "HARD":
+					return 3;
+				case "ELITE":
+					return 4;
+				case "MASTER":
+					return 5;
+				case "GRANDMASTER":
+					return 6;
+				default:
+					return 0;
+			}
+		}
+
+		/**
+		 * Sums the points of completed tasks.
+		 *
+		 * @param tasks the tasks
+		 * @return the total, or null when a completed task has no resolved tier
+		 */
+		private static Integer computePoints(List<CombatAchievementTask> tasks)
+		{
+			int total = 0;
+			for (CombatAchievementTask t : tasks)
+			{
+				if (!t.completed)
+					continue;
+
+				if (t.tier == null)
+					return null;
+
+				total += pointsPerTask(t.tier);
+			}
+
+			return total;
+		}
+
+		/**
+		 * Counts completed and total tasks per tier, ignoring tasks with no resolved tier.
+		 *
+		 * @param tasks the tasks
+		 * @return the counts for all six tiers in order, or null when no task has a tier
+		 */
+		private static Map<String, TierCount> countTiers(List<CombatAchievementTask> tasks)
+		{
+			Map<String, TierCount> counts = new LinkedHashMap<>();
+			for (String tier : new String[] {"EASY", "MEDIUM", "HARD", "ELITE", "MASTER", "GRANDMASTER"})
+				counts.put(tier, new TierCount(0, 0));
+
+			boolean any = false;
+			for (CombatAchievementTask t : tasks)
+			{
+				TierCount count = t.tier != null ? counts.get(t.tier) : null;
+				if (count == null)
+					continue;
+
+				any = true;
+				count.total++;
+				if (t.completed)
+					count.completed++;
+			}
+
+			return any ? counts : null;
+		}
+	}
+
+	/**
+	 * Completed and total task counts for one combat-achievement tier.
+	 */
+	@EqualsAndHashCode
+	public static class TierCount
+	{
+		/** Number of completed tasks in the tier. */
+		public int completed;
+
+		/** Number of tasks in the tier. */
+		public int total;
+
+		/**
+		 * @param completed completed task count
+		 * @param total     total task count
+		 */
+		public TierCount(int completed, int total)
+		{
+			this.completed = completed;
+			this.total = total;
 		}
 	}
 
@@ -547,7 +690,8 @@ public class CharacterSnapshot
 	}
 
 	/**
-	 * The current slayer task. The creature is exported as its game id plus, when resolvable, its name.
+	 * The slayer state. With no task assigned, the creature id and amount are 0 and the names are null, while
+	 * points and streak stay. The creature is exported as its game id plus, when resolvable, its name.
 	 */
 	@EqualsAndHashCode
 	public static class SlayerData
@@ -570,6 +714,21 @@ public class CharacterSnapshot
 		/** Current task-completion streak. */
 		public int streak;
 
+		/** Id of the current slayer master, 0 when unknown. Null in files written before this field existed. */
+		public Integer masterId;
+
+		/** Name of the current slayer master, or null when unresolved. */
+		public String masterName;
+
+		/** Blocked tasks across all masters, or null in files written before this field existed. */
+		public List<BlockedTask> blockedTasks;
+
+		/** Keys of purchased task-assignment unlocks, or null in files written before this field existed. */
+		public List<String> unlockedTasks;
+
+		/** Keys of tasks whose extension is purchased, or null in files written before this field existed. */
+		public List<String> extendedTasks;
+
 		/**
 		 * @param creatureId   assigned-creature id
 		 * @param creatureName assigned-creature name, or null
@@ -586,6 +745,34 @@ public class CharacterSnapshot
 			this.amount = amount;
 			this.points = points;
 			this.streak = streak;
+		}
+	}
+
+	/**
+	 * One blocked slayer task slot.
+	 */
+	@EqualsAndHashCode
+	public static class BlockedTask
+	{
+		/** Slayer task id (same id space as the slayer creature id). */
+		public int taskId;
+
+		/** Task name, or null when it could not be resolved. */
+		public String name;
+
+		/** Name of the slayer master whose block list holds this task, or null for the legacy shared list. */
+		public String master;
+
+		/**
+		 * @param taskId slayer task id
+		 * @param name   task name, or null
+		 * @param master master name, or null
+		 */
+		public BlockedTask(int taskId, String name, String master)
+		{
+			this.taskId = taskId;
+			this.name = name;
+			this.master = master;
 		}
 	}
 
@@ -674,4 +861,10 @@ public class CharacterSnapshot
 			this.spent = spent;
 		}
 	}
+
+	/**
+	 * Last known contents of storage containers that are only readable when opened, keyed by storage
+	 * ({@code lootingBag}, {@code seedVault}, {@code groupStorage}); a storage never opened is absent.
+	 */
+	public Map<String, List<ItemEntry>> storages;
 }
