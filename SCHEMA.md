@@ -106,7 +106,9 @@ Present only when a task is assigned:
 
 | Field | Type | Notes |
 |---|---|---|
-| `creatureId` | int | Assigned-creature game id; map to a name consumer-side. |
+| `creatureId` | int | Assigned-creature game id (98 is the generic boss task). |
+| `creatureName` | string or null | Assigned-creature name, e.g. `Abyssal demons`. Null when it could not be resolved. |
+| `bossName` | string or null | Specific boss for boss tasks. Null for every other task or when unresolved. |
 | `amount` | int | Remaining kills. |
 | `points` | int | Slayer reward points. |
 | `streak` | int | Task-completion streak. |
