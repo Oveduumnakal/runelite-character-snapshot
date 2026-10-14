@@ -481,7 +481,7 @@ public class SnapshotCollector
 					continue;
 
 				String name = struct.getStringValue(CA_PARAM_NAME);
-				if (name == null || name.isEmpty())
+				if (name == null || name.isEmpty() || "null".equals(name))
 					continue;
 
 				int id = struct.getIntValue(CA_PARAM_ID);
