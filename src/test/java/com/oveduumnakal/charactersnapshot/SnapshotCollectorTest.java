@@ -1085,4 +1085,22 @@ public class SnapshotCollectorTest
 		when(w.getOpacity()).thenReturn(opacity);
 		return w;
 	}
+
+	/**
+	 * Once the local player is gone (login screen), the snapshot still carries the identity from the last
+	 * live build; after a reset there is nothing to write.
+	 */
+	@Test
+	public void snapshotUsesCachedIdentityWhenPlayerIsGone()
+	{
+		Client client = loggedInClient("Zezima");
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+		assertEquals("Zezima", collector.buildSnapshot().player.username);
+
+		when(client.getLocalPlayer()).thenReturn(null);
+		assertEquals("Zezima", collector.buildSnapshot().player.username);
+
+		collector.reset();
+		assertNull(collector.buildSnapshot());
+	}
 }

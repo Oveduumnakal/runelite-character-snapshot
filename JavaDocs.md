@@ -1022,6 +1022,8 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private final Map<Integer,GeOffer>` | `geOffers` |  |
 | `private List<InventoryItem>` | `inventory` |  |
 | `private Instant` | `inventoryUpdated` |  |
+| `private LocationData` | `lastLocation` | Location captured by the last snapshot built with a live local player; cleared by `#reset()`. |
+| `private PlayerInfo` | `lastPlayer` | Identity captured by the last snapshot built with a live local player; cleared by `#reset()`. |
 | `private Integer` | `questPoints` |  |
 | `private List<QuestEntry>` | `quests` |  |
 | `private List<ItemEntry>` | `runePouch` |  |
@@ -1068,6 +1070,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollSpellbook()` | Polls the active spellbook from the spellbook varbit (0 standard, 1 ancient, 2 lunar, 3 arceuus). |
 | `private List<BlockedTask>` | `readBlockedTasks()` | Reads every master's blocked task slots, falling back to the legacy shared block list when no per-master slot is filled. |
 | `private List<String>` | `readFlags(Map<String,Integer> varbits)` | Lists the keys whose varbit is non-zero. |
+| `private PlayerInfo` | `readPlayerInfo(Player localPlayer)` | Reads the live player's identity and account context. |
 | `private List<ItemEntry>` | `readRunePouch()` | Reads the rune pouch slots from the client varbits. |
 | `private void` | `readSlayerDetails(SlayerData task)` | Fills in the slayer master, blocked tasks and reward unlocks of a task. |
 | `private String` | `readTaskRowName(int row)` | Reads the display name column of one slayer task table row. |
@@ -1274,6 +1277,18 @@ Cached task metadata by task id (completed flag unset); empty until resolved fro
 
 `private Instant inventoryUpdated`
 
+#### lastLocation
+
+`private LocationData lastLocation`
+
+Location captured by the last snapshot built with a live local player; cleared by `#reset()`.
+
+#### lastPlayer
+
+`private PlayerInfo lastPlayer`
+
+Identity captured by the last snapshot built with a live local player; cleared by `#reset()`.
+
 #### questPoints
 
 `private Integer questPoints`
@@ -1366,9 +1381,11 @@ Collects the capture time of each item section present in the snapshot.
 `public CharacterSnapshot buildSnapshot()`
 
 Assembles the export snapshot from the caches and cheap client reads, honouring the config
-toggles. Owned collections are copied so the writer thread reads a stable graph.
+toggles. Owned collections are copied so the writer thread reads a stable graph. The local
+player may already be gone when the client reaches the login screen, so identity and location
+are remembered from the last live build and used for the final write of a session.
 
-- **Returns:** the snapshot, or `null` when no character is logged in
+- **Returns:** the snapshot, or `null` when no character is logged in and none was seen this session
 
 #### buildVitals
 
@@ -1553,6 +1570,15 @@ Lists the keys whose varbit is non-zero.
 
 - **Parameter** `varbits` — key to varbit id
 - **Returns:** the keys of the set flags, in table order
+
+#### readPlayerInfo
+
+`private PlayerInfo readPlayerInfo(Player localPlayer)`
+
+Reads the live player's identity and account context.
+
+- **Parameter** `localPlayer` — the local player
+- **Returns:** the player info
 
 #### readRunePouch
 
