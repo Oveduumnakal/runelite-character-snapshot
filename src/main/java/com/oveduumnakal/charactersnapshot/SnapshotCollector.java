@@ -39,6 +39,7 @@ import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.LocationData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.MiscellaniaData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.PlayerInfo;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.QuestEntry;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SailingData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SkillEntry;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SlayerData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.TimersData;
@@ -286,6 +287,7 @@ public class SnapshotCollector
 		toolLeprechaun = null;
 		transport = null;
 		house = null;
+		sailing = null;
 	}
 
 	/**
@@ -1254,6 +1256,12 @@ public class SnapshotCollector
 				new ArrayList<>(house.nexusTeleports));
 		}
 
+		if (config.syncSailing() && sailing != null)
+		{
+			data.sailing = new SailingData(new ArrayList<>(sailing.boats), new ArrayList<>(sailing.crew),
+				sailing.chartingTasksCompleted, sailing.chartingEntries, new ArrayList<>(sailing.barracudaTrials));
+		}
+
 		return data;
 	}
 
@@ -2010,6 +2018,21 @@ public class SnapshotCollector
 		HouseData fresh = House.read(client);
 		boolean changed = !Objects.equals(fresh, house);
 		house = fresh;
+		return changed;
+	}
+
+	private SailingData sailing = null;
+
+	/**
+	 * Polls the Sailing state.
+	 *
+	 * @return whether it changed since the last poll
+	 */
+	public boolean pollSailing()
+	{
+		SailingData fresh = Sailing.read(client);
+		boolean changed = !fresh.equals(sailing);
+		sailing = fresh;
 		return changed;
 	}
 }

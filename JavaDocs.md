@@ -22,6 +22,7 @@
 - [com.oveduumnakal.charactersnapshot.KillCountVarps](#comoveduumnakalcharactersnapshotkillcountvarps)
 - [com.oveduumnakal.charactersnapshot.MinigamePoints](#comoveduumnakalcharactersnapshotminigamepoints)
 - [com.oveduumnakal.charactersnapshot.PrayerMagic](#comoveduumnakalcharactersnapshotprayermagic)
+- [com.oveduumnakal.charactersnapshot.Sailing](#comoveduumnakalcharactersnapshotsailing)
 - [com.oveduumnakal.charactersnapshot.SkillingStorage](#comoveduumnakalcharactersnapshotskillingstorage)
 - [com.oveduumnakal.charactersnapshot.SlayerInfo](#comoveduumnakalcharactersnapshotslayerinfo)
 - [com.oveduumnakal.charactersnapshot.SnapshotCollector](#comoveduumnakalcharactersnapshotsnapshotcollector)
@@ -32,6 +33,7 @@
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankTab](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbanktab)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BirdhouseTimer](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbirdhousetimer)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BlockedTask](#comoveduumnakalcharactersnapshotmodelcharactersnapshotblockedtask)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BoatData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotboatdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CollectionLogData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CollectionLogPage](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogpage)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementdata)
@@ -48,6 +50,7 @@
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.MiscellaniaData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotmiscellaniadata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.PlayerInfo](#comoveduumnakalcharactersnapshotmodelcharactersnapshotplayerinfo)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.QuestEntry](#comoveduumnakalcharactersnapshotmodelcharactersnapshotquestentry)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SailingData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotsailingdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SkillEntry](#comoveduumnakalcharactersnapshotmodelcharactersnapshotskillentry)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SlayerData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotslayerdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.TierCount](#comoveduumnakalcharactersnapshotmodelcharactersnapshottiercount)
@@ -96,6 +99,7 @@ for each category of data written to the export file.
 | `default boolean` | `syncMinigamePoints()` |  |
 | `default boolean` | `syncQuests()` |  |
 | `default boolean` | `syncRunePouch()` |  |
+| `default boolean` | `syncSailing()` |  |
 | `default boolean` | `syncSkills()` |  |
 | `default boolean` | `syncSlayer()` |  |
 | `default boolean` | `syncStorages()` |  |
@@ -233,6 +237,12 @@ Storage section: where and how often data is written.
 `default boolean syncRunePouch()`
 
 - **Returns:** whether to include the rune pouch contents
+
+#### syncSailing
+
+`default boolean syncSailing()`
+
+- **Returns:** whether to include Sailing boats, crew, charting and Barracuda Trials
 
 #### syncSkills
 
@@ -2111,6 +2121,132 @@ Lists the unlocked reward prayers.
 
 ---
 
+## com.oveduumnakal.charactersnapshot.Sailing
+
+_class_
+
+`final class Sailing`
+
+Reads Sailing state from its named game variables: owned boats and their parts, unlocked crew, charting
+progress and Barracuda Trials performance. Ids such as boat type, port and part tiers are raw game values.
+Every read runs on the client thread.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private static final int[]` | `BOAT_HULL` |  |
+| `private static final int[]` | `BOAT_KEEL` |  |
+| `private static final int[]` | `BOAT_OWNED` |  |
+| `private static final int[]` | `BOAT_PORT` |  |
+| `private static final int[]` | `BOAT_SAIL` |  |
+| `private static final int[]` | `BOAT_STEERING` |  |
+| `private static final int[]` | `BOAT_STORED_HP` |  |
+| `private static final int[]` | `BOAT_STORED_MAXHP` |  |
+| `private static final int[]` | `BOAT_TYPE` |  |
+| `static final int[]` | `CHARTING_COMPLETION` | Charting completion bitfield varps; each set bit is one completed charting task. |
+| `static final Map<String,Integer>` | `CREW` | Crew key to the varbit that is non-zero once that crew member is unlocked. |
+| `static final int[]` | `TRIAL_PERFORMANCE` | Barracuda Trials performance varps, one per trial slot. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `Sailing()` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `static SailingData` | `read(Client client)` | Reads the Sailing state. |
+| `private static int` | `value(Client client, int[] table, int slot)` | Reads one boat slot's varbit from a per-slot table. |
+
+### Field Detail
+
+#### BOAT_HULL
+
+`private static final int[] BOAT_HULL`
+
+#### BOAT_KEEL
+
+`private static final int[] BOAT_KEEL`
+
+#### BOAT_OWNED
+
+`private static final int[] BOAT_OWNED`
+
+#### BOAT_PORT
+
+`private static final int[] BOAT_PORT`
+
+#### BOAT_SAIL
+
+`private static final int[] BOAT_SAIL`
+
+#### BOAT_STEERING
+
+`private static final int[] BOAT_STEERING`
+
+#### BOAT_STORED_HP
+
+`private static final int[] BOAT_STORED_HP`
+
+#### BOAT_STORED_MAXHP
+
+`private static final int[] BOAT_STORED_MAXHP`
+
+#### BOAT_TYPE
+
+`private static final int[] BOAT_TYPE`
+
+#### CHARTING_COMPLETION
+
+`static final int[] CHARTING_COMPLETION`
+
+Charting completion bitfield varps; each set bit is one completed charting task.
+
+#### CREW
+
+`static final Map<String,Integer> CREW`
+
+Crew key to the varbit that is non-zero once that crew member is unlocked.
+
+#### TRIAL_PERFORMANCE
+
+`static final int[] TRIAL_PERFORMANCE`
+
+Barracuda Trials performance varps, one per trial slot.
+
+### Constructor Detail
+
+#### Sailing
+
+`private Sailing()`
+
+### Method Detail
+
+#### read
+
+`static SailingData read(Client client)`
+
+Reads the Sailing state.
+
+- **Parameter** `client` — the client
+- **Returns:** the Sailing state
+
+#### value
+
+`private static int value(Client client, int[] table, int slot)`
+
+Reads one boat slot's varbit from a per-slot table.
+
+- **Parameter** `client` — the client
+- **Parameter** `table` — the varbit for each of the five boat slots
+- **Parameter** `slot` — zero-based boat slot
+- **Returns:** the raw value
+
+---
+
 ## com.oveduumnakal.charactersnapshot.SkillingStorage
 
 _class_
@@ -2341,6 +2477,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private List<QuestEntry>` | `quests` |  |
 | `private List<String>` | `quickPrayers` |  |
 | `private List<ItemEntry>` | `runePouch` |  |
+| `private SailingData` | `sailing` |  |
 | `private final Map<String,SkillEntry>` | `skills` |  |
 | `private SlayerData` | `slayer` |  |
 | `private final Map<Integer,String>` | `slayerBossNames` |  |
@@ -2401,6 +2538,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollPrayerMagic()` | Polls the unlocked reward prayers, the selected quick prayers and the autocast spell. |
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
 | `public boolean` | `pollRunePouch()` | Polls the rune pouch contents. |
+| `public boolean` | `pollSailing()` | Polls the Sailing state. |
 | `public boolean` | `pollSkillingStorages()` | Polls the varbit-backed skilling storages: the plank sack (kept under `storages.plankSack` once it has held planks) and the tool leprechaun. |
 | `public boolean` | `pollSlayer()` | Polls the slayer state. |
 | `public boolean` | `pollSpellbook()` | Polls the active spellbook from the spellbook varbit (0 standard, 1 ancient, 2 lunar, 3 arceuus). |
@@ -2727,6 +2865,10 @@ Identity captured by the last snapshot built with a live local player; cleared b
 #### runePouch
 
 `private List<ItemEntry> runePouch`
+
+#### sailing
+
+`private SailingData sailing`
 
 #### skills
 
@@ -3115,6 +3257,14 @@ of the six slots pairs a rune-type varbit with a quantity varbit, and the rune t
 through the `EnumID#RUNEPOUCH_RUNE` cache enum. Empty slots and unresolvable runes are skipped.
 
 - **Returns:** whether the pouch contents (or its presence) changed since the last poll
+
+#### pollSailing
+
+`public boolean pollSailing()`
+
+Polls the Sailing state.
+
+- **Returns:** whether it changed since the last poll
 
 #### pollSkillingStorages
 
@@ -3578,6 +3728,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | _class_ [`BankTab`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbanktab) | A bank tab: an index (0 for the main tab, 1 to 9 for the numbered tabs) and the items it holds. |
 | _class_ [`BirdhouseTimer`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbirdhousetimer) | The projected state of one birdhouse space. |
 | _class_ [`BlockedTask`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotblockedtask) | One blocked slayer task slot. |
+| _class_ [`BoatData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotboatdata) | One owned boat. |
 | _class_ [`CollectionLogData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogdata) | Collection log: the account-wide obtained and total counts, the flat list of obtained items, and the obtained items grouped by the log page they were seen on. |
 | _class_ [`CollectionLogPage`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogpage) | One collection log page as last seen: how many of its slots there are and which are obtained. |
 | _class_ [`CombatAchievementData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementdata) | Combat-achievement tier progress. |
@@ -3594,6 +3745,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | _class_ [`MiscellaniaData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotmiscellaniadata) | Kingdom of Miscellania state. |
 | _class_ [`PlayerInfo`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotplayerinfo) | Identity and account context of the logged-in character. |
 | _class_ [`QuestEntry`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotquestentry) | Completion state of one quest. |
+| _class_ [`SailingData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotsailingdata) | Sailing state read from its named game variables. |
 | _class_ [`SkillEntry`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotskillentry) | Real level and experience for one skill, plus the current boosted level. |
 | _class_ [`SlayerData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotslayerdata) | The slayer state. |
 | _class_ [`TierCount`](#comoveduumnakalcharactersnapshotmodelcharactersnapshottiercount) | Completed and total task counts for one combat-achievement tier. |
@@ -3625,6 +3777,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | `public Integer` | `questPoints` | Total quest points. |
 | `public List<QuestEntry>` | `quests` | Quest completion state, one entry per quest. |
 | `public List<ItemEntry>` | `runePouch` | Runes held in the rune pouch, present only while the inventory holds a rune pouch (any variant). |
+| `public SailingData` | `sailing` | Sailing boats, crew, charting and Barracuda Trials; absent when the toggle is off. |
 | `public int` | `schemaVersion` | Schema version of this file; bumped when the shape of the export changes. |
 | `public Map<String,String>` | `sectionUpdated` | ISO-8601 instant each item section (`bank`, `inventory`, `equipment`) was last captured from the client, keyed by section name. |
 | `public Map<String,SkillEntry>` | `skills` | Real level and experience per skill, keyed by upper-case skill name, plus `OVERALL`. |
@@ -3764,6 +3917,12 @@ Quest completion state, one entry per quest.
 
 Runes held in the rune pouch, present only while the inventory holds a rune pouch (any variant).
 Empty when the pouch holds nothing.
+
+#### sailing
+
+`public SailingData sailing`
+
+Sailing boats, crew, charting and Barracuda Trials; absent when the toggle is off.
 
 #### schemaVersion
 
@@ -4059,6 +4218,108 @@ Slayer task id (same id space as the slayer creature id).
 - **Parameter** `taskId` — slayer task id
 - **Parameter** `name` — task name, or null
 - **Parameter** `master` — master name, or null
+
+---
+
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BoatData
+
+_class_
+
+`public static class BoatData`
+
+One owned boat. Type, port and part values are the game's raw ids.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public int` | `hp` | Stored hitpoints. |
+| `public int` | `hull` | Raw hull tier id. |
+| `public int` | `keel` | Raw keel tier id. |
+| `public int` | `maxHp` | Stored maximum hitpoints. |
+| `public int` | `port` | Raw id of the port the boat is moored at. |
+| `public int` | `sail` | Raw sail tier id. |
+| `public int` | `slot` | Boat slot, 1 to 5. |
+| `public int` | `steering` | Raw steering (helm) tier id. |
+| `public int` | `type` | Raw boat type id. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `BoatData(int slot, int type, int port, int hull, int keel, int sail, int steering, int hp, int maxHp)` |  |
+
+### Field Detail
+
+#### hp
+
+`public int hp`
+
+Stored hitpoints.
+
+#### hull
+
+`public int hull`
+
+Raw hull tier id.
+
+#### keel
+
+`public int keel`
+
+Raw keel tier id.
+
+#### maxHp
+
+`public int maxHp`
+
+Stored maximum hitpoints.
+
+#### port
+
+`public int port`
+
+Raw id of the port the boat is moored at.
+
+#### sail
+
+`public int sail`
+
+Raw sail tier id.
+
+#### slot
+
+`public int slot`
+
+Boat slot, 1 to 5.
+
+#### steering
+
+`public int steering`
+
+Raw steering (helm) tier id.
+
+#### type
+
+`public int type`
+
+Raw boat type id.
+
+### Constructor Detail
+
+#### BoatData
+
+`public BoatData(int slot, int type, int port, int hull, int keel, int sail, int steering, int hp, int maxHp)`
+
+- **Parameter** `slot` — boat slot
+- **Parameter** `type` — raw type id
+- **Parameter** `port` — raw port id
+- **Parameter** `hull` — raw hull id
+- **Parameter** `keel` — raw keel id
+- **Parameter** `sail` — raw sail id
+- **Parameter** `steering` — raw steering id
+- **Parameter** `hp` — stored hitpoints
+- **Parameter** `maxHp` — stored maximum hitpoints
 
 ---
 
@@ -5342,6 +5603,76 @@ One of `NOT_STARTED`, `IN_PROGRESS`, `FINISHED`.
 - **Parameter** `name` — enum name
 - **Parameter** `displayName` — readable name
 - **Parameter** `state` — completion state
+
+---
+
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SailingData
+
+_class_
+
+`public static class SailingData`
+
+Sailing state read from its named game variables.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public List<Integer>` | `barracudaTrials` | Raw Barracuda Trials performance values, trial slots 1 to 5. |
+| `public List<BoatData>` | `boats` | Owned boats, by boat slot. |
+| `public int` | `chartingEntries` | Raw `SAILING_CHARTING_TOTAL_ENTRIES`. |
+| `public int` | `chartingTasksCompleted` | Completed charting tasks: set bits across the charting completion varps. |
+| `public List<String>` | `crew` | Unlocked crew members by key, e.g. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `SailingData(List<BoatData> boats, List<String> crew, int chartingTasksCompleted, int chartingEntries, List<Integer> barracudaTrials)` |  |
+
+### Field Detail
+
+#### barracudaTrials
+
+`public List<Integer> barracudaTrials`
+
+Raw Barracuda Trials performance values, trial slots 1 to 5.
+
+#### boats
+
+`public List<BoatData> boats`
+
+Owned boats, by boat slot.
+
+#### chartingEntries
+
+`public int chartingEntries`
+
+Raw `SAILING_CHARTING_TOTAL_ENTRIES`.
+
+#### chartingTasksCompleted
+
+`public int chartingTasksCompleted`
+
+Completed charting tasks: set bits across the charting completion varps.
+
+#### crew
+
+`public List<String> crew`
+
+Unlocked crew members by key, e.g. `werewolf`, `ghostJenkins`.
+
+### Constructor Detail
+
+#### SailingData
+
+`public SailingData(List<BoatData> boats, List<String> crew, int chartingTasksCompleted, int chartingEntries, List<Integer> barracudaTrials)`
+
+- **Parameter** `boats` — owned boats
+- **Parameter** `crew` — unlocked crew
+- **Parameter** `chartingTasksCompleted` — completed charting tasks
+- **Parameter** `chartingEntries` — raw charting entries
+- **Parameter** `barracudaTrials` — raw trial performance values
 
 ---
 

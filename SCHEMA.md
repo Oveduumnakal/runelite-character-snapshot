@@ -42,6 +42,7 @@ missing sections as "not exported", not "empty".
 | `minigamePoints` | object | Minigame reward-shop balances. See below. |
 | `transport` | object | Fairy ring access and travel log, quetzal landing sites. See below. |
 | `house` | object | Player-owned house fields, raw game values. See below. |
+| `sailing` | object | Sailing boats, crew, charting and Barracuda Trials. See below. |
 
 ## player
 
@@ -357,6 +358,23 @@ charter ships) are not repeated here; read them from `quests` and `achievementDi
 expected to be basic, fancy, ornate), and `nexusTeleports`, the portal nexus teleport slots 1 to 45 whose
 `POH_NEXUS_TELE_<n>` varbit is set. Room contents (portal chamber, pool, altar, spirit tree) have no varbits
 and are not exported. Absent when the Player-owned house toggle is off.
+
+## sailing
+
+`{ boats, crew, chartingTasksCompleted, chartingEntries, barracudaTrials }`, read live from Sailing's named
+game variables.
+
+- `boats[]`: one entry per owned boat slot (`SAILING_BOAT_<n>_OWNED` set): `{ slot, type, port, hull, keel,
+  sail, steering, hp, maxHp }`. `slot` is 1 to 5; `hp`/`maxHp` are the stored hitpoints. **`type`, `port` and
+  the part fields are raw game ids, not decoded yet.**
+- `crew[]`: unlocked crew members: `generic1` to `generic5`, `werewolf`, `fremennik`, `spiritAngler`,
+  `captainSiad`, `ghostJenkins`.
+- `chartingTasksCompleted`: set bits across the twelve `SAILING_CHARTING_COMPLETION_<n>` varps, i.e. charting
+  tasks completed. `chartingEntries` is raw `SAILING_CHARTING_TOTAL_ENTRIES`.
+- `barracudaTrials`: raw `SAILING_BT_PERFORMANCE_1..5` values (trial performance; encoding not decoded yet).
+  Barracuda Trials completion counts are in `activityCounts` (`tempor tantrum`, `jubbly jive`, `gwenith glide`).
+
+Absent when the Sailing toggle is off.
 
 ## Versioning
 

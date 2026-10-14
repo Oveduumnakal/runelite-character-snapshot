@@ -136,6 +136,9 @@ public class CharacterSnapshot
 	/** Player-owned house fields kept in game variables, raw values; absent with no house or the toggle off. */
 	public HouseData house;
 
+	/** Sailing boats, crew, charting and Barracuda Trials; absent when the toggle is off. */
+	public SailingData sailing;
+
 	/**
 	 * Identity and account context of the logged-in character.
 	 */
@@ -1302,6 +1305,103 @@ public class CharacterSnapshot
 			this.servant = servant;
 			this.jewelleryBox = jewelleryBox;
 			this.nexusTeleports = nexusTeleports;
+		}
+	}
+
+	/**
+	 * Sailing state read from its named game variables.
+	 */
+	@EqualsAndHashCode
+	public static class SailingData
+	{
+		/** Owned boats, by boat slot. */
+		public List<BoatData> boats;
+
+		/** Unlocked crew members by key, e.g. {@code werewolf}, {@code ghostJenkins}. */
+		public List<String> crew;
+
+		/** Completed charting tasks: set bits across the charting completion varps. */
+		public int chartingTasksCompleted;
+
+		/** Raw {@code SAILING_CHARTING_TOTAL_ENTRIES}. */
+		public int chartingEntries;
+
+		/** Raw Barracuda Trials performance values, trial slots 1 to 5. */
+		public List<Integer> barracudaTrials;
+
+		/**
+		 * @param boats                  owned boats
+		 * @param crew                   unlocked crew
+		 * @param chartingTasksCompleted completed charting tasks
+		 * @param chartingEntries        raw charting entries
+		 * @param barracudaTrials        raw trial performance values
+		 */
+		public SailingData(List<BoatData> boats, List<String> crew, int chartingTasksCompleted, int chartingEntries,
+			List<Integer> barracudaTrials)
+		{
+			this.boats = boats;
+			this.crew = crew;
+			this.chartingTasksCompleted = chartingTasksCompleted;
+			this.chartingEntries = chartingEntries;
+			this.barracudaTrials = barracudaTrials;
+		}
+	}
+
+	/**
+	 * One owned boat. Type, port and part values are the game's raw ids.
+	 */
+	@EqualsAndHashCode
+	public static class BoatData
+	{
+		/** Boat slot, 1 to 5. */
+		public int slot;
+
+		/** Raw boat type id. */
+		public int type;
+
+		/** Raw id of the port the boat is moored at. */
+		public int port;
+
+		/** Raw hull tier id. */
+		public int hull;
+
+		/** Raw keel tier id. */
+		public int keel;
+
+		/** Raw sail tier id. */
+		public int sail;
+
+		/** Raw steering (helm) tier id. */
+		public int steering;
+
+		/** Stored hitpoints. */
+		public int hp;
+
+		/** Stored maximum hitpoints. */
+		public int maxHp;
+
+		/**
+		 * @param slot     boat slot
+		 * @param type     raw type id
+		 * @param port     raw port id
+		 * @param hull     raw hull id
+		 * @param keel     raw keel id
+		 * @param sail     raw sail id
+		 * @param steering raw steering id
+		 * @param hp       stored hitpoints
+		 * @param maxHp    stored maximum hitpoints
+		 */
+		public BoatData(int slot, int type, int port, int hull, int keel, int sail, int steering, int hp, int maxHp)
+		{
+			this.slot = slot;
+			this.type = type;
+			this.port = port;
+			this.hull = hull;
+			this.keel = keel;
+			this.sail = sail;
+			this.steering = steering;
+			this.hp = hp;
+			this.maxHp = maxHp;
 		}
 	}
 }
