@@ -135,7 +135,11 @@ Present only when a task is assigned:
 
 ## location
 
-`{ regionId, x, y, plane }` — the character's current world point.
+`{ regionId, x, y, plane, instanced }` — the character's current world point. Inside an instance (raids,
+boss rooms, player-owned house) `x`, `y`, `plane` and `regionId` are mapped back to the template area the
+instance was built from, and `instanced` is `true`. `instanced` is `false` (or absent in older files) in the
+normal world. The location and `vitals.runEnergyPercent` are refreshed whenever the position or run energy
+changes, at the usual save interval.
 
 ## grandExchange
 

@@ -49,16 +49,16 @@ public class CharacterSnapshotPlugin extends Plugin
 	private static final int POLL_INTERVAL_TICKS = 30;
 
 	@Inject
-	private Client client;
+	Client client;
 
 	@Inject
-	private CharacterSnapshotConfig config;
+	CharacterSnapshotConfig config;
 
 	@Inject
-	private ScheduledExecutorService executor;
+	ScheduledExecutorService executor;
 
 	@Inject
-	private Gson gson;
+	Gson gson;
 
 	private SnapshotCollector collector;
 
@@ -242,6 +242,9 @@ public class CharacterSnapshotPlugin extends Plugin
 			doSave();
 			return;
 		}
+
+		if (collector.pollMovement())
+			dirty = true;
 
 		if (tickCounter % POLL_INTERVAL_TICKS == 0)
 			pollPeriodic();

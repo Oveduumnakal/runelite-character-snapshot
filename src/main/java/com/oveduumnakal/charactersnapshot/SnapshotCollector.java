@@ -49,6 +49,7 @@ import net.runelite.api.StructComposition;
 import net.runelite.api.VarPlayer;
 import net.runelite.api.Varbits;
 import net.runelite.api.WorldType;
+import net.runelite.api.coords.LocalPoint;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.gameval.DBTableID;
 import net.runelite.api.gameval.VarPlayerID;
@@ -153,6 +154,10 @@ public class SnapshotCollector
 
 	private SlayerData slayer = null;
 
+	private WorldPoint polledLocation = null;
+
+	private Integer polledEnergy = null;
+
 	/**
 	 * @param client the RuneLite client
 	 * @param config the plugin configuration
@@ -184,6 +189,8 @@ public class SnapshotCollector
 		diaries = null;
 		combatAchievements = null;
 		slayer = null;
+		polledLocation = null;
+		polledEnergy = null;
 	}
 
 	/**
@@ -424,6 +431,27 @@ public class SnapshotCollector
 		boolean changed = !questList.equals(quests) || !Objects.equals(questPoints, qp);
 		quests = questList;
 		questPoints = qp;
+		return changed;
+	}
+
+	/**
+	 * Compares the character's real-world location and run energy against the previous call. Meant to
+	 * run every game tick so walking or regenerating run energy marks the snapshot dirty.
+	 *
+	 * @return whether an enabled value (location or vitals) changed since the last call
+	 */
+	public boolean pollMovement()
+	{
+		Player localPlayer = client.getLocalPlayer();
+		if (localPlayer == null)
+			return false;
+
+		WorldPoint location = resolveLocation(localPlayer);
+		int energy = client.getEnergy() / 100;
+		boolean changed = config.syncLocation() && !Objects.equals(location, polledLocation);
+		changed |= config.syncVitals() && !Objects.equals(energy, polledEnergy);
+		polledLocation = location;
+		polledEnergy = energy;
 		return changed;
 	}
 
@@ -902,18 +930,34 @@ public class SnapshotCollector
 	}
 
 	/**
+	 * Resolves the character's real-world point. Inside an instance (raids, boss rooms, player-owned
+	 * house) the world location is a copy-area coordinate, so the local point is mapped back to the
+	 * template area it was built from.
+	 *
+	 * @param localPlayer the local player
+	 * @return the world point, or {@code null} when it is unavailable
+	 */
+	private WorldPoint resolveLocation(Player localPlayer)
+	{
+		LocalPoint local = localPlayer.getLocalLocation();
+		WorldPoint mapped = local != null ? WorldPoint.fromLocalInstance(client, local) : null;
+		return mapped != null ? mapped : localPlayer.getWorldLocation();
+	}
+
+	/**
 	 * Reads the character's world location.
 	 *
 	 * @param localPlayer the local player
 	 * @return the location, or {@code null} when it is unavailable
 	 */
+	@SuppressWarnings("deprecation")
 	private LocationData buildLocation(Player localPlayer)
 	{
-		WorldPoint wp = localPlayer.getWorldLocation();
+		WorldPoint wp = resolveLocation(localPlayer);
 		if (wp == null)
 			return null;
 
-		return new LocationData(wp.getRegionID(), wp.getX(), wp.getY(), wp.getPlane());
+		return new LocationData(wp.getRegionID(), wp.getX(), wp.getY(), wp.getPlane(), client.isInInstancedRegion());
 	}
 
 	/**

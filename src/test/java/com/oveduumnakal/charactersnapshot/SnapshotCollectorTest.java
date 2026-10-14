@@ -21,6 +21,7 @@ import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.PlayerInfo;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SlayerData;
 import org.junit.Test;
+import org.mockito.MockedStatic;
 
 import net.runelite.api.Client;
 import net.runelite.api.EquipmentInventorySlot;
@@ -29,16 +30,20 @@ import net.runelite.api.ItemComposition;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.Player;
 import net.runelite.api.WorldType;
+import net.runelite.api.coords.LocalPoint;
+import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.gameval.DBTableID;
 import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 /**
@@ -440,6 +445,83 @@ public class SnapshotCollectorTest
 		when(client.getLocalPlayer()).thenReturn(player);
 		when(client.getWorldType()).thenReturn(EnumSet.noneOf(WorldType.class));
 		return client;
+	}
+
+	/**
+	 * Inside an instance the exported location is the template area's point, flagged as instanced.
+	 */
+	@Test
+	@SuppressWarnings("deprecation")
+	public void instancedLocationIsMappedToTemplate()
+	{
+		Client client = loggedInClient("Zezima");
+		Player player = client.getLocalPlayer();
+		LocalPoint local = mock(LocalPoint.class);
+		when(player.getLocalLocation()).thenReturn(local);
+		when(player.getWorldLocation()).thenReturn(new WorldPoint(1, 2, 0));
+		when(client.isInInstancedRegion()).thenReturn(true);
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		try (MockedStatic<WorldPoint> worldPoint = mockStatic(WorldPoint.class))
+		{
+			WorldPoint template = new WorldPoint(3000, 4000, 1);
+			worldPoint.when(() -> WorldPoint.fromLocalInstance(client, local)).thenReturn(template);
+			CharacterSnapshot.LocationData location = collector.buildSnapshot().location;
+
+			assertEquals(3000, location.x);
+			assertEquals(4000, location.y);
+			assertEquals(1, location.plane);
+			assertEquals((3000 >> 6) << 8 | (4000 >> 6), location.regionId);
+			assertTrue(location.instanced);
+		}
+	}
+
+	/**
+	 * Movement polling reports a change only when the position or run energy differs from the last poll.
+	 */
+	@Test
+	public void movementPollDetectsLocationAndEnergyChanges()
+	{
+		Client client = loggedInClient("Zezima");
+		Player player = client.getLocalPlayer();
+		when(player.getWorldLocation()).thenReturn(new WorldPoint(3200, 3200, 0));
+		when(client.getEnergy()).thenReturn(10000);
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		assertTrue(collector.pollMovement());
+		assertFalse(collector.pollMovement());
+
+		when(player.getWorldLocation()).thenReturn(new WorldPoint(3201, 3200, 0));
+		assertTrue(collector.pollMovement());
+		assertFalse(collector.pollMovement());
+
+		when(client.getEnergy()).thenReturn(9900);
+		assertTrue(collector.pollMovement());
+		assertFalse(collector.pollMovement());
+
+		when(client.getEnergy()).thenReturn(9910);
+		assertFalse(collector.pollMovement());
+	}
+
+	/**
+	 * With location and vitals export disabled, movement never marks the snapshot dirty.
+	 */
+	@Test
+	public void movementPollIgnoresDisabledSections()
+	{
+		Client client = loggedInClient("Zezima");
+		Player player = client.getLocalPlayer();
+		when(player.getWorldLocation()).thenReturn(new WorldPoint(3200, 3200, 0));
+		CharacterSnapshotConfig config = allEnabled();
+		when(config.syncLocation()).thenReturn(false);
+		when(config.syncVitals()).thenReturn(false);
+		SnapshotCollector collector = new SnapshotCollector(client, config);
+
+		collector.pollMovement();
+		when(player.getWorldLocation()).thenReturn(new WorldPoint(3201, 3200, 0));
+		when(client.getEnergy()).thenReturn(5000);
+
+		assertFalse(collector.pollMovement());
 	}
 
 	/**

@@ -191,12 +191,12 @@ makes no network calls of any kind.
 |---|---|---|
 | `private static final int` | `INITIAL_DELAY_TICKS` |  |
 | `private static final int` | `POLL_INTERVAL_TICKS` |  |
-| `private Client` | `client` |  |
+| `Client` | `client` |  |
 | `private SnapshotCollector` | `collector` |  |
-| `private CharacterSnapshotConfig` | `config` |  |
+| `CharacterSnapshotConfig` | `config` |  |
 | `private volatile boolean` | `dirty` |  |
-| `private ScheduledExecutorService` | `executor` |  |
-| `private Gson` | `gson` |  |
+| `ScheduledExecutorService` | `executor` |  |
+| `Gson` | `gson` |  |
 | `private boolean` | `initialCollectionDone` |  |
 | `private String` | `lastPlayerName` |  |
 | `private int` | `syncTickThreshold` |  |
@@ -234,7 +234,7 @@ makes no network calls of any kind.
 
 #### client
 
-`private Client client`
+`Client client`
 
 #### collector
 
@@ -242,7 +242,7 @@ makes no network calls of any kind.
 
 #### config
 
-`private CharacterSnapshotConfig config`
+`CharacterSnapshotConfig config`
 
 #### dirty
 
@@ -250,11 +250,11 @@ makes no network calls of any kind.
 
 #### executor
 
-`private ScheduledExecutorService executor`
+`ScheduledExecutorService executor`
 
 #### gson
 
-`private Gson gson`
+`Gson gson`
 
 #### initialCollectionDone
 
@@ -862,6 +862,8 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private final Map<Integer,GeOffer>` | `geOffers` |  |
 | `private List<InventoryItem>` | `inventory` |  |
 | `private Instant` | `inventoryUpdated` |  |
+| `private Integer` | `polledEnergy` |  |
+| `private WorldPoint` | `polledLocation` |  |
 | `private Integer` | `questPoints` |  |
 | `private List<QuestEntry>` | `quests` |  |
 | `private final Map<String,SkillEntry>` | `skills` |  |
@@ -895,11 +897,13 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public void` | `pollAllSkills()` | Reads every skill from the client, plus a computed `OVERALL` total. |
 | `public boolean` | `pollCombatAchievements()` | Polls the six combat-achievement tier varbits and the per-task completion bits. |
 | `public boolean` | `pollDiaries()` | Polls achievement-diary completion for every region via named RuneLite varbits, and each mapped task via `DiaryTasks`. |
+| `public boolean` | `pollMovement()` | Compares the character's real-world location and run energy against the previous call. |
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
 | `public boolean` | `pollSlayer()` | Polls the current slayer task, clearing it when no task is assigned. |
 | `private String` | `readTaskRowName(int row)` | Reads the display name column of one slayer task table row. |
 | `public void` | `reset()` | Clears every cache. |
 | `private String` | `resolveBossName(int bossId)` | Resolves a boss-task boss id to the boss name via the slayer task sublist table. |
+| `private WorldPoint` | `resolveLocation(Player localPlayer)` | Resolves the character's real-world point. |
 | `private String` | `resolveTaskName(int taskId)` | Resolves a slayer task id to its display name from the cache's slayer task table. |
 | `public void` | `restore(CharacterSnapshot previous)` | Seeds the bank, inventory, and equipment caches from this character's previous export, so a section not yet re-captured this session keeps its last known contents instead of vanishing. |
 | `private static Instant` | `sectionTime(Map<String,String> times, String section, Instant fallback)` | Resolves a restored section's capture time from the previous export. |
@@ -1027,6 +1031,14 @@ Cached task metadata by task id (completed flag unset); empty until resolved fro
 #### inventoryUpdated
 
 `private Instant inventoryUpdated`
+
+#### polledEnergy
+
+`private Integer polledEnergy`
+
+#### polledLocation
+
+`private WorldPoint polledLocation`
 
 #### questPoints
 
@@ -1210,6 +1222,15 @@ task via `DiaryTasks`.
 
 - **Returns:** whether any diary completion changed since the last poll
 
+#### pollMovement
+
+`public boolean pollMovement()`
+
+Compares the character's real-world location and run energy against the previous call. Meant to
+run every game tick so walking or regenerating run energy marks the snapshot dirty.
+
+- **Returns:** whether an enabled value (location or vitals) changed since the last call
+
 #### pollQuests
 
 `public boolean pollQuests()`
@@ -1250,6 +1271,17 @@ Resolves a boss-task boss id to the boss name via the slayer task sublist table.
 
 - **Parameter** `bossId` — the value of the slayer target boss varbit
 - **Returns:** the boss name, or null when it cannot be resolved
+
+#### resolveLocation
+
+`private WorldPoint resolveLocation(Player localPlayer)`
+
+Resolves the character's real-world point. Inside an instance (raids, boss rooms, player-owned
+house) the world location is a copy-area coordinate, so the local point is mapped back to the
+template area it was built from.
+
+- **Parameter** `localPlayer` — the local player
+- **Returns:** the world point, or `null` when it is unavailable
 
 #### resolveTaskName
 
@@ -2243,6 +2275,7 @@ World location of the character.
 
 | Modifier and Type | Field | Description |
 |---|---|---|
+| `public boolean` | `instanced` | Whether the character is in an instanced region; x and y are then the template area's coordinates. |
 | `public int` | `plane` | Plane (height level), 0–3. |
 | `public int` | `regionId` | Map region id. |
 | `public int` | `x` | World x coordinate. |
@@ -2253,8 +2286,15 @@ World location of the character.
 | Constructor | Description |
 |---|---|
 | `LocationData(int regionId, int x, int y, int plane)` |  |
+| `LocationData(int regionId, int x, int y, int plane, boolean instanced)` |  |
 
 ### Field Detail
+
+#### instanced
+
+`public boolean instanced`
+
+Whether the character is in an instanced region; x and y are then the template area's coordinates.
 
 #### plane
 
@@ -2290,6 +2330,16 @@ World y coordinate.
 - **Parameter** `x` — world x
 - **Parameter** `y` — world y
 - **Parameter** `plane` — plane
+
+#### LocationData
+
+`public LocationData(int regionId, int x, int y, int plane, boolean instanced)`
+
+- **Parameter** `regionId` — map region id
+- **Parameter** `x` — world x
+- **Parameter** `y` — world y
+- **Parameter** `plane` — plane
+- **Parameter** `instanced` — whether the character is in an instanced region
 
 ---
 

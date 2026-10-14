@@ -588,6 +588,9 @@ public class CharacterSnapshot
 		/** Plane (height level), 0–3. */
 		public int plane;
 
+		/** Whether the character is in an instanced region; x and y are then the template area's coordinates. */
+		public boolean instanced;
+
 		/**
 		 * @param regionId map region id
 		 * @param x        world x
@@ -596,10 +599,23 @@ public class CharacterSnapshot
 		 */
 		public LocationData(int regionId, int x, int y, int plane)
 		{
+			this(regionId, x, y, plane, false);
+		}
+
+		/**
+		 * @param regionId  map region id
+		 * @param x         world x
+		 * @param y         world y
+		 * @param plane     plane
+		 * @param instanced whether the character is in an instanced region
+		 */
+		public LocationData(int regionId, int x, int y, int plane, boolean instanced)
+		{
 			this.regionId = regionId;
 			this.x = x;
 			this.y = y;
 			this.plane = plane;
+			this.instanced = instanced;
 		}
 	}
 
