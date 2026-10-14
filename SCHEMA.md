@@ -33,6 +33,7 @@ missing sections as "not exported", not "empty".
 | `grandExchange` | array | Active GE offers, by slot. |
 | `collectionLog` | object | Collection log captured while the log is open, carried over between sessions. |
 | `killCounts` | object | Boss kill counts keyed by lower-case boss name. |
+| `clueCounts` | object | Completed treasure trails per tier. |
 
 ## player
 
@@ -213,6 +214,18 @@ Sources, merged per boss:
 When merging a stored or previous value with the cache the larger wins (kill counts only grow). Only
 bosses whose count the game has printed in chat since the account first ran either plugin appear; a boss
 never killed (or never checked) is simply absent.
+## clueCounts
+
+`{ beginner, easy, medium, hard, elite, master }` — integers, completed treasure trails per tier, in that
+order. Only tiers whose count is known are present; a tier absent from the object means "not seen yet", never
+zero. The section is omitted when no tier is known, and when the "Clue scroll counts" toggle is off.
+
+RuneLite's built-in plugins keep no clue completion count offline (Chat Commands queries the hiscores), so
+the plugin reads the game's own line "You have completed N <tier> Treasure Trails." when a clue is handed
+in. That line carries the new running total and replaces the cached value. Counts are carried over from the
+previous export of the same character on login (the larger value wins), so a tier first appears after its
+next completion on an account that has never been exported; clues completed before the plugin first ran stay
+unknown until then.
 
 ## Versioning
 

@@ -230,21 +230,25 @@ public class CharacterSnapshotPlugin extends Plugin
 	}
 
 	/**
-	 * Reads kill-count lines from game messages.
+	 * Reads kill-count and treasure-trail completion lines from game messages.
 	 *
 	 * @param event the chat-message event
 	 */
 	@Subscribe
 	public void onChatMessage(ChatMessage event)
 	{
-		if (collector == null || !config.syncKillCounts())
+		if (collector == null)
 			return;
 
 		ChatMessageType type = event.getType();
 		if (type != ChatMessageType.GAMEMESSAGE && type != ChatMessageType.SPAM)
 			return;
 
-		if (collector.onChatMessage(event.getMessage()))
+		if (config.syncKillCounts() && collector.onChatMessage(event.getMessage()))
+			dirty = true;
+
+		boolean clue = config.syncClueCounts() && type == ChatMessageType.GAMEMESSAGE;
+		if (clue && collector.onClueMessage(event.getMessage()))
 			dirty = true;
 	}
 

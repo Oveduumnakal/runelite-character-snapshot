@@ -91,6 +91,12 @@ public class CharacterSnapshot
 	public Map<String, Integer> killCounts;
 
 	/**
+	 * Completed treasure trails per tier ({@code beginner} to {@code master}), in tier order. Only tiers whose
+	 * count has been seen are present. Absent when the toggle is off or no tier is known yet.
+	 */
+	public Map<String, Integer> clueCounts;
+
+	/**
 	 * Identity and account context of the logged-in character.
 	 */
 	public static class PlayerInfo

@@ -313,4 +313,19 @@ public interface CharacterSnapshotConfig extends Config
 	{
 		return true;
 	}
+
+	/**
+	 * @return whether to include completed clue scroll counts
+	 */
+	@ConfigItem(
+		keyName = "syncClueCounts",
+		name = "Clue scroll counts",
+		description = "Include completed clue scroll counts per tier (read from completion messages in chat)",
+		section = dataSection,
+		position = 16
+	)
+	default boolean syncClueCounts()
+	{
+		return true;
+	}
 }
