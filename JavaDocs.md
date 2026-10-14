@@ -10,11 +10,15 @@
 - [com.oveduumnakal.charactersnapshot.ChatCounts](#comoveduumnakalcharactersnapshotchatcounts)
 - [com.oveduumnakal.charactersnapshot.DiaryTasks](#comoveduumnakalcharactersnapshotdiarytasks)
 - [com.oveduumnakal.charactersnapshot.DiaryTasks.Task](#comoveduumnakalcharactersnapshotdiarytaskstask)
+- [com.oveduumnakal.charactersnapshot.SlayerInfo](#comoveduumnakalcharactersnapshotslayerinfo)
 - [com.oveduumnakal.charactersnapshot.SnapshotCollector](#comoveduumnakalcharactersnapshotsnapshotcollector)
 - [com.oveduumnakal.charactersnapshot.SnapshotWriter](#comoveduumnakalcharactersnapshotsnapshotwriter)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot](#comoveduumnakalcharactersnapshotmodelcharactersnapshot)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbankdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankTab](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbanktab)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BlockedTask](#comoveduumnakalcharactersnapshotmodelcharactersnapshotblockedtask)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CollectionLogData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogdata)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CollectionLogPage](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogpage)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementTask](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementtask)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiaryregion)
@@ -27,6 +31,7 @@
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.QuestEntry](#comoveduumnakalcharactersnapshotmodelcharactersnapshotquestentry)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SkillEntry](#comoveduumnakalcharactersnapshotmodelcharactersnapshotskillentry)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SlayerData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotslayerdata)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.TierCount](#comoveduumnakalcharactersnapshotmodelcharactersnapshottiercount)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.VitalsData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotvitalsdata)
 
 ---
@@ -55,6 +60,7 @@ for each category of data written to the export file.
 | `default String` | `saveDirectory()` |  |
 | `default boolean` | `syncAccountInfo()` |  |
 | `default boolean` | `syncBank()` |  |
+| `default boolean` | `syncCollectionLog()` |  |
 | `default boolean` | `syncCombatAchievements()` |  |
 | `default boolean` | `syncDiaries()` |  |
 | `default boolean` | `syncEquipment()` |  |
@@ -64,8 +70,10 @@ for each category of data written to the export file.
 | `default boolean` | `syncKillCounts()` |  |
 | `default boolean` | `syncLocation()` |  |
 | `default boolean` | `syncQuests()` |  |
+| `default boolean` | `syncRunePouch()` |  |
 | `default boolean` | `syncSkills()` |  |
 | `default boolean` | `syncSlayer()` |  |
+| `default boolean` | `syncStorages()` |  |
 | `default boolean` | `syncVitals()` |  |
 
 ### Field Detail
@@ -108,6 +116,12 @@ Storage section: where and how often data is written.
 `default boolean syncBank()`
 
 - **Returns:** whether to include bank contents (captured when the bank is opened)
+
+#### syncCollectionLog
+
+`default boolean syncCollectionLog()`
+
+- **Returns:** whether to include the collection log
 
 #### syncCombatAchievements
 
@@ -163,6 +177,12 @@ Storage section: where and how often data is written.
 
 - **Returns:** whether to include quest completion state and total quest points
 
+#### syncRunePouch
+
+`default boolean syncRunePouch()`
+
+- **Returns:** whether to include the rune pouch contents
+
 #### syncSkills
 
 `default boolean syncSkills()`
@@ -174,6 +194,12 @@ Storage section: where and how often data is written.
 `default boolean syncSlayer()`
 
 - **Returns:** whether to include the current slayer task
+
+#### syncStorages
+
+`default boolean syncStorages()`
+
+- **Returns:** whether to include looting bag, seed vault and group storage contents
 
 #### syncVitals
 
@@ -199,18 +225,21 @@ makes no network calls of any kind.
 |---|---|---|
 | `private static final int` | `INITIAL_DELAY_TICKS` |  |
 | `private static final int` | `POLL_INTERVAL_TICKS` |  |
-| `private Client` | `client` |  |
-| `private SnapshotCollector` | `collector` |  |
-| `private CharacterSnapshotConfig` | `config` |  |
-| `private ConfigManager` | `configManager` |  |
+| `Client` | `client` |  |
+| `SnapshotCollector` | `collector` |  |
+| `CharacterSnapshotConfig` | `config` |  |
+| `ConfigManager` | `configManager` |  |
+| `File` | `defaultDir` | Default export folder; replaced in tests so they never touch the real RuneLite directory. |
 | `private volatile boolean` | `dirty` |  |
-| `private ScheduledExecutorService` | `executor` |  |
-| `private Gson` | `gson` |  |
+| `ScheduledExecutorService` | `executor` |  |
+| `Gson` | `gson` |  |
 | `private boolean` | `initialCollectionDone` |  |
 | `private String` | `lastPlayerName` |  |
+| `private volatile boolean` | `questsStale` |  |
 | `private int` | `syncTickThreshold` |  |
 | `private int` | `tickCounter` |  |
-| `private SnapshotWriter` | `writer` |  |
+| `private String` | `warnedInvalidDir` | The last invalid custom folder a warning was logged for, so the warning is not repeated. |
+| `SnapshotWriter` | `writer` |  |
 
 ### Method Summary
 
@@ -218,17 +247,20 @@ makes no network calls of any kind.
 |---|---|---|
 | `private void` | `doFullCollection()` | Runs a one-off full collection of every enabled data source after login. |
 | `private void` | `doSave()` | Builds a snapshot on the client thread and writes it off-thread. |
+| `private static boolean` | `isUsableDirectory(String path)` | Checks that a folder exists (creating it if absent) and is writable. |
 | `public void` | `onChatMessage(ChatMessage event)` | Reads kill-count lines from game messages. |
 | `public void` | `onConfigChanged(ConfigChanged event)` | Recomputes the save interval when this plugin's configuration changes. |
 | `public void` | `onGameStateChanged(GameStateChanged event)` | Schedules the initial collection on login and clears state on logout or world hop so one character's data cannot leak into another's file. |
 | `public void` | `onGameTick(GameTick event)` | Drives the initial collection, periodic polling, and interval-gated saves. |
 | `public void` | `onGrandExchangeOfferChanged(GrandExchangeOfferChanged event)` | Caches a changed Grand Exchange offer. |
 | `public void` | `onItemContainerChanged(ItemContainerChanged event)` | Caches bank, inventory, or equipment changes. |
+| `public void` | `onScriptPostFired(ScriptPostFired event)` | Captures the collection log page whenever the log redraws its item list. |
 | `public void` | `onStatChanged(StatChanged event)` | Caches a changed skill (real, experience, and boosted levels). |
+| `public void` | `onVarbitChanged(VarbitChanged event)` | Marks the quests stale on any varp or varbit change, since quest progress lives in those. |
 | `private void` | `pollPeriodic()` | Polls the data sources that are not event-driven, marking the snapshot dirty on any change. |
 | `CharacterSnapshotConfig` | `provideConfig(ConfigManager configManager)` | Provides the plugin configuration. |
 | `private void` | `recalcSyncThreshold()` | Recomputes the save threshold in game ticks (one tick is about 0.6 seconds). |
-| `private File` | `resolveSyncDir()` | Resolves the export directory: the configured folder if set, else the default under the RuneLite directory. |
+| `File` | `resolveSyncDir()` | Resolves the export directory: the configured folder if it can be created and written to, else the default under the RuneLite directory. |
 | `protected void` | `shutDown()` | Writes a final snapshot when still logged in, then releases resources. |
 | `protected void` | `startUp()` | Initializes the collector and writer and computes the save interval. |
 
@@ -244,19 +276,25 @@ makes no network calls of any kind.
 
 #### client
 
-`private Client client`
+`Client client`
 
 #### collector
 
-`private SnapshotCollector collector`
+`SnapshotCollector collector`
 
 #### config
 
-`private CharacterSnapshotConfig config`
+`CharacterSnapshotConfig config`
 
 #### configManager
 
-`private ConfigManager configManager`
+`ConfigManager configManager`
+
+#### defaultDir
+
+`File defaultDir`
+
+Default export folder; replaced in tests so they never touch the real RuneLite directory.
 
 #### dirty
 
@@ -264,11 +302,11 @@ makes no network calls of any kind.
 
 #### executor
 
-`private ScheduledExecutorService executor`
+`ScheduledExecutorService executor`
 
 #### gson
 
-`private Gson gson`
+`Gson gson`
 
 #### initialCollectionDone
 
@@ -278,6 +316,10 @@ makes no network calls of any kind.
 
 `private String lastPlayerName`
 
+#### questsStale
+
+`private volatile boolean questsStale`
+
 #### syncTickThreshold
 
 `private int syncTickThreshold`
@@ -286,9 +328,15 @@ makes no network calls of any kind.
 
 `private int tickCounter`
 
+#### warnedInvalidDir
+
+`private String warnedInvalidDir`
+
+The last invalid custom folder a warning was logged for, so the warning is not repeated.
+
 #### writer
 
-`private SnapshotWriter writer`
+`SnapshotWriter writer`
 
 ### Method Detail
 
@@ -304,6 +352,15 @@ Runs a one-off full collection of every enabled data source after login.
 
 Builds a snapshot on the client thread and writes it off-thread. Clears the dirty flag
 optimistically and re-sets it if the write fails, so a failed write is retried.
+
+#### isUsableDirectory
+
+`private static boolean isUsableDirectory(String path)`
+
+Checks that a folder exists (creating it if absent) and is writable.
+
+- **Parameter** `path` — the folder path
+- **Returns:** whether exports can be written there
 
 #### onChatMessage
 
@@ -355,6 +412,14 @@ Caches bank, inventory, or equipment changes.
 
 - **Parameter** `event` — the container-changed event
 
+#### onScriptPostFired
+
+`public void onScriptPostFired(ScriptPostFired event)`
+
+Captures the collection log page whenever the log redraws its item list.
+
+- **Parameter** `event` — the script-post-fired event
+
 #### onStatChanged
 
 `public void onStatChanged(StatChanged event)`
@@ -362,6 +427,15 @@ Caches bank, inventory, or equipment changes.
 Caches a changed skill (real, experience, and boosted levels).
 
 - **Parameter** `event` — the stat-changed event
+
+#### onVarbitChanged
+
+`public void onVarbitChanged(VarbitChanged event)`
+
+Marks the quests stale on any varp or varbit change, since quest progress lives in those. The next
+periodic poll then re-reads the quests; without a change they are not polled again.
+
+- **Parameter** `event` — the varbit-changed event
 
 #### pollPeriodic
 
@@ -386,10 +460,10 @@ Recomputes the save threshold in game ticks (one tick is about 0.6 seconds).
 
 #### resolveSyncDir
 
-`private File resolveSyncDir()`
+`File resolveSyncDir()`
 
-Resolves the export directory: the configured folder if set, else the default under the
-RuneLite directory.
+Resolves the export directory: the configured folder if it can be created and written to, else
+the default under the RuneLite directory. An unusable folder is logged once, not per save.
 
 - **Returns:** the directory to write export files into
 
@@ -914,6 +988,94 @@ Reads this task's completion from the client.
 
 ---
 
+## com.oveduumnakal.charactersnapshot.SlayerInfo
+
+_class_
+
+`final class SlayerInfo`
+
+Static tables describing where the game stores the slayer master, per-master blocked task slots and the
+task-assignment reward unlocks. Master ids follow `VarbitID.SLAYER_MASTER`; ids 1 to 10 were matched
+against the slayer master NPC constants in the API (`NpcID.SLAYER_MASTER_n`).
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `static final Map<String,int[]>` | `BLOCK_VARBITS` | Master name to the varbits holding that master's blocked task ids (0 = empty slot). |
+| `static final Map<String,Integer>` | `EXTEND_VARBITS` | Task key to the varbit that is non-zero once that task's extension is purchased. |
+| `static final int[]` | `LEGACY_BLOCK_VARBITS` | Legacy shared block-list varbits, used only when no per-master slot is filled. |
+| `static final String[]` | `MASTER_NAMES` | Master id to display name. |
+| `static final Map<String,Integer>` | `UNLOCK_VARBITS` | Unlock key to the varbit that is non-zero once the task-assignment unlock is purchased. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `SlayerInfo()` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `static Map<String,int[]>` | `blockVarbits()` |  |
+| `static String` | `masterName(int masterId)` |  |
+
+### Field Detail
+
+#### BLOCK_VARBITS
+
+`static final Map<String,int[]> BLOCK_VARBITS`
+
+Master name to the varbits holding that master's blocked task ids (0 = empty slot).
+
+#### EXTEND_VARBITS
+
+`static final Map<String,Integer> EXTEND_VARBITS`
+
+Task key to the varbit that is non-zero once that task's extension is purchased.
+
+#### LEGACY_BLOCK_VARBITS
+
+`static final int[] LEGACY_BLOCK_VARBITS`
+
+Legacy shared block-list varbits, used only when no per-master slot is filled.
+
+#### MASTER_NAMES
+
+`static final String[] MASTER_NAMES`
+
+Master id to display name. Index is the master id; index 0 is unused.
+
+#### UNLOCK_VARBITS
+
+`static final Map<String,Integer> UNLOCK_VARBITS`
+
+Unlock key to the varbit that is non-zero once the task-assignment unlock is purchased.
+
+### Constructor Detail
+
+#### SlayerInfo
+
+`private SlayerInfo()`
+
+### Method Detail
+
+#### blockVarbits
+
+`static Map<String,int[]> blockVarbits()`
+
+- **Returns:** an unmodifiable view of the per-master block varbits
+
+#### masterName
+
+`static String masterName(int masterId)`
+
+- **Parameter** `masterId` — the value of the slayer master varbit
+- **Returns:** the master's name, or null when the id is 0 or unknown
+
+---
+
 ## com.oveduumnakal.charactersnapshot.SnapshotCollector
 
 _class_
@@ -932,21 +1094,34 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 |---|---|---|
 | `private static final int[]` | `BANK_TAB_VARBITS` |  |
 | `private static final int[]` | `CA_COMPLETED_VARPS` |  |
+| `private static final int` | `CA_META_MAX_RETRIES` | Most reloads attempted after a partial metadata load, so a permanently missing struct is not re-read forever. |
 | `private static final int` | `CA_MONSTER_ENUM` | Cache enum mapping monster category id to display name. |
 | `private static final int` | `CA_PARAM_ID` | Task struct param: task id (the completion bit index). |
 | `private static final int` | `CA_PARAM_MONSTER` | Task struct param: monster category id, a key of `#CA_MONSTER_ENUM`. |
 | `private static final int` | `CA_PARAM_NAME` | Task struct param: task name. |
 | `private static final int[]` | `CA_TIER_ENUMS` | Cache enums listing the task struct ids per tier, easy to grandmaster. |
 | `private static final String[]` | `CA_TIER_NAMES` |  |
+| `private static final int` | `CLOG_HEADER_TITLE_INDEX` | Index of the page title text among the children of the collection log header widget. |
 | `private static final EquipmentInventorySlot[]` | `EQUIPMENT_SLOTS` |  |
 | `private static final int` | `KARAMJA_TIER_DONE` | Value of the Karamja easy, medium and hard tier varbits once the tier is complete; 1 only means started. |
+| `private static final int[]` | `RUNE_POUCH_ITEMS` | Every rune pouch variant; the contents varbits are shared by all of them. |
+| `private static final int[]` | `RUNE_POUCH_QUANTITY_VARBITS` |  |
+| `private static final int[]` | `RUNE_POUCH_TYPE_VARBITS` |  |
 | `private static final int` | `SLAYER_BOSS_TASK_ID` |  |
+| `private static final String[]` | `SPELLBOOK_NAMES` | Spellbook varbit values 0 to 3, in order; any other value is reported as unknown. |
+| `private static final Map<Integer,String>` | `STORAGE_KEYS` | Storage containers captured when opened, keyed by container id to export key. |
 | `private List<ItemEntry>` | `bankItems` |  |
 | `private List<BankTab>` | `bankTabs` |  |
 | `private int` | `bankTotal` |  |
 | `private Instant` | `bankUpdated` |  |
+| `private boolean` | `caMetaPartial` | Whether the last metadata load skipped a tier enum or task struct the cache did not return. |
+| `private int` | `caMetaRetries` | How many times a partial metadata load has been retried. |
 | `private Map<Integer,CombatAchievementTask>` | `caTaskMeta` | Cached task metadata by task id (completed flag unset); empty until resolved from the cache. |
 | `private final Client` | `client` |  |
+| `private int` | `clogObtained` |  |
+| `private final Map<String,CollectionLogPage>` | `clogPages` |  |
+| `private int` | `clogTotal` |  |
+| `private Instant` | `clogUpdated` |  |
 | `private CombatAchievementData` | `combatAchievements` |  |
 | `private final CharacterSnapshotConfig` | `config` |  |
 | `private final ConfigManager` | `configManager` |  |
@@ -957,12 +1132,20 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private List<InventoryItem>` | `inventory` |  |
 | `private Instant` | `inventoryUpdated` |  |
 | `private final Map<String,Integer>` | `killCounts` |  |
+| `private LocationData` | `lastLocation` | Location captured by the last snapshot built with a live local player; cleared by `#reset()`. |
+| `private PlayerInfo` | `lastPlayer` | Identity captured by the last snapshot built with a live local player; cleared by `#reset()`. |
+| `private Integer` | `polledEnergy` |  |
+| `private WorldPoint` | `polledLocation` |  |
 | `private Integer` | `questPoints` |  |
 | `private List<QuestEntry>` | `quests` |  |
+| `private List<ItemEntry>` | `runePouch` |  |
 | `private final Map<String,SkillEntry>` | `skills` |  |
 | `private SlayerData` | `slayer` |  |
 | `private final Map<Integer,String>` | `slayerBossNames` |  |
 | `private final Map<Integer,String>` | `slayerTaskNames` |  |
+| `private String` | `spellbook` |  |
+| `private final Map<String,Instant>` | `storageUpdated` |  |
+| `private final Map<String,List<ItemEntry>>` | `storages` |  |
 
 ### Constructor Summary
 
@@ -975,16 +1158,19 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 
 | Modifier and Type | Method | Description |
 |---|---|---|
+| `private CollectionLogData` | `buildCollectionLog()` | Builds the exported collection log from the stored pages. |
 | `private List<CombatAchievementTask>` | `buildCombatAchievementTasks()` | Combines the completion varps with the cached task metadata. |
 | `private LocationData` | `buildLocation(Player localPlayer)` | Reads the character's world location. |
 | `private Map<String,String>` | `buildSectionUpdated(CharacterSnapshot data)` | Collects the capture time of each item section present in the snapshot. |
 | `public CharacterSnapshot` | `buildSnapshot()` | Assembles the export snapshot from the caches and cheap client reads, honouring the config toggles. |
 | `private VitalsData` | `buildVitals()` | Reads current combat vitals from boosted and real skill levels and run energy. |
+| `public boolean` | `captureCollectionLog()` | Captures the collection log page currently drawn. |
 | `private List<BankTab>` | `copyBankTabs()` | Copies the cached bank tabs so a built snapshot does not share lists with the cache. |
 | `private DiaryRegion` | `diaryRegion(String region, int easy, int medium, int hard, int elite)` | Reads a diary region whose four tier varbits are 0/1 completion flags. |
 | `private DiaryRegion` | `diaryRegion(String region, int easy, int medium, int hard, int elite, int doneValue)` | Reads a diary region's four tiers and its mapped tasks. |
 | `private List<ItemEntry>` | `filterBankSlice(Item[] raw, int start, int end)` | Converts a slice of raw bank slots to item entries, dropping empty slots and placeholders. |
 | `private String` | `getItemName(int itemId)` | Resolves an item id to its display name. |
+| `private boolean` | `hasRunePouch()` |  |
 | `private Map<Integer,CombatAchievementTask>` | `loadCombatAchievementMeta()` | Reads task names, tiers, and monsters from the game cache: each tier enum lists task structs, and each struct carries the task id, name, and monster category as params. |
 | `public boolean` | `onChatMessage(String message)` | Reads a kill-count line from chat. |
 | `private static Instant` | `parseInstant(String value)` | Parses an ISO-8601 instant, tolerating a missing or malformed value. |
@@ -993,21 +1179,35 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollCombatAchievements()` | Polls the six combat-achievement tier varbits and the per-task completion bits. |
 | `public boolean` | `pollDiaries()` | Polls achievement-diary completion for every region via named RuneLite varbits, and each mapped task via `DiaryTasks`. |
 | `public boolean` | `pollKillCounts()` | Merges the kill counts RuneLite's Chat Commands plugin stored in the RuneScape-profile config (group `killcount`, key = lower-cased boss name) into the cache, keeping the larger of the stored and cached value since kill counts only grow. |
+| `public boolean` | `pollMovement()` | Compares the character's real-world location and run energy against the previous call. |
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
-| `public boolean` | `pollSlayer()` | Polls the current slayer task, clearing it when no task is assigned. |
+| `public boolean` | `pollRunePouch()` | Polls the rune pouch contents. |
+| `public boolean` | `pollSlayer()` | Polls the slayer state. |
+| `public boolean` | `pollSpellbook()` | Polls the active spellbook from the spellbook varbit (0 standard, 1 ancient, 2 lunar, 3 arceuus). |
+| `private List<BlockedTask>` | `readBlockedTasks()` | Reads every master's blocked task slots, falling back to the legacy shared block list when no per-master slot is filled. |
+| `private List<String>` | `readFlags(Map<String,Integer> varbits)` | Lists the keys whose varbit is non-zero. |
+| `private PlayerInfo` | `readPlayerInfo(Player localPlayer)` | Reads the live player's identity and account context. |
+| `private List<ItemEntry>` | `readRunePouch()` | Reads the rune pouch slots from the client varbits. |
+| `private void` | `readSlayerDetails(SlayerData task)` | Fills in the slayer master, blocked tasks and reward unlocks of a task. |
 | `private String` | `readTaskRowName(int row)` | Reads the display name column of one slayer task table row. |
+| `private void` | `refreshOverall()` | Recomputes the `OVERALL` entry from the cached skills. |
+| `private void` | `reloadCombatAchievementMetaIfNeeded()` | Loads the task metadata when none is cached, and retries (at most `#CA_META_MAX_RETRIES` times) while the last load was partial, i.e. |
 | `public void` | `reset()` | Clears every cache. |
 | `private String` | `resolveBossName(int bossId)` | Resolves a boss-task boss id to the boss name via the slayer task sublist table. |
+| `private WorldPoint` | `resolveLocation(Player localPlayer)` | Resolves the character's real-world point. |
 | `private String` | `resolveTaskName(int taskId)` | Resolves a slayer task id to its display name from the cache's slayer task table. |
-| `public void` | `restore(CharacterSnapshot previous)` | Seeds the bank, inventory, and equipment caches from this character's previous export, so a section not yet re-captured this session keeps its last known contents instead of vanishing. |
+| `public void` | `restore(CharacterSnapshot previous)` | Seeds the bank, inventory, equipment, and storage caches from this character's previous export, so a section not yet re-captured this session keeps its last known contents instead of vanishing. |
 | `private static Instant` | `sectionTime(Map<String,String> times, String section, Instant fallback)` | Resolves a restored section's capture time from the previous export. |
 | `private static String` | `stateName(QuestState state)` | Maps a quest state to its exported string form. |
+| `public static Iterable<Integer>` | `storageContainerIds()` |  |
+| `public static String` | `storageKey(int containerId)` | Resolves the export key of a storage container. |
 | `private GeOffer` | `toGeOffer(int slot, GrandExchangeOffer offer)` | Converts a client GE offer into the exported model. |
 | `public void` | `updateBank(ItemContainer container)` | Replaces the cached bank contents with a flat item list and the same items split by bank tab. |
 | `public void` | `updateEquipment(ItemContainer container)` | Rebuilds the cached equipment from scratch so an unequipped slot is dropped. |
 | `public void` | `updateGeOffer(int slot, GrandExchangeOffer offer)` | Adds, replaces, or removes a cached Grand Exchange offer for one slot. |
 | `public void` | `updateInventory(ItemContainer container)` | Replaces the cached inventory, keeping empty slots so slot indices stay meaningful. |
 | `public void` | `updateSkill(Skill skill, int level, int xp, int boostedLevel)` | Updates a single skill from a stat-changed event. |
+| `public void` | `updateStorage(String key, ItemContainer container)` | Replaces the cached contents of one storage container, dropping empty slots and placeholders. |
 
 ### Field Detail
 
@@ -1018,6 +1218,12 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 #### CA_COMPLETED_VARPS
 
 `private static final int[] CA_COMPLETED_VARPS`
+
+#### CA_META_MAX_RETRIES
+
+`private static final int CA_META_MAX_RETRIES`
+
+Most reloads attempted after a partial metadata load, so a permanently missing struct is not re-read forever.
 
 #### CA_MONSTER_ENUM
 
@@ -1053,6 +1259,12 @@ Cache enums listing the task struct ids per tier, easy to grandmaster. Not in th
 
 `private static final String[] CA_TIER_NAMES`
 
+#### CLOG_HEADER_TITLE_INDEX
+
+`private static final int CLOG_HEADER_TITLE_INDEX`
+
+Index of the page title text among the children of the collection log header widget.
+
 #### EQUIPMENT_SLOTS
 
 `private static final EquipmentInventorySlot[] EQUIPMENT_SLOTS`
@@ -1064,9 +1276,37 @@ Cache enums listing the task struct ids per tier, easy to grandmaster. Not in th
 Value of the Karamja easy, medium and hard tier varbits once the tier is complete; 1 only means started.
 The Karamja elite varbit and every other region's tier varbits are plain 0/1 flags.
 
+#### RUNE_POUCH_ITEMS
+
+`private static final int[] RUNE_POUCH_ITEMS`
+
+Every rune pouch variant; the contents varbits are shared by all of them.
+
+#### RUNE_POUCH_QUANTITY_VARBITS
+
+`private static final int[] RUNE_POUCH_QUANTITY_VARBITS`
+
+#### RUNE_POUCH_TYPE_VARBITS
+
+`private static final int[] RUNE_POUCH_TYPE_VARBITS`
+
 #### SLAYER_BOSS_TASK_ID
 
 `private static final int SLAYER_BOSS_TASK_ID`
+
+#### SPELLBOOK_NAMES
+
+`private static final String[] SPELLBOOK_NAMES`
+
+Spellbook varbit values 0 to 3, in order; any other value is reported as unknown.
+
+#### STORAGE_KEYS
+
+`private static final Map<Integer,String> STORAGE_KEYS`
+
+Storage containers captured when opened, keyed by container id to export key. The group storage id is the
+one the legacy `InventoryID.GROUP_STORAGE` constant held; the current API names it
+`INV_GROUP_TEMP`.
 
 #### bankItems
 
@@ -1084,6 +1324,18 @@ The Karamja elite varbit and every other region's tier varbits are plain 0/1 fla
 
 `private Instant bankUpdated`
 
+#### caMetaPartial
+
+`private boolean caMetaPartial`
+
+Whether the last metadata load skipped a tier enum or task struct the cache did not return.
+
+#### caMetaRetries
+
+`private int caMetaRetries`
+
+How many times a partial metadata load has been retried.
+
 #### caTaskMeta
 
 `private Map<Integer,CombatAchievementTask> caTaskMeta`
@@ -1093,6 +1345,22 @@ Cached task metadata by task id (completed flag unset); empty until resolved fro
 #### client
 
 `private final Client client`
+
+#### clogObtained
+
+`private int clogObtained`
+
+#### clogPages
+
+`private final Map<String,CollectionLogPage> clogPages`
+
+#### clogTotal
+
+`private int clogTotal`
+
+#### clogUpdated
+
+`private Instant clogUpdated`
 
 #### combatAchievements
 
@@ -1134,6 +1402,26 @@ Cached task metadata by task id (completed flag unset); empty until resolved fro
 
 `private final Map<String,Integer> killCounts`
 
+#### lastLocation
+
+`private LocationData lastLocation`
+
+Location captured by the last snapshot built with a live local player; cleared by `#reset()`.
+
+#### lastPlayer
+
+`private PlayerInfo lastPlayer`
+
+Identity captured by the last snapshot built with a live local player; cleared by `#reset()`.
+
+#### polledEnergy
+
+`private Integer polledEnergy`
+
+#### polledLocation
+
+`private WorldPoint polledLocation`
+
 #### questPoints
 
 `private Integer questPoints`
@@ -1141,6 +1429,10 @@ Cached task metadata by task id (completed flag unset); empty until resolved fro
 #### quests
 
 `private List<QuestEntry> quests`
+
+#### runePouch
+
+`private List<ItemEntry> runePouch`
 
 #### skills
 
@@ -1157,6 +1449,18 @@ Cached task metadata by task id (completed flag unset); empty until resolved fro
 #### slayerTaskNames
 
 `private final Map<Integer,String> slayerTaskNames`
+
+#### spellbook
+
+`private String spellbook`
+
+#### storageUpdated
+
+`private final Map<String,Instant> storageUpdated`
+
+#### storages
+
+`private final Map<String,List<ItemEntry>> storages`
 
 ### Constructor Detail
 
@@ -1179,6 +1483,15 @@ Creates a collector that cannot read other plugins' stored data.
                      config, may be `null`
 
 ### Method Detail
+
+#### buildCollectionLog
+
+`private CollectionLogData buildCollectionLog()`
+
+Builds the exported collection log from the stored pages. The flat item list holds each obtained
+item id once, taking the quantity from the first page it appears on.
+
+- **Returns:** the collection log, or `null` when no page has been captured
 
 #### buildCombatAchievementTasks
 
@@ -1212,9 +1525,11 @@ Collects the capture time of each item section present in the snapshot.
 `public CharacterSnapshot buildSnapshot()`
 
 Assembles the export snapshot from the caches and cheap client reads, honouring the config
-toggles. Owned collections are copied so the writer thread reads a stable graph.
+toggles. Owned collections are copied so the writer thread reads a stable graph. The local
+player may already be gone when the client reaches the login screen, so identity and location
+are remembered from the last live build and used for the final write of a session.
 
-- **Returns:** the snapshot, or `null` when no character is logged in
+- **Returns:** the snapshot, or `null` when no character is logged in and none was seen this session
 
 #### buildVitals
 
@@ -1223,6 +1538,18 @@ toggles. Owned collections are copied so the writer thread reads a stable graph.
 Reads current combat vitals from boosted and real skill levels and run energy.
 
 - **Returns:** the vitals snapshot
+
+#### captureCollectionLog
+
+`public boolean captureCollectionLog()`
+
+Captures the collection log page currently drawn. Called when the log's draw-list script has
+run, so it only does work as the player opens or switches pages. Each item widget under the
+items container is an obtained item when its opacity is 0, and a greyed-out missing item
+otherwise. The page is stored under its title, replacing any earlier capture of that page, and
+the account-wide counts are read from the collection log varps.
+
+- **Returns:** whether the captured data changed
 
 #### copyBankTabs
 
@@ -1280,6 +1607,12 @@ Resolves an item id to its display name.
 - **Parameter** `itemId` — the item id
 - **Returns:** the item name, or `null` when it cannot be resolved
 
+#### hasRunePouch
+
+`private boolean hasRunePouch()`
+
+- **Returns:** whether the live inventory holds any rune pouch variant
+
 #### loadCombatAchievementMeta
 
 `private Map<Integer,CombatAchievementTask> loadCombatAchievementMeta()`
@@ -1287,7 +1620,8 @@ Resolves an item id to its display name.
 Reads task names, tiers, and monsters from the game cache: each tier enum lists task structs,
 and each struct carries the task id, name, and monster category as params.
 
-- **Returns:** the metadata by task id, or empty if the cache is not readable yet
+- **Returns:** the metadata by task id, or empty if the cache is not readable yet; also sets
+        `#caMetaPartial`
 
 #### onChatMessage
 
@@ -1348,6 +1682,15 @@ go stale, but counts parsed from chat by `#onChatMessage` stay current.
 
 - **Returns:** whether any cached count changed
 
+#### pollMovement
+
+`public boolean pollMovement()`
+
+Compares the character's real-world location and run energy against the previous call. Meant to
+run every game tick so walking or regenerating run energy marks the snapshot dirty.
+
+- **Returns:** whether an enabled value (location or vitals) changed since the last call
+
 #### pollQuests
 
 `public boolean pollQuests()`
@@ -1356,13 +1699,76 @@ Polls quest completion state and total quest points.
 
 - **Returns:** whether either the quest states or the quest-point total changed since the last poll
 
+#### pollRunePouch
+
+`public boolean pollRunePouch()`
+
+Polls the rune pouch contents. The pouch is present only while the inventory holds one of its variants
+(the same check RuneLite's rune pouch plugin makes); otherwise the cached contents are cleared. Each
+of the six slots pairs a rune-type varbit with a quantity varbit, and the rune type maps to an item id
+through the `EnumID#RUNEPOUCH_RUNE` cache enum. Empty slots and unresolvable runes are skipped.
+
+- **Returns:** whether the pouch contents (or its presence) changed since the last poll
+
 #### pollSlayer
 
 `public boolean pollSlayer()`
 
-Polls the current slayer task, clearing it when no task is assigned.
+Polls the slayer state. Points and streak are always exported; the task fields are null/0 when no task is
+assigned.
 
-- **Returns:** whether the slayer task changed since the last poll
+- **Returns:** whether the slayer state changed since the last poll
+
+#### pollSpellbook
+
+`public boolean pollSpellbook()`
+
+Polls the active spellbook from the spellbook varbit (0 standard, 1 ancient, 2 lunar, 3 arceuus).
+
+- **Returns:** whether the spellbook changed since the last poll
+
+#### readBlockedTasks
+
+`private List<BlockedTask> readBlockedTasks()`
+
+Reads every master's blocked task slots, falling back to the legacy shared block list when no
+per-master slot is filled.
+
+- **Returns:** the blocked tasks, never null
+
+#### readFlags
+
+`private List<String> readFlags(Map<String,Integer> varbits)`
+
+Lists the keys whose varbit is non-zero.
+
+- **Parameter** `varbits` — key to varbit id
+- **Returns:** the keys of the set flags, in table order
+
+#### readPlayerInfo
+
+`private PlayerInfo readPlayerInfo(Player localPlayer)`
+
+Reads the live player's identity and account context.
+
+- **Parameter** `localPlayer` — the local player
+- **Returns:** the player info
+
+#### readRunePouch
+
+`private List<ItemEntry> readRunePouch()`
+
+Reads the rune pouch slots from the client varbits.
+
+- **Returns:** the runes held, possibly empty
+
+#### readSlayerDetails
+
+`private void readSlayerDetails(SlayerData task)`
+
+Fills in the slayer master, blocked tasks and reward unlocks of a task.
+
+- **Parameter** `task` — the slayer data to complete
 
 #### readTaskRowName
 
@@ -1372,6 +1778,21 @@ Reads the display name column of one slayer task table row.
 
 - **Parameter** `row` — the slayer task table row id
 - **Returns:** the name, or null when absent
+
+#### refreshOverall
+
+`private void refreshOverall()`
+
+Recomputes the `OVERALL` entry from the cached skills. Does nothing until every real skill is
+cached, so a partial total is never exported.
+
+#### reloadCombatAchievementMetaIfNeeded
+
+`private void reloadCombatAchievementMetaIfNeeded()`
+
+Loads the task metadata when none is cached, and retries (at most `#CA_META_MAX_RETRIES` times)
+while the last load was partial, i.e. some tier enum or task struct was not returned by the cache.
+A retry never replaces the cached metadata with a smaller set.
 
 #### reset
 
@@ -1389,6 +1810,17 @@ Resolves a boss-task boss id to the boss name via the slayer task sublist table.
 - **Parameter** `bossId` — the value of the slayer target boss varbit
 - **Returns:** the boss name, or null when it cannot be resolved
 
+#### resolveLocation
+
+`private WorldPoint resolveLocation(Player localPlayer)`
+
+Resolves the character's real-world point. Inside an instance (raids, boss rooms, player-owned
+house) the world location is a copy-area coordinate, so the local point is mapped back to the
+template area it was built from.
+
+- **Parameter** `localPlayer` — the local player
+- **Returns:** the world point, or `null` when it is unavailable
+
 #### resolveTaskName
 
 `private String resolveTaskName(int taskId)`
@@ -1402,7 +1834,7 @@ Resolves a slayer task id to its display name from the cache's slayer task table
 
 `public void restore(CharacterSnapshot previous)`
 
-Seeds the bank, inventory, and equipment caches from this character's previous export, so a
+Seeds the bank, inventory, equipment, and storage caches from this character's previous export, so a
 section not yet re-captured this session keeps its last known contents instead of vanishing. Only
 sections not captured since the last `#reset()` are filled, so live data is never replaced,
 and each restored section keeps its original capture time. A snapshot belonging to a different
@@ -1429,6 +1861,21 @@ Maps a quest state to its exported string form.
 
 - **Parameter** `state` — the quest state
 - **Returns:** `FINISHED`, `IN_PROGRESS`, or `NOT_STARTED`
+
+#### storageContainerIds
+
+`public static Iterable<Integer> storageContainerIds()`
+
+- **Returns:** the item container ids of every captured storage, in export order
+
+#### storageKey
+
+`public static String storageKey(int containerId)`
+
+Resolves the export key of a storage container.
+
+- **Parameter** `containerId` — the item container id
+- **Returns:** `lootingBag`, `seedVault` or `groupStorage`, or `null` for any other container
 
 #### toGeOffer
 
@@ -1489,6 +1936,15 @@ Updates a single skill from a stat-changed event.
 - **Parameter** `level` — the real level
 - **Parameter** `xp` — the experience
 - **Parameter** `boostedLevel` — the current boosted level
+
+#### updateStorage
+
+`public void updateStorage(String key, ItemContainer container)`
+
+Replaces the cached contents of one storage container, dropping empty slots and placeholders.
+
+- **Parameter** `key` — the storage export key, see `#storageKey(int)`
+- **Parameter** `container` — the storage item container
 
 ---
 
@@ -1596,6 +2052,9 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 |---|---|
 | _class_ [`BankData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbankdata) | Bank contents: total distinct item count and a flat list of the stacks it holds. |
 | _class_ [`BankTab`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbanktab) | A bank tab: an index (0 for the main tab, 1 to 9 for the numbered tabs) and the items it holds. |
+| _class_ [`BlockedTask`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotblockedtask) | One blocked slayer task slot. |
+| _class_ [`CollectionLogData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogdata) | Collection log: the account-wide obtained and total counts, the flat list of obtained items, and the obtained items grouped by the log page they were seen on. |
+| _class_ [`CollectionLogPage`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogpage) | One collection log page as last seen: how many of its slots there are and which are obtained. |
 | _class_ [`CombatAchievementData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementdata) | Combat-achievement tier progress. |
 | _class_ [`CombatAchievementTask`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementtask) | A single combat-achievement task and whether it is complete. |
 | _class_ [`DiaryRegion`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiaryregion) | Completion of the four achievement-diary tiers for one region, plus the individual tasks where known. |
@@ -1607,7 +2066,8 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | _class_ [`PlayerInfo`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotplayerinfo) | Identity and account context of the logged-in character. |
 | _class_ [`QuestEntry`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotquestentry) | Completion state of one quest. |
 | _class_ [`SkillEntry`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotskillentry) | Real level and experience for one skill, plus the current boosted level. |
-| _class_ [`SlayerData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotslayerdata) | The current slayer task. |
+| _class_ [`SlayerData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotslayerdata) | The slayer state. |
+| _class_ [`TierCount`](#comoveduumnakalcharactersnapshotmodelcharactersnapshottiercount) | Completed and total task counts for one combat-achievement tier. |
 | _class_ [`VitalsData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotvitalsdata) | Current combat vitals: hitpoints, prayer, and run energy. |
 
 ### Field Summary
@@ -1616,6 +2076,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 |---|---|---|
 | `public Map<String,DiaryRegion>` | `achievementDiaries` | Achievement diary completion keyed by region name. |
 | `public BankData` | `bank` | Bank contents as a flat item list, captured when the bank is opened and carried over from the previous session until then. |
+| `public CollectionLogData` | `collectionLog` | Collection log contents captured while the log was open, carried over between sessions. |
 | `public CombatAchievementData` | `combatAchievements` | Combat-achievement tier progress. |
 | `public Map<String,ItemEntry>` | `equipment` | Worn equipment keyed by slot name. |
 | `public List<GeOffer>` | `grandExchange` | Active Grand Exchange offers by slot. |
@@ -1626,10 +2087,12 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | `public PlayerInfo` | `player` | Identity and account context of the logged-in character. |
 | `public Integer` | `questPoints` | Total quest points. |
 | `public List<QuestEntry>` | `quests` | Quest completion state, one entry per quest. |
+| `public List<ItemEntry>` | `runePouch` | Runes held in the rune pouch, present only while the inventory holds a rune pouch (any variant). |
 | `public int` | `schemaVersion` | Schema version of this file; bumped when the shape of the export changes. |
 | `public Map<String,String>` | `sectionUpdated` | ISO-8601 instant each item section (`bank`, `inventory`, `equipment`) was last captured from the client, keyed by section name. |
 | `public Map<String,SkillEntry>` | `skills` | Real level and experience per skill, keyed by upper-case skill name, plus `OVERALL`. |
-| `public SlayerData` | `slayer` | Current slayer task, or `null` when no task is assigned. |
+| `public SlayerData` | `slayer` | Slayer state; points and streak always set once polled, task fields null/0 when no task. |
+| `public Map<String,List<ItemEntry>>` | `storages` | Last known contents of storage containers that are only readable when opened, keyed by storage (`lootingBag`, `seedVault`, `groupStorage`); a storage never opened is absent. |
 | `public VitalsData` | `vitals` | Current combat vitals (hitpoints, prayer, run energy). |
 
 ### Field Detail
@@ -1646,6 +2109,12 @@ Achievement diary completion keyed by region name.
 
 Bank contents as a flat item list, captured when the bank is opened and carried over from the
 previous session until then.
+
+#### collectionLog
+
+`public CollectionLogData collectionLog`
+
+Collection log contents captured while the log was open, carried over between sessions.
 
 #### combatAchievements
 
@@ -1708,6 +2177,13 @@ Total quest points.
 
 Quest completion state, one entry per quest.
 
+#### runePouch
+
+`public List<ItemEntry> runePouch`
+
+Runes held in the rune pouch, present only while the inventory holds a rune pouch (any variant).
+Empty when the pouch holds nothing.
+
 #### schemaVersion
 
 `public int schemaVersion`
@@ -1732,7 +2208,14 @@ Real level and experience per skill, keyed by upper-case skill name, plus `OVERA
 
 `public SlayerData slayer`
 
-Current slayer task, or `null` when no task is assigned.
+Slayer state; points and streak always set once polled, task fields null/0 when no task.
+
+#### storages
+
+`public Map<String,List<ItemEntry>> storages`
+
+Last known contents of storage containers that are only readable when opened, keyed by storage
+(`lootingBag`, `seedVault`, `groupStorage`); a storage never opened is absent.
 
 #### vitals
 
@@ -1854,6 +2337,201 @@ Tab index: 0 is the main tab, 1 to 9 are the numbered tabs.
 
 ---
 
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BlockedTask
+
+_class_
+
+`public static class BlockedTask`
+
+One blocked slayer task slot.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public String` | `master` | Name of the slayer master whose block list holds this task, or null for the legacy shared list. |
+| `public String` | `name` | Task name, or null when it could not be resolved. |
+| `public int` | `taskId` | Slayer task id (same id space as the slayer creature id). |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `BlockedTask(int taskId, String name, String master)` |  |
+
+### Field Detail
+
+#### master
+
+`public String master`
+
+Name of the slayer master whose block list holds this task, or null for the legacy shared list.
+
+#### name
+
+`public String name`
+
+Task name, or null when it could not be resolved.
+
+#### taskId
+
+`public int taskId`
+
+Slayer task id (same id space as the slayer creature id).
+
+### Constructor Detail
+
+#### BlockedTask
+
+`public BlockedTask(int taskId, String name, String master)`
+
+- **Parameter** `taskId` — slayer task id
+- **Parameter** `name` — task name, or null
+- **Parameter** `master` — master name, or null
+
+---
+
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CollectionLogData
+
+_class_
+
+`public static class CollectionLogData`
+
+Collection log: the account-wide obtained and total counts, the flat list of obtained items, and
+the obtained items grouped by the log page they were seen on.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public List<ItemEntry>` | `items` | Every obtained item seen so far, one entry per item id. |
+| `public int` | `obtained` | Obtained-item count shown by the game; 0 when it was not readable. |
+| `public Map<String,CollectionLogPage>` | `pages` | Per-page captures keyed by page title; only pages the player has opened are present. |
+| `public int` | `total` | Total collectable-item count shown by the game; 0 when it was not readable. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `CollectionLogData(int obtained, int total, List<ItemEntry> items, Map<String,CollectionLogPage> pages)` |  |
+
+### Field Detail
+
+#### items
+
+`public List<ItemEntry> items`
+
+Every obtained item seen so far, one entry per item id.
+
+#### obtained
+
+`public int obtained`
+
+Obtained-item count shown by the game; 0 when it was not readable.
+
+#### pages
+
+`public Map<String,CollectionLogPage> pages`
+
+Per-page captures keyed by page title; only pages the player has opened are present.
+
+#### total
+
+`public int total`
+
+Total collectable-item count shown by the game; 0 when it was not readable.
+
+### Constructor Detail
+
+#### CollectionLogData
+
+`public CollectionLogData(int obtained, int total, List<ItemEntry> items, Map<String,CollectionLogPage> pages)`
+
+- **Parameter** `obtained` — obtained-item count
+- **Parameter** `total` — total item count
+- **Parameter** `items` — obtained items
+- **Parameter** `pages` — captured pages by title
+
+---
+
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CollectionLogPage
+
+_class_
+
+`public static class CollectionLogPage`
+
+One collection log page as last seen: how many of its slots there are and which are obtained.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public List<ItemEntry>` | `items` | The obtained items on the page. |
+| `public int` | `obtained` | Number of obtained items on the page. |
+| `public int` | `total` | Number of item slots on the page, obtained or not. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `CollectionLogPage(int total, int obtained, List<ItemEntry> items)` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `public boolean` | `equals(Object o)` | Compares by counts and by item id, name and quantity in order. |
+| `public int` | `hashCode()` |  |
+
+### Field Detail
+
+#### items
+
+`public List<ItemEntry> items`
+
+The obtained items on the page.
+
+#### obtained
+
+`public int obtained`
+
+Number of obtained items on the page.
+
+#### total
+
+`public int total`
+
+Number of item slots on the page, obtained or not.
+
+### Constructor Detail
+
+#### CollectionLogPage
+
+`public CollectionLogPage(int total, int obtained, List<ItemEntry> items)`
+
+- **Parameter** `total` — slot count
+- **Parameter** `obtained` — obtained count
+- **Parameter** `items` — obtained items
+
+### Method Detail
+
+#### equals
+
+`public boolean equals(Object o)`
+
+Compares by counts and by item id, name and quantity in order.
+
+- **Parameter** `o` — the other object
+- **Returns:** whether the pages hold the same capture
+
+#### hashCode
+
+`public int hashCode()`
+
+- **Returns:** a hash consistent with `#equals(Object)`
+
+---
+
 ## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData
 
 _class_
@@ -1872,7 +2550,9 @@ Combat-achievement tier progress. Each field is the raw value of the correspondi
 | `public boolean` | `eliteComplete` | Compatibility flag: whether the elite tier has any progress. |
 | `public boolean` | `hardComplete` | Compatibility flag: whether the hard tier has any progress. |
 | `public boolean` | `mediumComplete` | Compatibility flag: whether the medium tier has any progress. |
+| `public Integer` | `points` | Total combat-achievement points. |
 | `public List<CombatAchievementTask>` | `tasks` | Every combat-achievement task with its completion flag. |
+| `public Map<String,TierCount>` | `tierCounts` | Completed and total task counts per tier, keyed `EASY` to `GRANDMASTER`. |
 | `public int` | `tierEasy` | Raw easy-tier varbit value. |
 | `public int` | `tierElite` | Raw elite-tier varbit value. |
 | `public int` | `tierGrandmaster` | Raw grandmaster-tier varbit value. |
@@ -1886,6 +2566,15 @@ Combat-achievement tier progress. Each field is the raw value of the correspondi
 |---|---|
 | `CombatAchievementData(int tierEasy, int tierMedium, int tierHard, int tierElite, int tierMaster, int tierGrandmaster)` |  |
 | `CombatAchievementData(int tierEasy, int tierMedium, int tierHard, int tierElite, int tierMaster, int tierGrandmaster, List<CombatAchievementTask> tasks)` |  |
+| `CombatAchievementData(int tierEasy, int tierMedium, int tierHard, int tierElite, int tierMaster, int tierGrandmaster, List<CombatAchievementTask> tasks, int pointsVarbit)` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `private static Integer` | `computePoints(List<CombatAchievementTask> tasks)` | Sums the points of completed tasks. |
+| `private static Map<String,TierCount>` | `countTiers(List<CombatAchievementTask> tasks)` | Counts completed and total tasks per tier, ignoring tasks with no resolved tier. |
+| `static int` | `pointsPerTask(String tier)` | Points one completed task of the given tier is worth: easy 1, medium 2, hard 3, elite 4, master 5, grandmaster 6. |
 
 ### Field Detail
 
@@ -1920,12 +2609,26 @@ Compatibility flag: whether the hard tier has any progress.
 
 Compatibility flag: whether the medium tier has any progress.
 
+#### points
+
+`public Integer points`
+
+Total combat-achievement points. Read from the game's points varbit when it is non-zero; otherwise
+the sum of completed task points, or null when a completed task's tier is unresolved.
+
 #### tasks
 
 `public List<CombatAchievementTask> tasks`
 
 Every combat-achievement task with its completion flag. When the cache metadata cannot be
 resolved, holds only the completed task ids with null name, tier, and monster.
+
+#### tierCounts
+
+`public Map<String,TierCount> tierCounts`
+
+Completed and total task counts per tier, keyed `EASY` to `GRANDMASTER`. Null when no
+task tier could be resolved from the game cache.
 
 #### tierEasy
 
@@ -1987,6 +2690,51 @@ Raw medium-tier varbit value.
 - **Parameter** `tierMaster` — master varbit value
 - **Parameter** `tierGrandmaster` — grandmaster varbit value
 - **Parameter** `tasks` — per-task detail; `completedTasks` is derived from it
+
+#### CombatAchievementData
+
+`public CombatAchievementData(int tierEasy, int tierMedium, int tierHard, int tierElite, int tierMaster, int tierGrandmaster, List<CombatAchievementTask> tasks, int pointsVarbit)`
+
+- **Parameter** `tierEasy` — easy varbit value
+- **Parameter** `tierMedium` — medium varbit value
+- **Parameter** `tierHard` — hard varbit value
+- **Parameter** `tierElite` — elite varbit value
+- **Parameter** `tierMaster` — master varbit value
+- **Parameter** `tierGrandmaster` — grandmaster varbit value
+- **Parameter** `tasks` — per-task detail; `completedTasks`, `tierCounts` and the fallback
+                       `points` are derived from it
+- **Parameter** `pointsVarbit` — the game's combat-achievement points varbit; used when non-zero
+
+### Method Detail
+
+#### computePoints
+
+`private static Integer computePoints(List<CombatAchievementTask> tasks)`
+
+Sums the points of completed tasks.
+
+- **Parameter** `tasks` — the tasks
+- **Returns:** the total, or null when a completed task has no resolved tier
+
+#### countTiers
+
+`private static Map<String,TierCount> countTiers(List<CombatAchievementTask> tasks)`
+
+Counts completed and total tasks per tier, ignoring tasks with no resolved tier.
+
+- **Parameter** `tasks` — the tasks
+- **Returns:** the counts for all six tiers in order, or null when no task has a tier
+
+#### pointsPerTask
+
+`static int pointsPerTask(String tier)`
+
+Points one completed task of the given tier is worth: easy 1, medium 2, hard 3, elite 4, master 5,
+grandmaster 6. Source: https://oldschool.runescape.wiki/w/Combat_Achievements (points per task
+table, checked 2026-10-14).
+
+- **Parameter** `tier` — the tier name, `EASY` to `GRANDMASTER`
+- **Returns:** the points, or 0 for an unknown tier
 
 ---
 
@@ -2389,6 +3137,7 @@ World location of the character.
 
 | Modifier and Type | Field | Description |
 |---|---|---|
+| `public boolean` | `instanced` | Whether the character is in an instanced region; x and y are then the template area's coordinates. |
 | `public int` | `plane` | Plane (height level), 0–3. |
 | `public int` | `regionId` | Map region id. |
 | `public int` | `x` | World x coordinate. |
@@ -2399,8 +3148,15 @@ World location of the character.
 | Constructor | Description |
 |---|---|
 | `LocationData(int regionId, int x, int y, int plane)` |  |
+| `LocationData(int regionId, int x, int y, int plane, boolean instanced)` |  |
 
 ### Field Detail
+
+#### instanced
+
+`public boolean instanced`
+
+Whether the character is in an instanced region; x and y are then the template area's coordinates.
 
 #### plane
 
@@ -2437,6 +3193,16 @@ World y coordinate.
 - **Parameter** `y` — world y
 - **Parameter** `plane` — plane
 
+#### LocationData
+
+`public LocationData(int regionId, int x, int y, int plane, boolean instanced)`
+
+- **Parameter** `regionId` — map region id
+- **Parameter** `x` — world x
+- **Parameter** `y` — world y
+- **Parameter** `plane` — plane
+- **Parameter** `instanced` — whether the character is in an instanced region
+
 ---
 
 ## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.PlayerInfo
@@ -2453,7 +3219,8 @@ Identity and account context of the logged-in character.
 |---|---|---|
 | `public String` | `accountType` | Account type, e.g. |
 | `public int` | `combatLevel` | Combat level. |
-| `public boolean` | `members` | Whether the current world is a members' world. |
+| `public Boolean` | `members` | Whether the current world is a members' world; `null` when account info is not exported. |
+| `public String` | `spellbook` | Active spellbook: `STANDARD`, `ANCIENT`, `LUNAR` or `ARCEUUS`; null if unknown. |
 | `public String` | `username` | In-game display name. |
 | `public int` | `world` | World the character is logged into. |
 
@@ -2461,7 +3228,8 @@ Identity and account context of the logged-in character.
 
 | Constructor | Description |
 |---|---|
-| `PlayerInfo(String username, int combatLevel, int world, String accountType, boolean members)` |  |
+| `PlayerInfo(String username, int combatLevel, int world, String accountType, Boolean members)` |  |
+| `PlayerInfo(String username, int combatLevel, int world, String accountType, Boolean members, String spellbook)` |  |
 
 ### Field Detail
 
@@ -2479,9 +3247,15 @@ Combat level.
 
 #### members
 
-`public boolean members`
+`public Boolean members`
 
-Whether the current world is a members' world.
+Whether the current world is a members' world; `null` when account info is not exported.
+
+#### spellbook
+
+`public String spellbook`
+
+Active spellbook: `STANDARD`, `ANCIENT`, `LUNAR` or `ARCEUUS`; null if unknown.
 
 #### username
 
@@ -2499,13 +3273,24 @@ World the character is logged into.
 
 #### PlayerInfo
 
-`public PlayerInfo(String username, int combatLevel, int world, String accountType, boolean members)`
+`public PlayerInfo(String username, int combatLevel, int world, String accountType, Boolean members)`
+
+- **Parameter** `username` — display name
+- **Parameter** `combatLevel` — combat level
+- **Parameter** `world` — current world
+- **Parameter** `accountType` — account-type name
+- **Parameter** `members` — whether on a members' world, or `null` when not exported
+
+#### PlayerInfo
+
+`public PlayerInfo(String username, int combatLevel, int world, String accountType, Boolean members, String spellbook)`
 
 - **Parameter** `username` — display name
 - **Parameter** `combatLevel` — combat level
 - **Parameter** `world` — current world
 - **Parameter** `accountType` — account-type name
 - **Parameter** `members` — whether on a members' world
+- **Parameter** `spellbook` — active spellbook name, may be `null`
 
 ---
 
@@ -2623,18 +3408,24 @@ _class_
 
 `public static class SlayerData`
 
-The current slayer task. The creature is exported as its game id plus, when resolvable, its name.
+The slayer state. With no task assigned, the creature id and amount are 0 and the names are null, while
+points and streak stay. The creature is exported as its game id plus, when resolvable, its name.
 
 ### Field Summary
 
 | Modifier and Type | Field | Description |
 |---|---|---|
 | `public int` | `amount` | Remaining kill count. |
+| `public List<BlockedTask>` | `blockedTasks` | Blocked tasks across all masters, or null in files written before this field existed. |
 | `public String` | `bossName` | Specific boss name for boss tasks, or null for any other task. |
 | `public int` | `creatureId` | Game id of the assigned creature. |
 | `public String` | `creatureName` | Display name of the assigned creature, or null when it could not be resolved. |
+| `public List<String>` | `extendedTasks` | Keys of tasks whose extension is purchased, or null in files written before this field existed. |
+| `public Integer` | `masterId` | Id of the current slayer master, 0 when unknown. |
+| `public String` | `masterName` | Name of the current slayer master, or null when unresolved. |
 | `public int` | `points` | Slayer reward points. |
 | `public int` | `streak` | Current task-completion streak. |
+| `public List<String>` | `unlockedTasks` | Keys of purchased task-assignment unlocks, or null in files written before this field existed. |
 
 ### Constructor Summary
 
@@ -2649,6 +3440,12 @@ The current slayer task. The creature is exported as its game id plus, when reso
 `public int amount`
 
 Remaining kill count.
+
+#### blockedTasks
+
+`public List<BlockedTask> blockedTasks`
+
+Blocked tasks across all masters, or null in files written before this field existed.
 
 #### bossName
 
@@ -2668,6 +3465,24 @@ Game id of the assigned creature.
 
 Display name of the assigned creature, or null when it could not be resolved.
 
+#### extendedTasks
+
+`public List<String> extendedTasks`
+
+Keys of tasks whose extension is purchased, or null in files written before this field existed.
+
+#### masterId
+
+`public Integer masterId`
+
+Id of the current slayer master, 0 when unknown. Null in files written before this field existed.
+
+#### masterName
+
+`public String masterName`
+
+Name of the current slayer master, or null when unresolved.
+
 #### points
 
 `public int points`
@@ -2679,6 +3494,12 @@ Slayer reward points.
 `public int streak`
 
 Current task-completion streak.
+
+#### unlockedTasks
+
+`public List<String> unlockedTasks`
+
+Keys of purchased task-assignment unlocks, or null in files written before this field existed.
 
 ### Constructor Detail
 
@@ -2692,6 +3513,52 @@ Current task-completion streak.
 - **Parameter** `amount` — remaining kills
 - **Parameter** `points` — reward points
 - **Parameter** `streak` — completion streak
+
+---
+
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.TierCount
+
+_class_
+
+`public static class TierCount`
+
+Completed and total task counts for one combat-achievement tier.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public int` | `completed` | Number of completed tasks in the tier. |
+| `public int` | `total` | Number of tasks in the tier. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `TierCount(int completed, int total)` |  |
+
+### Field Detail
+
+#### completed
+
+`public int completed`
+
+Number of completed tasks in the tier.
+
+#### total
+
+`public int total`
+
+Number of tasks in the tier.
+
+### Constructor Detail
+
+#### TierCount
+
+`public TierCount(int completed, int total)`
+
+- **Parameter** `completed` — completed task count
+- **Parameter** `total` — total task count
 
 ---
 

@@ -6,6 +6,9 @@
 package com.oveduumnakal.charactersnapshot;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.ScheduledExecutorService;
 import javax.inject.Inject;
 
@@ -19,12 +22,15 @@ import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.Player;
+import net.runelite.api.ScriptID;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.GrandExchangeOfferChanged;
 import net.runelite.api.events.ItemContainerChanged;
+import net.runelite.api.events.ScriptPostFired;
 import net.runelite.api.events.StatChanged;
+import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.client.RuneLite;
 import net.runelite.client.config.ConfigManager;
@@ -51,23 +57,25 @@ public class CharacterSnapshotPlugin extends Plugin
 	private static final int POLL_INTERVAL_TICKS = 30;
 
 	@Inject
-	private Client client;
+	Client client;
 
 	@Inject
-	private CharacterSnapshotConfig config;
+	CharacterSnapshotConfig config;
 
 	@Inject
-	private ConfigManager configManager;
+	ScheduledExecutorService executor;
 
 	@Inject
-	private ScheduledExecutorService executor;
+	ConfigManager configManager;
 
 	@Inject
-	private Gson gson;
+	Gson gson;
 
-	private SnapshotCollector collector;
+	/** Default export folder; replaced in tests so they never touch the real RuneLite directory. */
+	File defaultDir = new File(RuneLite.RUNELITE_DIR, "osrs-companion");
 
-	private SnapshotWriter writer;
+	/** The last invalid custom folder a warning was logged for, so the warning is not repeated. */
+	private String warnedInvalidDir = null;
 
 	private volatile boolean dirty = false;
 
@@ -188,6 +196,9 @@ public class CharacterSnapshotPlugin extends Plugin
 		else if (id == InventoryID.INV && config.syncInventory())
 		{
 			collector.updateInventory(event.getItemContainer());
+			if (config.syncRunePouch())
+				collector.pollRunePouch();
+
 			dirty = true;
 		}
 		else if (id == InventoryID.WORN && config.syncEquipment())
@@ -195,6 +206,27 @@ public class CharacterSnapshotPlugin extends Plugin
 			collector.updateEquipment(event.getItemContainer());
 			dirty = true;
 		}
+		else if (SnapshotCollector.storageKey(id) != null && config.syncStorages())
+		{
+			collector.updateStorage(SnapshotCollector.storageKey(id), event.getItemContainer());
+			dirty = true;
+		}
+	}
+
+	/**
+	 * Captures the collection log page whenever the log redraws its item list.
+	 *
+	 * @param event the script-post-fired event
+	 */
+	@Subscribe
+	public void onScriptPostFired(ScriptPostFired event)
+	{
+		if (event.getScriptId() != ScriptID.COLLECTION_DRAW_LIST || collector == null
+				|| !config.syncCollectionLog())
+			return;
+
+		if (collector.captureCollectionLog())
+			dirty = true;
 	}
 
 	/**
@@ -267,6 +299,9 @@ public class CharacterSnapshotPlugin extends Plugin
 			return;
 		}
 
+		if (collector.pollMovement())
+			dirty = true;
+
 		if (tickCounter % POLL_INTERVAL_TICKS == 0)
 			pollPeriodic();
 
@@ -283,8 +318,12 @@ public class CharacterSnapshotPlugin extends Plugin
 	private void pollPeriodic()
 	{
 		boolean changed = false;
-		if (config.syncQuests())
-			changed |= collector.pollQuests();
+		if (questsStale)
+		{
+			questsStale = false;
+			if (config.syncQuests())
+				changed |= collector.pollQuests();
+		}
 
 		if (config.syncDiaries())
 			changed |= collector.pollDiaries();
@@ -294,6 +333,12 @@ public class CharacterSnapshotPlugin extends Plugin
 
 		if (config.syncSlayer())
 			changed |= collector.pollSlayer();
+
+		if (config.syncRunePouch())
+			changed |= collector.pollRunePouch();
+
+		if (config.syncAccountInfo())
+			changed |= collector.pollSpellbook();
 
 		if (config.syncKillCounts())
 			changed |= collector.pollKillCounts();
@@ -331,6 +376,17 @@ public class CharacterSnapshotPlugin extends Plugin
 				collector.updateEquipment(equip);
 		}
 
+		if (config.syncStorages())
+		{
+			for (int containerId : SnapshotCollector.storageContainerIds())
+			{
+				ItemContainer storage = client.getItemContainer(containerId);
+				if (storage != null)
+					collector.updateStorage(SnapshotCollector.storageKey(containerId), storage);
+			}
+		}
+
+		questsStale = false;
 		if (config.syncQuests())
 			collector.pollQuests();
 
@@ -343,8 +399,14 @@ public class CharacterSnapshotPlugin extends Plugin
 		if (config.syncSlayer())
 			collector.pollSlayer();
 
+		if (config.syncAccountInfo())
+			collector.pollSpellbook();
+
 		if (config.syncGrandExchange())
 			collector.pollAllGeOffers();
+
+		if (config.syncRunePouch())
+			collector.pollRunePouch();
 
 		if (config.syncKillCounts())
 			collector.pollKillCounts();
@@ -373,18 +435,51 @@ public class CharacterSnapshotPlugin extends Plugin
 	}
 
 	/**
-	 * Resolves the export directory: the configured folder if set, else the default under the
-	 * RuneLite directory.
+	 * Resolves the export directory: the configured folder if it can be created and written to, else
+	 * the default under the RuneLite directory. An unusable folder is logged once, not per save.
 	 *
 	 * @return the directory to write export files into
 	 */
-	private File resolveSyncDir()
+	File resolveSyncDir()
 	{
 		String custom = config.saveDirectory();
-		if (custom != null && !custom.trim().isEmpty())
-			return new File(custom.trim());
+		if (custom == null || custom.trim().isEmpty())
+			return defaultDir;
 
-		return new File(RuneLite.RUNELITE_DIR, "osrs-companion");
+		String trimmed = custom.trim();
+		if (isUsableDirectory(trimmed))
+		{
+			warnedInvalidDir = null;
+			return new File(trimmed);
+		}
+
+		if (!trimmed.equals(warnedInvalidDir))
+		{
+			warnedInvalidDir = trimmed;
+			log.warn("Character Snapshot: save folder '{}' is not usable, using {}", trimmed, defaultDir);
+		}
+
+		return defaultDir;
+	}
+
+	/**
+	 * Checks that a folder exists (creating it if absent) and is writable.
+	 *
+	 * @param path the folder path
+	 * @return whether exports can be written there
+	 */
+	private static boolean isUsableDirectory(String path)
+	{
+		try
+		{
+			Path dir = new File(path).toPath();
+			Files.createDirectories(dir);
+			return Files.isDirectory(dir) && Files.isWritable(dir);
+		}
+		catch (IOException | RuntimeException e)
+		{
+			return false;
+		}
 	}
 
 	/**
@@ -394,5 +489,23 @@ public class CharacterSnapshotPlugin extends Plugin
 	{
 		int seconds = Math.max(30, config.syncIntervalSeconds());
 		syncTickThreshold = (int) (seconds / 0.6);
+	}
+
+	SnapshotCollector collector;
+
+	SnapshotWriter writer;
+
+	private volatile boolean questsStale = false;
+
+	/**
+	 * Marks the quests stale on any varp or varbit change, since quest progress lives in those. The next
+	 * periodic poll then re-reads the quests; without a change they are not polled again.
+	 *
+	 * @param event the varbit-changed event
+	 */
+	@Subscribe
+	public void onVarbitChanged(VarbitChanged event)
+	{
+		questsStale = true;
 	}
 }
