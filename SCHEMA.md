@@ -188,15 +188,23 @@ are not exported).
 ## collectionLog
 
 `{ obtained, total, items[], pages }`. The game only exposes the log while its interface is open, so the
-plugin captures each page the player views and keeps the last known data (also across sessions, with
-`sectionUpdated.collectionLog` giving the last capture time). The section is absent until a page has
-been viewed.
+plugin keeps the last known data (also across sessions, with `sectionUpdated.collectionLog` giving the
+last capture time). The section is absent until a page has been viewed or a Search pass has run.
+
+Two capture paths feed it:
+
+- Page views: each page the player opens is stored under `pages` and its obtained items merged into `items`.
+- Search pass: when the player clicks the log's Search, the game runs one script per obtained item (script
+  4100). The plugin merges `{ itemId, quantity }` for each into `items`, so `items` is complete after one
+  click even for pages never viewed. `pages` is not filled by this pass.
 
 - `obtained` / `total`: the game's overall counters (varps) as of the last capture; 0 if unreadable.
 - `items`: every obtained item seen so far, one item entry `{ itemId, name, quantity }` per item id.
+  Complete once a Search pass has run; before that it holds only the items on viewed pages.
 - `pages`: map of page title (e.g. `Abyssal Sire`) to `{ total, obtained, items[] }`, where `total` is
   the number of item slots on the page and `items` its obtained items. Only pages the player has opened
-  are present, so `items` can hold fewer entries than `obtained` until every page has been viewed.
+  are present, regardless of Search passes.
+
 ## killCounts
 
 `{ "<boss>": count }` — a JSON object of integers, sorted by key. The key is the boss name as RuneLite's

@@ -1055,6 +1055,68 @@ public class SnapshotCollectorTest
 	}
 
 	/**
+	 * A Search pass merges one entry per script event, keeps page data intact, closes once per pass, and
+	 * survives a restore.
+	 */
+	@Test
+	public void collectionLogSearchPassMergesAllItems()
+	{
+		Client client = loggedInClient("Zezima");
+		when(client.getVarpValue(VarPlayerID.COLLECTION_COUNT)).thenReturn(50);
+		when(client.getVarpValue(VarPlayerID.COLLECTION_COUNT_MAX)).thenReturn(1717);
+		ItemComposition whip = named("Abyssal whip");
+		when(client.getItemDefinition(11)).thenReturn(whip);
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		logPage(client, "Abyssal Sire", clogItem(11, 1, 0), clogItem(12, 0, 175));
+		collector.captureCollectionLog();
+
+		for (int id = 11; id < 61; id++)
+			collector.recordCollectionLogItem(new Object[] {SnapshotCollector.CLOG_ITEM_SCRIPT_ID, id, 2, 0, null});
+
+		assertTrue(collector.finishCollectionLogSearch());
+		assertTrue(!collector.finishCollectionLogSearch());
+
+		CharacterSnapshot snap = collector.buildSnapshot();
+		assertEquals(50, snap.collectionLog.items.size());
+		assertEquals(50, snap.collectionLog.obtained);
+		assertEquals("Abyssal whip", snap.collectionLog.items.get(0).name);
+		assertEquals(2, snap.collectionLog.items.get(0).quantity);
+		assertEquals(1, snap.collectionLog.pages.size());
+		assertEquals(1, snap.collectionLog.pages.get("Abyssal Sire").obtained);
+
+		SnapshotCollector fresh = new SnapshotCollector(loggedInClient("Zezima"), allEnabled());
+		CharacterSnapshot previous = previous("Zezima", "x");
+		previous.collectionLog = snap.collectionLog;
+		fresh.restore(previous);
+		assertEquals(50, fresh.buildSnapshot().collectionLog.items.size());
+	}
+
+	/**
+	 * A Search pass alone exports the section, and a repeat pass with unchanged data reports no change.
+	 */
+	@Test
+	public void collectionLogSearchPassAloneAndMalformedArgs()
+	{
+		Client client = loggedInClient("Zezima");
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.recordCollectionLogItem(null);
+		collector.recordCollectionLogItem(new Object[] {4100});
+		collector.recordCollectionLogItem(new Object[] {4100, "x", 1});
+		assertTrue(!collector.finishCollectionLogSearch());
+		assertNull(collector.buildSnapshot().collectionLog);
+
+		collector.recordCollectionLogItem(new Object[] {4100, 7, 1, 0, null});
+		assertTrue(collector.finishCollectionLogSearch());
+		assertEquals(1, collector.buildSnapshot().collectionLog.items.size());
+		assertNotNull(collector.buildSnapshot().collectionLog.pages);
+
+		collector.recordCollectionLogItem(new Object[] {4100, 7, 1, 0, null});
+		assertTrue(!collector.finishCollectionLogSearch());
+	}
+
+	/**
 	 * Stubs the open collection log interface with a page title and item widgets.
 	 *
 	 * @param client the mock client

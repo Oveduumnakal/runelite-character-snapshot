@@ -1,6 +1,9 @@
 /*
  * Copyright (c) 2026, isaac
  * Copyright (c) 2026, Oveduumnakal
+ * Collection log search script id and argument layout derived from WikiSync
+ * (https://github.com/weirdgloop/WikiSync), BSD 2-Clause:
+ * Copyright (c) 2021, andmcadams
  * All rights reserved.
  */
 package com.oveduumnakal.charactersnapshot;
@@ -29,6 +32,7 @@ import net.runelite.api.events.GameTick;
 import net.runelite.api.events.GrandExchangeOfferChanged;
 import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.ScriptPostFired;
+import net.runelite.api.events.ScriptPreFired;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.gameval.InventoryID;
@@ -230,6 +234,22 @@ public class CharacterSnapshotPlugin extends Plugin
 	}
 
 	/**
+	 * Merges every obtained item the game reports while the player opens the collection log's Search. The
+	 * pass is closed once per pass on a later game tick, not per item.
+	 *
+	 * @param event the script-pre-fired event
+	 */
+	@Subscribe
+	public void onScriptPreFired(ScriptPreFired event)
+	{
+		if (event.getScriptId() != SnapshotCollector.CLOG_ITEM_SCRIPT_ID || collector == null
+				|| !config.syncCollectionLog() || event.getScriptEvent() == null)
+			return;
+
+		collector.recordCollectionLogItem(event.getScriptEvent().getArguments());
+	}
+
+	/**
 	 * Reads kill-count and treasure-trail completion lines from game messages.
 	 *
 	 * @param event the chat-message event
@@ -302,6 +322,9 @@ public class CharacterSnapshotPlugin extends Plugin
 			doSave();
 			return;
 		}
+
+		if (collector.finishCollectionLogSearch())
+			dirty = true;
 
 		if (collector.pollMovement())
 			dirty = true;
