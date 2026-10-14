@@ -25,6 +25,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -184,5 +186,48 @@ public class CombatAchievementTasksTest
 		assertNull(ca.tasks.get(0).tier);
 		assertTrue(ca.tasks.get(0).completed);
 		assertTrue(ca.completedTasks.isEmpty());
+	}
+
+	/**
+	 * A first load that returns only some tier enums is retried on the next poll until the rest arrive.
+	 */
+	@Test
+	public void partialMetadataLoadIsRetried()
+	{
+		Client client = clientWithCache();
+		when(client.getEnum(3983)).thenReturn(null);
+		when(client.getVarpValue(VarPlayerID.CA_TASK_COMPLETED_0)).thenReturn(1 | (1 << 5));
+		SnapshotCollector collector = collector(client);
+
+		collector.pollCombatAchievements();
+		CombatAchievementTask partial = find(collector.buildSnapshot().combatAchievements.tasks, 5);
+		assertNull(partial.name);
+
+		EnumComposition hard = mock(EnumComposition.class);
+		when(hard.getIntVals()).thenReturn(new int[] {102});
+		when(client.getEnum(3983)).thenReturn(hard);
+
+		assertTrue(collector.pollCombatAchievements());
+		List<CombatAchievementTask> tasks = collector.buildSnapshot().combatAchievements.tasks;
+
+		assertEquals("Task C", find(tasks, 5).name);
+		assertEquals("HARD", find(tasks, 5).tier);
+		assertEquals("Task A", find(tasks, 0).name);
+	}
+
+	/**
+	 * A permanently missing struct is retried a bounded number of times, then the cache is left alone.
+	 */
+	@Test
+	public void partialMetadataRetriesAreBounded()
+	{
+		Client client = clientWithCache();
+		when(client.getStructComposition(102)).thenReturn(null);
+		SnapshotCollector collector = collector(client);
+
+		for (int i = 0; i < 30; i++)
+			collector.pollCombatAchievements();
+
+		verify(client, times(11)).getStructComposition(102);
 	}
 }

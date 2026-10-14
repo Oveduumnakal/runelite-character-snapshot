@@ -839,6 +839,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 |---|---|---|
 | `private static final int[]` | `BANK_TAB_VARBITS` |  |
 | `private static final int[]` | `CA_COMPLETED_VARPS` |  |
+| `private static final int` | `CA_META_MAX_RETRIES` | Most reloads attempted after a partial metadata load, so a permanently missing struct is not re-read forever. |
 | `private static final int` | `CA_MONSTER_ENUM` | Cache enum mapping monster category id to display name. |
 | `private static final int` | `CA_PARAM_ID` | Task struct param: task id (the completion bit index). |
 | `private static final int` | `CA_PARAM_MONSTER` | Task struct param: monster category id, a key of `#CA_MONSTER_ENUM`. |
@@ -852,6 +853,8 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private List<BankTab>` | `bankTabs` |  |
 | `private int` | `bankTotal` |  |
 | `private Instant` | `bankUpdated` |  |
+| `private boolean` | `caMetaPartial` | Whether the last metadata load skipped a tier enum or task struct the cache did not return. |
+| `private int` | `caMetaRetries` | How many times a partial metadata load has been retried. |
 | `private Map<Integer,CombatAchievementTask>` | `caTaskMeta` | Cached task metadata by task id (completed flag unset); empty until resolved from the cache. |
 | `private final Client` | `client` |  |
 | `private CombatAchievementData` | `combatAchievements` |  |
@@ -898,6 +901,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
 | `public boolean` | `pollSlayer()` | Polls the current slayer task, clearing it when no task is assigned. |
 | `private String` | `readTaskRowName(int row)` | Reads the display name column of one slayer task table row. |
+| `private void` | `reloadCombatAchievementMetaIfNeeded()` | Loads the task metadata when none is cached, and retries (at most `#CA_META_MAX_RETRIES` times) while the last load was partial, i.e. |
 | `public void` | `reset()` | Clears every cache. |
 | `private String` | `resolveBossName(int bossId)` | Resolves a boss-task boss id to the boss name via the slayer task sublist table. |
 | `private String` | `resolveTaskName(int taskId)` | Resolves a slayer task id to its display name from the cache's slayer task table. |
@@ -920,6 +924,12 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 #### CA_COMPLETED_VARPS
 
 `private static final int[] CA_COMPLETED_VARPS`
+
+#### CA_META_MAX_RETRIES
+
+`private static final int CA_META_MAX_RETRIES`
+
+Most reloads attempted after a partial metadata load, so a permanently missing struct is not re-read forever.
 
 #### CA_MONSTER_ENUM
 
@@ -985,6 +995,18 @@ The Karamja elite varbit and every other region's tier varbits are plain 0/1 fla
 #### bankUpdated
 
 `private Instant bankUpdated`
+
+#### caMetaPartial
+
+`private boolean caMetaPartial`
+
+Whether the last metadata load skipped a tier enum or task struct the cache did not return.
+
+#### caMetaRetries
+
+`private int caMetaRetries`
+
+How many times a partial metadata load has been retried.
 
 #### caTaskMeta
 
@@ -1170,7 +1192,8 @@ Resolves an item id to its display name.
 Reads task names, tiers, and monsters from the game cache: each tier enum lists task structs,
 and each struct carries the task id, name, and monster category as params.
 
-- **Returns:** the metadata by task id, or empty if the cache is not readable yet
+- **Returns:** the metadata by task id, or empty if the cache is not readable yet; also sets
+        `#caMetaPartial`
 
 #### parseInstant
 
@@ -1234,6 +1257,14 @@ Reads the display name column of one slayer task table row.
 
 - **Parameter** `row` — the slayer task table row id
 - **Returns:** the name, or null when absent
+
+#### reloadCombatAchievementMetaIfNeeded
+
+`private void reloadCombatAchievementMetaIfNeeded()`
+
+Loads the task metadata when none is cached, and retries (at most `#CA_META_MAX_RETRIES` times)
+while the last load was partial, i.e. some tier enum or task struct was not returned by the cache.
+A retry never replaces the cached metadata with a smaller set.
 
 #### reset
 
