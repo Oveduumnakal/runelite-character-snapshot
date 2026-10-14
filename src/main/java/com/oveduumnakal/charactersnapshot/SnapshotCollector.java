@@ -93,6 +93,12 @@ public class SnapshotCollector
 
 	private static final int SLAYER_BOSS_TASK_ID = 98;
 
+	/**
+	 * Value of the Karamja easy, medium and hard tier varbits once the tier is complete; 1 only means started.
+	 * The Karamja elite varbit and every other region's tier varbits are plain 0/1 flags.
+	 */
+	private static final int KARAMJA_TIER_DONE = 2;
+
 	private static final EquipmentInventorySlot[] EQUIPMENT_SLOTS = {
 		EquipmentInventorySlot.HEAD, EquipmentInventorySlot.CAPE, EquipmentInventorySlot.AMULET,
 		EquipmentInventorySlot.WEAPON, EquipmentInventorySlot.BODY, EquipmentInventorySlot.SHIELD,
@@ -448,7 +454,7 @@ public class SnapshotCollector
 			Varbits.DIARY_KANDARIN_HARD, Varbits.DIARY_KANDARIN_ELITE));
 		map.put("KARAMJA", diaryRegion("KARAMJA",
 			Varbits.DIARY_KARAMJA_EASY, Varbits.DIARY_KARAMJA_MEDIUM,
-			Varbits.DIARY_KARAMJA_HARD, Varbits.DIARY_KARAMJA_ELITE));
+			Varbits.DIARY_KARAMJA_HARD, Varbits.DIARY_KARAMJA_ELITE, KARAMJA_TIER_DONE));
 		map.put("KOUREND", diaryRegion("KOUREND",
 			Varbits.DIARY_KOUREND_EASY, Varbits.DIARY_KOUREND_MEDIUM,
 			Varbits.DIARY_KOUREND_HARD, Varbits.DIARY_KOUREND_ELITE));
@@ -834,8 +840,9 @@ public class SnapshotCollector
 	}
 
 	/**
-	 * Reads a diary region's four tiers, each complete when its varbit equals 1.
+	 * Reads a diary region whose four tier varbits are 0/1 completion flags.
 	 *
+	 * @param region the region key
 	 * @param easy   the easy-tier varbit id
 	 * @param medium the medium-tier varbit id
 	 * @param hard   the hard-tier varbit id
@@ -843,6 +850,23 @@ public class SnapshotCollector
 	 * @return the region's completion state
 	 */
 	private DiaryRegion diaryRegion(String region, int easy, int medium, int hard, int elite)
+	{
+		return diaryRegion(region, easy, medium, hard, elite, 1);
+	}
+
+	/**
+	 * Reads a diary region's four tiers and its mapped tasks. The elite tier is complete when its varbit is 1;
+	 * the easy, medium and hard tiers are complete once their varbit reaches {@code doneValue}.
+	 *
+	 * @param region    the region key
+	 * @param easy      the easy-tier varbit id
+	 * @param medium    the medium-tier varbit id
+	 * @param hard      the hard-tier varbit id
+	 * @param elite     the elite-tier varbit id
+	 * @param doneValue the easy, medium and hard varbit value that marks the tier complete
+	 * @return the region's completion state
+	 */
+	private DiaryRegion diaryRegion(String region, int easy, int medium, int hard, int elite, int doneValue)
 	{
 		Map<String, List<DiaryTask>> tasks = new LinkedHashMap<>();
 		for (Map.Entry<String, List<DiaryTasks.Task>> tier : DiaryTasks.tasks(region).entrySet())
@@ -855,9 +879,9 @@ public class SnapshotCollector
 		}
 
 		return new DiaryRegion(
-			client.getVarbitValue(easy) == 1,
-			client.getVarbitValue(medium) == 1,
-			client.getVarbitValue(hard) == 1,
+			client.getVarbitValue(easy) >= doneValue,
+			client.getVarbitValue(medium) >= doneValue,
+			client.getVarbitValue(hard) >= doneValue,
 			client.getVarbitValue(elite) == 1,
 			tasks.isEmpty() ? null : tasks);
 	}

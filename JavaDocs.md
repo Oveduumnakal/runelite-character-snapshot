@@ -846,6 +846,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private static final int[]` | `CA_TIER_ENUMS` | Cache enums listing the task struct ids per tier, easy to grandmaster. |
 | `private static final String[]` | `CA_TIER_NAMES` |  |
 | `private static final EquipmentInventorySlot[]` | `EQUIPMENT_SLOTS` |  |
+| `private static final int` | `KARAMJA_TIER_DONE` | Value of the Karamja easy, medium and hard tier varbits once the tier is complete; 1 only means started. |
 | `private static final int` | `SLAYER_BOSS_TASK_ID` |  |
 | `private List<ItemEntry>` | `bankItems` |  |
 | `private List<BankTab>` | `bankTabs` |  |
@@ -884,7 +885,8 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public CharacterSnapshot` | `buildSnapshot()` | Assembles the export snapshot from the caches and cheap client reads, honouring the config toggles. |
 | `private VitalsData` | `buildVitals()` | Reads current combat vitals from boosted and real skill levels and run energy. |
 | `private List<BankTab>` | `copyBankTabs()` | Copies the cached bank tabs so a built snapshot does not share lists with the cache. |
-| `private DiaryRegion` | `diaryRegion(String region, int easy, int medium, int hard, int elite)` | Reads a diary region's four tiers, each complete when its varbit equals 1. |
+| `private DiaryRegion` | `diaryRegion(String region, int easy, int medium, int hard, int elite)` | Reads a diary region whose four tier varbits are 0/1 completion flags. |
+| `private DiaryRegion` | `diaryRegion(String region, int easy, int medium, int hard, int elite, int doneValue)` | Reads a diary region's four tiers and its mapped tasks. |
 | `private List<ItemEntry>` | `filterBankSlice(Item[] raw, int start, int end)` | Converts a slice of raw bank slots to item entries, dropping empty slots and placeholders. |
 | `private String` | `getItemName(int itemId)` | Resolves an item id to its display name. |
 | `private Map<Integer,CombatAchievementTask>` | `loadCombatAchievementMeta()` | Reads task names, tiers, and monsters from the game cache: each tier enum lists task structs, and each struct carries the task id, name, and monster category as params. |
@@ -956,6 +958,13 @@ Cache enums listing the task struct ids per tier, easy to grandmaster. Not in th
 #### EQUIPMENT_SLOTS
 
 `private static final EquipmentInventorySlot[] EQUIPMENT_SLOTS`
+
+#### KARAMJA_TIER_DONE
+
+`private static final int KARAMJA_TIER_DONE`
+
+Value of the Karamja easy, medium and hard tier varbits once the tier is complete; 1 only means started.
+The Karamja elite varbit and every other region's tier varbits are plain 0/1 flags.
 
 #### SLAYER_BOSS_TASK_ID
 
@@ -1110,12 +1119,28 @@ Copies the cached bank tabs so a built snapshot does not share lists with the ca
 
 `private DiaryRegion diaryRegion(String region, int easy, int medium, int hard, int elite)`
 
-Reads a diary region's four tiers, each complete when its varbit equals 1.
+Reads a diary region whose four tier varbits are 0/1 completion flags.
 
+- **Parameter** `region` — the region key
 - **Parameter** `easy` — the easy-tier varbit id
 - **Parameter** `medium` — the medium-tier varbit id
 - **Parameter** `hard` — the hard-tier varbit id
 - **Parameter** `elite` — the elite-tier varbit id
+- **Returns:** the region's completion state
+
+#### diaryRegion
+
+`private DiaryRegion diaryRegion(String region, int easy, int medium, int hard, int elite, int doneValue)`
+
+Reads a diary region's four tiers and its mapped tasks. The elite tier is complete when its varbit is 1;
+the easy, medium and hard tiers are complete once their varbit reaches `doneValue`.
+
+- **Parameter** `region` — the region key
+- **Parameter** `easy` — the easy-tier varbit id
+- **Parameter** `medium` — the medium-tier varbit id
+- **Parameter** `hard` — the hard-tier varbit id
+- **Parameter** `elite` — the elite-tier varbit id
+- **Parameter** `doneValue` — the easy, medium and hard varbit value that marks the tier complete
 - **Returns:** the region's completion state
 
 #### filterBankSlice
