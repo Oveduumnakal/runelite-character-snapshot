@@ -22,11 +22,13 @@ missing sections as "not exported", not "empty".
 | `bank` | object | Flat bank contents; captured when the bank is opened, carried over from the previous session until then. |
 | `inventory` | array | One entry per slot; empty slots have `itemId` -1. |
 | `equipment` | object | Map of slot name → item entry. |
+| `runePouch` | array | Runes in the rune pouch; present only while one is in the inventory. See below. |
+| `storages` | object | Last known looting bag, seed vault and group storage contents. See below. |
 | `quests` | array | One entry per quest. |
 | `questPoints` | int | Total quest points. |
 | `achievementDiaries` | object | Map of region name → tier completion. |
 | `combatAchievements` | object | Combat-achievement tier progress. |
-| `slayer` | object | Current task, or absent when none is assigned. |
+| `slayer` | object | Slayer points, streak and current task (task fields are 0/null between tasks). |
 | `location` | object | Region and world coordinates. |
 | `grandExchange` | array | Active GE offers, by slot. |
 | `collectionLog` | object | Collection log captured while the log is open, carried over between sessions. |
@@ -39,7 +41,9 @@ missing sections as "not exported", not "empty".
 | `combatLevel` | int | |
 | `world` | int | |
 | `accountType` | string | `NORMAL`, `IRONMAN`, `ULTIMATE_IRONMAN`, `HARDCORE_IRONMAN`, `GROUP_IRONMAN`, `HARDCORE_GROUP_IRONMAN`; null when Account info is off. |
+| `members` | boolean or null | Whether the current world is members'; null when Account info is off. |
 | `members` | boolean | Whether the current world is members'. |
+| `spellbook` | string | Active spellbook: `STANDARD`, `ANCIENT`, `LUNAR`, `ARCEUUS`; null when unknown or Account info is off. |
 
 ## skills (map value) and vitals
 
@@ -70,7 +74,20 @@ An **item entry** is `{ itemId, name, quantity }`; `name` is null for an unresol
 - `inventory`: array of item entries with an extra `slot` (0–27); empty slots are included with
   `itemId` -1 so slot indices stay meaningful.
 - `equipment`: map of slot name (`HEAD`, `CAPE`, `AMULET`, `WEAPON`, `BODY`, `SHIELD`, `LEGS`,
-  `GLOVES`, `BOOTS`, `RING`, `AMMO`) → item entry; empty slots are omitted.
+  `GLOVES`, `BOOTS`, `RING`, `AMMO`) → item entry; empty slots are omitted. A character wearing nothing exports `{}`; the field is absent only when equipment is toggled off or not yet captured.
+
+- `runePouch` (additive, optional): array of item entries, one per filled pouch slot (up to 6; the divine pouch has
+  more slots than the standard one). Present only while the inventory holds a rune
+  pouch of any variant (including divine and trouver-protected); an empty pouch gives `[]`, no pouch
+  omits the field. Read live from varbits, so it is as current as the last inventory change or 30-tick poll.
+  It is not carried over from a previous session.
+
+- `storages` (additive, optional): `{ lootingBag: [...], seedVault: [...], groupStorage: [...] }`, each an
+  array of item entries (empty slots omitted). A storage appears only once it has been captured: the client
+  exposes these containers only when the player opens them, so each key is the last known copy and is
+  carried over between sessions like the bank. A storage never opened is absent; one opened while empty is `[]`.
+  The whole field is absent when none has been captured. Capture times are in `sectionUpdated` as
+  `storages.lootingBag`, `storages.seedVault` and `storages.groupStorage`.
 
 ### Carried-over sections and `sectionUpdated`
 
@@ -78,7 +95,7 @@ On login the plugin reloads the character's own previous file and keeps its `ban
 `equipment` until each is captured again. Inventory and equipment are re-captured almost at once; the
 bank is re-captured only when the player opens it. So the bank in a file can be from an earlier session.
 
-`sectionUpdated` maps each present item section (`bank`, `inventory`, `equipment`) to the ISO-8601
+`sectionUpdated` maps each present item section (`bank`, `inventory`, `equipment`, and `storages.<name>`) to the ISO-8601
 instant it was last captured from the client. A value earlier than `lastUpdated` means that section was
 carried over. A consumer can show it as, e.g., "bank as of 2 days ago". The field is additive: files
 written before it existed simply lack it, and a section missing from the map has an unknown capture
@@ -116,6 +133,16 @@ integers are the source of truth.
 `null` when unresolved. If the cache metadata cannot be read, `tasks` holds only the completed ids with
 null `name`/`tier`/`monster`.
 
+`points` (additive, int or null) is the total combat-achievement points. It is read from the game's points
+varbit (`VarbitID.CA_POINTS`) when that is non-zero; otherwise it is computed as the sum of completed task
+points (easy 1, medium 2, hard 3, elite 4, master 5, grandmaster 6, per
+https://oldschool.runescape.wiki/w/Combat_Achievements), and is null if a completed task's tier is unresolved.
+
+`tierCounts` (additive, object or null) maps each of `EASY`, `MEDIUM`, `HARD`, `ELITE`, `MASTER`,
+`GRANDMASTER` to `{ completed, total }`, counted from `tasks` (so `total` is only complete once the cache
+metadata has fully loaded; the full game has 41 / 64 / 89 / 166 / 173 / 122 tasks). It is null when no task
+tier could be resolved.
+
 Cache ids relied on (from the community cache dump tooling, e.g. ReinhardtR/runeprofile
 `scripts/ts-scripts/lib/combat-achievements.ts`; not in the RuneLite API and NOT verified in-client):
 tier enums 3981 to 3986 (easy to grandmaster; values are task struct ids), monster enum 3971
@@ -123,7 +150,9 @@ tier enums 3981 to 3986 (easy to grandmaster; values are task struct ids), monst
 
 ## slayer
 
-Present only when a task is assigned:
+Present whenever slayer has been read. `points` and `streak` are always exported. When no task is assigned,
+`creatureId` is 0, `amount` is 0, and `creatureName` and `bossName` are null.
+
 
 | Field | Type | Notes |
 |---|---|---|
@@ -133,6 +162,11 @@ Present only when a task is assigned:
 | `amount` | int | Remaining kills. |
 | `points` | int | Slayer reward points. |
 | `streak` | int | Task-completion streak. |
+| `masterId` | int | Current slayer master id (1 Turael, 2 Mazchna, 3 Vannaka, 4 Chaeldar, 5 Duradel, 6 Nieve, 7 Krystilia, 8 Konar, 9 Spria, 10 Mortimer); 0 when none. Absent in older files. |
+| `masterName` | string or null | Master name for `masterId`; null when 0 or unknown. Absent in older files. |
+| `blockedTasks` | array | Blocked tasks, `{ taskId, name, master }`. `name` is null when unresolved. `master` is the master whose block list holds the task, or null for the legacy shared list (used only when no per-master slot is filled). Empty when nothing is blocked. Absent in older files. |
+| `unlockedTasks` | array of string | Purchased task-assignment unlocks, e.g. `BOSSES`, `RED_DRAGONS`, `SUPERIOR_MONSTERS`. Absent in older files. |
+| `extendedTasks` | array of string | Tasks with a purchased extension, e.g. `ANKOU`, `BLACK_DRAGONS`. Absent in older files. |
 
 ## location
 

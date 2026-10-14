@@ -185,11 +185,19 @@ public class CharacterSnapshotPlugin extends Plugin
 		else if (id == InventoryID.INV && config.syncInventory())
 		{
 			collector.updateInventory(event.getItemContainer());
+			if (config.syncRunePouch())
+				collector.pollRunePouch();
+
 			dirty = true;
 		}
 		else if (id == InventoryID.WORN && config.syncEquipment())
 		{
 			collector.updateEquipment(event.getItemContainer());
+			dirty = true;
+		}
+		else if (SnapshotCollector.storageKey(id) != null && config.syncStorages())
+		{
+			collector.updateStorage(SnapshotCollector.storageKey(id), event.getItemContainer());
 			dirty = true;
 		}
 	}
@@ -289,6 +297,12 @@ public class CharacterSnapshotPlugin extends Plugin
 		if (config.syncSlayer())
 			changed |= collector.pollSlayer();
 
+		if (config.syncRunePouch())
+			changed |= collector.pollRunePouch();
+
+		if (config.syncAccountInfo())
+			changed |= collector.pollSpellbook();
+
 		if (changed)
 			dirty = true;
 	}
@@ -322,6 +336,16 @@ public class CharacterSnapshotPlugin extends Plugin
 				collector.updateEquipment(equip);
 		}
 
+		if (config.syncStorages())
+		{
+			for (int containerId : SnapshotCollector.storageContainerIds())
+			{
+				ItemContainer storage = client.getItemContainer(containerId);
+				if (storage != null)
+					collector.updateStorage(SnapshotCollector.storageKey(containerId), storage);
+			}
+		}
+
 		if (config.syncQuests())
 			collector.pollQuests();
 
@@ -334,8 +358,14 @@ public class CharacterSnapshotPlugin extends Plugin
 		if (config.syncSlayer())
 			collector.pollSlayer();
 
+		if (config.syncAccountInfo())
+			collector.pollSpellbook();
+
 		if (config.syncGrandExchange())
 			collector.pollAllGeOffers();
+
+		if (config.syncRunePouch())
+			collector.pollRunePouch();
 	}
 
 	/**
