@@ -266,4 +266,20 @@ public interface CharacterSnapshotConfig extends Config
 	{
 		return true;
 	}
+
+	/**
+	 * @return whether to include looting bag, seed vault and group storage contents
+	 */
+	@ConfigItem(
+		keyName = "syncStorages",
+		name = "Storage containers",
+		description = "Include the last known contents of the looting bag, seed vault and group storage "
+			+ "(captured when opened)",
+		section = dataSection,
+		position = 13
+	)
+	default boolean syncStorages()
+	{
+		return true;
+	}
 }

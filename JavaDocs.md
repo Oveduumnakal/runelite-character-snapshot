@@ -68,6 +68,7 @@ for each category of data written to the export file.
 | `default boolean` | `syncRunePouch()` |  |
 | `default boolean` | `syncSkills()` |  |
 | `default boolean` | `syncSlayer()` |  |
+| `default boolean` | `syncStorages()` |  |
 | `default boolean` | `syncVitals()` |  |
 
 ### Field Detail
@@ -176,6 +177,12 @@ Storage section: where and how often data is written.
 `default boolean syncSlayer()`
 
 - **Returns:** whether to include the current slayer task
+
+#### syncStorages
+
+`default boolean syncStorages()`
+
+- **Returns:** whether to include looting bag, seed vault and group storage contents
 
 #### syncVitals
 
@@ -950,6 +957,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private static final int[]` | `RUNE_POUCH_QUANTITY_VARBITS` |  |
 | `private static final int[]` | `RUNE_POUCH_TYPE_VARBITS` |  |
 | `private static final int` | `SLAYER_BOSS_TASK_ID` |  |
+| `private static final Map<Integer,String>` | `STORAGE_KEYS` | Storage containers captured when opened, keyed by container id to export key. |
 | `private List<ItemEntry>` | `bankItems` |  |
 | `private List<BankTab>` | `bankTabs` |  |
 | `private int` | `bankTotal` |  |
@@ -973,6 +981,8 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private SlayerData` | `slayer` |  |
 | `private final Map<Integer,String>` | `slayerBossNames` |  |
 | `private final Map<Integer,String>` | `slayerTaskNames` |  |
+| `private final Map<String,Instant>` | `storageUpdated` |  |
+| `private final Map<String,List<ItemEntry>>` | `storages` |  |
 
 ### Constructor Summary
 
@@ -1014,15 +1024,18 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public void` | `reset()` | Clears every cache. |
 | `private String` | `resolveBossName(int bossId)` | Resolves a boss-task boss id to the boss name via the slayer task sublist table. |
 | `private String` | `resolveTaskName(int taskId)` | Resolves a slayer task id to its display name from the cache's slayer task table. |
-| `public void` | `restore(CharacterSnapshot previous)` | Seeds the bank, inventory, and equipment caches from this character's previous export, so a section not yet re-captured this session keeps its last known contents instead of vanishing. |
+| `public void` | `restore(CharacterSnapshot previous)` | Seeds the bank, inventory, equipment, and storage caches from this character's previous export, so a section not yet re-captured this session keeps its last known contents instead of vanishing. |
 | `private static Instant` | `sectionTime(Map<String,String> times, String section, Instant fallback)` | Resolves a restored section's capture time from the previous export. |
 | `private static String` | `stateName(QuestState state)` | Maps a quest state to its exported string form. |
+| `public static Iterable<Integer>` | `storageContainerIds()` |  |
+| `public static String` | `storageKey(int containerId)` | Resolves the export key of a storage container. |
 | `private GeOffer` | `toGeOffer(int slot, GrandExchangeOffer offer)` | Converts a client GE offer into the exported model. |
 | `public void` | `updateBank(ItemContainer container)` | Replaces the cached bank contents with a flat item list and the same items split by bank tab. |
 | `public void` | `updateEquipment(ItemContainer container)` | Rebuilds the cached equipment from scratch so an unequipped slot is dropped. |
 | `public void` | `updateGeOffer(int slot, GrandExchangeOffer offer)` | Adds, replaces, or removes a cached Grand Exchange offer for one slot. |
 | `public void` | `updateInventory(ItemContainer container)` | Replaces the cached inventory, keeping empty slots so slot indices stay meaningful. |
 | `public void` | `updateSkill(Skill skill, int level, int xp, int boostedLevel)` | Updates a single skill from a stat-changed event. |
+| `public void` | `updateStorage(String key, ItemContainer container)` | Replaces the cached contents of one storage container, dropping empty slots and placeholders. |
 
 ### Field Detail
 
@@ -1102,6 +1115,14 @@ Every rune pouch variant; the contents varbits are shared by all of them.
 #### SLAYER_BOSS_TASK_ID
 
 `private static final int SLAYER_BOSS_TASK_ID`
+
+#### STORAGE_KEYS
+
+`private static final Map<Integer,String> STORAGE_KEYS`
+
+Storage containers captured when opened, keyed by container id to export key. The group storage id is the
+one the legacy `InventoryID.GROUP_STORAGE` constant held; the current API names it
+`INV_GROUP_TEMP`.
 
 #### bankItems
 
@@ -1200,6 +1221,14 @@ Cached task metadata by task id (completed flag unset); empty until resolved fro
 #### slayerTaskNames
 
 `private final Map<Integer,String> slayerTaskNames`
+
+#### storageUpdated
+
+`private final Map<String,Instant> storageUpdated`
+
+#### storages
+
+`private final Map<String,List<ItemEntry>> storages`
 
 ### Constructor Detail
 
@@ -1481,7 +1510,7 @@ Resolves a slayer task id to its display name from the cache's slayer task table
 
 `public void restore(CharacterSnapshot previous)`
 
-Seeds the bank, inventory, and equipment caches from this character's previous export, so a
+Seeds the bank, inventory, equipment, and storage caches from this character's previous export, so a
 section not yet re-captured this session keeps its last known contents instead of vanishing. Only
 sections not captured since the last `#reset()` are filled, so live data is never replaced,
 and each restored section keeps its original capture time. A snapshot belonging to a different
@@ -1508,6 +1537,21 @@ Maps a quest state to its exported string form.
 
 - **Parameter** `state` — the quest state
 - **Returns:** `FINISHED`, `IN_PROGRESS`, or `NOT_STARTED`
+
+#### storageContainerIds
+
+`public static Iterable<Integer> storageContainerIds()`
+
+- **Returns:** the item container ids of every captured storage, in export order
+
+#### storageKey
+
+`public static String storageKey(int containerId)`
+
+Resolves the export key of a storage container.
+
+- **Parameter** `containerId` — the item container id
+- **Returns:** `lootingBag`, `seedVault` or `groupStorage`, or `null` for any other container
 
 #### toGeOffer
 
@@ -1568,6 +1612,15 @@ Updates a single skill from a stat-changed event.
 - **Parameter** `level` — the real level
 - **Parameter** `xp` — the experience
 - **Parameter** `boostedLevel` — the current boosted level
+
+#### updateStorage
+
+`public void updateStorage(String key, ItemContainer container)`
+
+Replaces the cached contents of one storage container, dropping empty slots and placeholders.
+
+- **Parameter** `key` — the storage export key, see `#storageKey(int)`
+- **Parameter** `container` — the storage item container
 
 ---
 
@@ -1711,6 +1764,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | `public Map<String,String>` | `sectionUpdated` | ISO-8601 instant each item section (`bank`, `inventory`, `equipment`) was last captured from the client, keyed by section name. |
 | `public Map<String,SkillEntry>` | `skills` | Real level and experience per skill, keyed by upper-case skill name, plus `OVERALL`. |
 | `public SlayerData` | `slayer` | Slayer state; points and streak always set once polled, task fields null/0 when no task. |
+| `public Map<String,List<ItemEntry>>` | `storages` | Last known contents of storage containers that are only readable when opened, keyed by storage (`lootingBag`, `seedVault`, `groupStorage`); a storage never opened is absent. |
 | `public VitalsData` | `vitals` | Current combat vitals (hitpoints, prayer, run energy). |
 
 ### Field Detail
@@ -1814,6 +1868,13 @@ Real level and experience per skill, keyed by upper-case skill name, plus `OVERA
 `public SlayerData slayer`
 
 Slayer state; points and streak always set once polled, task fields null/0 when no task.
+
+#### storages
+
+`public Map<String,List<ItemEntry>> storages`
+
+Last known contents of storage containers that are only readable when opened, keyed by storage
+(`lootingBag`, `seedVault`, `groupStorage`); a storage never opened is absent.
 
 #### vitals
 

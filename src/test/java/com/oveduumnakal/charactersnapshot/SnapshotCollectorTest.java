@@ -757,6 +757,7 @@ public class SnapshotCollectorTest
 		when(config.syncAccountInfo()).thenReturn(true);
 		when(config.syncGrandExchange()).thenReturn(true);
 		when(config.syncRunePouch()).thenReturn(true);
+		when(config.syncStorages()).thenReturn(true);
 		return config;
 	}
 
@@ -883,5 +884,83 @@ public class SnapshotCollectorTest
 		assertEquals(0, slayer.creatureId);
 		assertNull(slayer.creatureName);
 		assertNull(slayer.bossName);
+	}
+
+	/**
+	 * Only the looting bag, seed vault and group storage containers map to an export key.
+	 */
+	@Test
+	public void storageKeysAreMapped()
+	{
+		assertEquals("lootingBag", SnapshotCollector.storageKey(InventoryID.LOOTING_BAG));
+		assertEquals("seedVault", SnapshotCollector.storageKey(InventoryID.SEED_VAULT));
+		assertEquals("groupStorage", SnapshotCollector.storageKey(InventoryID.INV_GROUP_TEMP));
+		assertNull(SnapshotCollector.storageKey(InventoryID.INV));
+	}
+
+	/**
+	 * A captured storage is exported without empty slots, and a storage never opened is absent.
+	 */
+	@Test
+	public void storageContentsAreExported()
+	{
+		Client client = loggedInClient("Zezima");
+		ItemComposition seed = named("Ranarr seed");
+		when(client.getItemDefinition(5295)).thenReturn(seed);
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.updateStorage("seedVault", container(item(5295, 40), item(-1, 0)));
+		CharacterSnapshot data = collector.buildSnapshot();
+
+		assertEquals(1, data.storages.size());
+		assertEquals(Arrays.asList(5295), ids(data.storages.get("seedVault")));
+		ItemEntry vaultSeed = data.storages.get("seedVault").get(0);
+		assertEquals("Ranarr seed", vaultSeed.name);
+		assertNotNull(data.sectionUpdated.get("storages.seedVault"));
+		assertNull(data.storages.get("lootingBag"));
+	}
+
+	/**
+	 * With nothing captured the field is omitted, and the toggle removes captured storages.
+	 */
+	@Test
+	public void storagesOmittedWhenEmptyOrDisabled()
+	{
+		Client client = loggedInClient("Zezima");
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+		assertNull(collector.buildSnapshot().storages);
+
+		CharacterSnapshotConfig off = allEnabled();
+		when(off.syncStorages()).thenReturn(false);
+		SnapshotCollector disabled = new SnapshotCollector(client, off);
+		disabled.updateStorage("lootingBag", container(item(1, 1)));
+		assertNull(disabled.buildSnapshot().storages);
+	}
+
+	/**
+	 * A previous export's storages are carried over with their own capture time until reopened, a live capture
+	 * replaces them, and reset clears them.
+	 */
+	@Test
+	public void storagesRestoreAndReset()
+	{
+		Client client = loggedInClient("Zezima");
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+		CharacterSnapshot old = previous("Zezima", "Dragon claws");
+		old.storages = new LinkedHashMap<>();
+		old.storages.put("lootingBag", Collections.singletonList(new ItemEntry(7, "Bones", 3)));
+		old.storages.put("seedVault", Collections.singletonList(new ItemEntry(8, "Seed", 9)));
+		old.sectionUpdated.put("storages.lootingBag", OLD_BANK_TIME);
+
+		collector.updateStorage("seedVault", container(item(9, 1)));
+		collector.restore(old);
+		CharacterSnapshot data = collector.buildSnapshot();
+
+		assertEquals(Arrays.asList(7), ids(data.storages.get("lootingBag")));
+		assertEquals(OLD_BANK_TIME, data.sectionUpdated.get("storages.lootingBag"));
+		assertEquals(Arrays.asList(9), ids(data.storages.get("seedVault")));
+
+		collector.reset();
+		assertNull(collector.buildSnapshot().storages);
 	}
 }

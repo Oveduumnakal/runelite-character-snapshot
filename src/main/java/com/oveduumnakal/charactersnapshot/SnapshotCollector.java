@@ -203,6 +203,8 @@ public class SnapshotCollector
 		skills.clear();
 		geOffers.clear();
 		equipment.clear();
+		storages.clear();
+		storageUpdated.clear();
 		bankItems = null;
 		bankTabs = null;
 		bankTotal = 0;
@@ -412,7 +414,7 @@ public class SnapshotCollector
 	}
 
 	/**
-	 * Seeds the bank, inventory, and equipment caches from this character's previous export, so a
+	 * Seeds the bank, inventory, equipment, and storage caches from this character's previous export, so a
 	 * section not yet re-captured this session keeps its last known contents instead of vanishing. Only
 	 * sections not captured since the last {@link #reset()} are filled, so live data is never replaced,
 	 * and each restored section keeps its original capture time. A snapshot belonging to a different
@@ -455,6 +457,20 @@ public class SnapshotCollector
 		{
 			equipment = new LinkedHashMap<>(previous.equipment);
 			equipmentUpdated = equipmentTime;
+		}
+
+		if (previous.storages != null)
+		{
+			for (String key : STORAGE_KEYS.values())
+			{
+				List<ItemEntry> old = previous.storages.get(key);
+				Instant time = sectionTime(times, "storages." + key, fallback);
+				if (!storageUpdated.containsKey(key) && old != null && time != null)
+				{
+					storages.put(key, new ArrayList<>(old));
+					storageUpdated.put(key, time);
+				}
+			}
 		}
 	}
 
@@ -916,6 +932,13 @@ public class SnapshotCollector
 		if (config.syncEquipment() && equipmentUpdated != null)
 			data.equipment = new LinkedHashMap<>(equipment);
 
+		if (config.syncStorages() && !storages.isEmpty())
+		{
+			data.storages = new LinkedHashMap<>();
+			for (Map.Entry<String, List<ItemEntry>> entry : storages.entrySet())
+				data.storages.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+		}
+
 		data.sectionUpdated = buildSectionUpdated(data);
 
 		if (config.syncRunePouch() && runePouch != null)
@@ -962,6 +985,16 @@ public class SnapshotCollector
 
 		if (data.equipment != null && equipmentUpdated != null)
 			times.put("equipment", equipmentUpdated.toString());
+
+		if (data.storages != null)
+		{
+			for (String key : data.storages.keySet())
+			{
+				Instant time = storageUpdated.get(key);
+				if (time != null)
+					times.put("storages." + key, time.toString());
+			}
+		}
 
 		return times.isEmpty() ? null : times;
 	}
@@ -1192,5 +1225,64 @@ public class SnapshotCollector
 		}
 
 		return keys;
+	}
+
+	/**
+	 * Storage containers captured when opened, keyed by container id to export key. The group storage id is the
+	 * one the legacy {@code InventoryID.GROUP_STORAGE} constant held; the current API names it
+	 * {@code INV_GROUP_TEMP}.
+	 */
+	private static final Map<Integer, String> STORAGE_KEYS = new LinkedHashMap<>();
+
+	static
+	{
+		STORAGE_KEYS.put(InventoryID.LOOTING_BAG, "lootingBag");
+		STORAGE_KEYS.put(InventoryID.SEED_VAULT, "seedVault");
+		STORAGE_KEYS.put(InventoryID.INV_GROUP_TEMP, "groupStorage");
+	}
+
+	private final Map<String, List<ItemEntry>> storages = new LinkedHashMap<>();
+
+	private final Map<String, Instant> storageUpdated = new HashMap<>();
+
+	/**
+	 * Resolves the export key of a storage container.
+	 *
+	 * @param containerId the item container id
+	 * @return {@code lootingBag}, {@code seedVault} or {@code groupStorage}, or {@code null} for any other container
+	 */
+	public static String storageKey(int containerId)
+	{
+		return STORAGE_KEYS.get(containerId);
+	}
+
+	/**
+	 * @return the item container ids of every captured storage, in export order
+	 */
+	public static Iterable<Integer> storageContainerIds()
+	{
+		return STORAGE_KEYS.keySet();
+	}
+
+	/**
+	 * Replaces the cached contents of one storage container, dropping empty slots and placeholders.
+	 *
+	 * @param key       the storage export key, see {@link #storageKey(int)}
+	 * @param container the storage item container
+	 */
+	public void updateStorage(String key, ItemContainer container)
+	{
+		if (key == null || container == null)
+			return;
+
+		List<ItemEntry> items = new ArrayList<>();
+		for (Item item : container.getItems())
+		{
+			if (item.getId() > 0 && item.getQuantity() > 0)
+				items.add(new ItemEntry(item.getId(), getItemName(item.getId()), item.getQuantity()));
+		}
+
+		storages.put(key, items);
+		storageUpdated.put(key, Instant.now());
 	}
 }

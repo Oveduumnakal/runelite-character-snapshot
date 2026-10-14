@@ -843,4 +843,10 @@ public class CharacterSnapshot
 			this.spent = spent;
 		}
 	}
+
+	/**
+	 * Last known contents of storage containers that are only readable when opened, keyed by storage
+	 * ({@code lootingBag}, {@code seedVault}, {@code groupStorage}); a storage never opened is absent.
+	 */
+	public Map<String, List<ItemEntry>> storages;
 }
