@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,7 @@ import java.util.TreeMap;
 
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankTab;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementTask;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion;
@@ -47,7 +49,9 @@ import net.runelite.api.VarPlayer;
 import net.runelite.api.Varbits;
 import net.runelite.api.WorldType;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.gameval.DBTableID;
 import net.runelite.api.gameval.VarPlayerID;
+import net.runelite.api.gameval.VarbitID;
 import net.runelite.api.vars.AccountType;
 
 /**
@@ -86,11 +90,19 @@ public class SnapshotCollector
 	/** Task struct param: monster category id, a key of {@link #CA_MONSTER_ENUM}. */
 	private static final int CA_PARAM_MONSTER = 1312;
 
+	private static final int SLAYER_BOSS_TASK_ID = 98;
+
 	private static final EquipmentInventorySlot[] EQUIPMENT_SLOTS = {
 		EquipmentInventorySlot.HEAD, EquipmentInventorySlot.CAPE, EquipmentInventorySlot.AMULET,
 		EquipmentInventorySlot.WEAPON, EquipmentInventorySlot.BODY, EquipmentInventorySlot.SHIELD,
 		EquipmentInventorySlot.LEGS, EquipmentInventorySlot.GLOVES, EquipmentInventorySlot.BOOTS,
 		EquipmentInventorySlot.RING, EquipmentInventorySlot.AMMO
+	};
+
+	private static final int[] BANK_TAB_VARBITS = {
+		VarbitID.BANK_TAB_1, VarbitID.BANK_TAB_2, VarbitID.BANK_TAB_3, VarbitID.BANK_TAB_4,
+		VarbitID.BANK_TAB_5, VarbitID.BANK_TAB_6, VarbitID.BANK_TAB_7, VarbitID.BANK_TAB_8,
+		VarbitID.BANK_TAB_9
 	};
 
 	private final Client client;
@@ -101,7 +113,13 @@ public class SnapshotCollector
 
 	private final Map<Integer, GeOffer> geOffers = new TreeMap<>();
 
+	private final Map<Integer, String> slayerTaskNames = new HashMap<>();
+
+	private final Map<Integer, String> slayerBossNames = new HashMap<>();
+
 	private List<ItemEntry> bankItems = null;
+
+	private List<BankTab> bankTabs = null;
 
 	private int bankTotal = 0;
 
@@ -148,6 +166,7 @@ public class SnapshotCollector
 		geOffers.clear();
 		equipment.clear();
 		bankItems = null;
+		bankTabs = null;
 		bankTotal = 0;
 		inventory = new ArrayList<>();
 		bankUpdated = null;
@@ -197,7 +216,11 @@ public class SnapshotCollector
 	}
 
 	/**
-	 * Replaces the cached bank contents with a flat item list.
+	 * Replaces the cached bank contents with a flat item list and the same items split by bank tab.
+	 * The container holds tabs 1 to 9 in order, then the main tab; each numbered tab's slot count is
+	 * read from its varbit, and the remaining slots are the main tab. Slicing uses the raw container,
+	 * placeholders and empty slots included, so the counts line up; each slice is then filtered like
+	 * the flat list.
 	 *
 	 * @param container the bank item container
 	 */
@@ -206,17 +229,67 @@ public class SnapshotCollector
 		if (container == null)
 			return;
 
+		Item[] raw = container.getItems();
 		List<ItemEntry> items = new ArrayList<>();
-		for (Item item : container.getItems())
+		List<BankTab> tabs = new ArrayList<>();
+		int start = 0;
+		for (int tab = 1; tab <= BANK_TAB_VARBITS.length; tab++)
 		{
-			int id = item.getId();
-			if (id > 0 && item.getQuantity() > 0)
-				items.add(new ItemEntry(id, getItemName(id), item.getQuantity()));
+			int count = Math.max(0, client.getVarbitValue(BANK_TAB_VARBITS[tab - 1]));
+			int end = Math.min(raw.length, start + count);
+			if (count > 0)
+			{
+				BankTab bankTab = new BankTab(tab, filterBankSlice(raw, start, end));
+				tabs.add(bankTab);
+				items.addAll(bankTab.items);
+			}
+
+			start = end;
 		}
 
+		BankTab main = new BankTab(0, filterBankSlice(raw, start, raw.length));
+		tabs.add(0, main);
+		items.addAll(main.items);
+
 		bankItems = items;
+		bankTabs = tabs;
 		bankTotal = items.size();
 		bankUpdated = Instant.now();
+	}
+
+	/**
+	 * Converts a slice of raw bank slots to item entries, dropping empty slots and placeholders.
+	 *
+	 * @param raw   the raw bank container items
+	 * @param start first slot of the slice, inclusive
+	 * @param end   last slot of the slice, exclusive
+	 * @return the item entries in the slice
+	 */
+	private List<ItemEntry> filterBankSlice(Item[] raw, int start, int end)
+	{
+		List<ItemEntry> slice = new ArrayList<>();
+		for (int i = start; i < end; i++)
+		{
+			int id = raw[i].getId();
+			if (id > 0 && raw[i].getQuantity() > 0)
+				slice.add(new ItemEntry(id, getItemName(id), raw[i].getQuantity()));
+		}
+
+		return slice;
+	}
+
+	/**
+	 * Copies the cached bank tabs so a built snapshot does not share lists with the cache.
+	 *
+	 * @return a deep copy of the cached tabs
+	 */
+	private List<BankTab> copyBankTabs()
+	{
+		List<BankTab> copy = new ArrayList<>();
+		for (BankTab tab : bankTabs)
+			copy.add(new BankTab(tab.tabIndex, new ArrayList<>(tab.items)));
+
+		return copy;
 	}
 
 	/**
@@ -296,6 +369,9 @@ public class SnapshotCollector
 		if (bankUpdated == null && bankTime != null && previous.bank != null && previous.bank.items != null)
 		{
 			bankItems = new ArrayList<>(previous.bank.items);
+			bankTabs = previous.bank.tabs != null && !previous.bank.tabs.isEmpty()
+					? new ArrayList<>(previous.bank.tabs)
+					: new ArrayList<>(Collections.singletonList(new BankTab(0, bankItems)));
 			bankTotal = bankItems.size();
 			bankUpdated = bankTime;
 		}
@@ -501,12 +577,19 @@ public class SnapshotCollector
 	@SuppressWarnings("deprecation")
 	public boolean pollSlayer()
 	{
-		int amount = client.getVarpValue(VarPlayer.SLAYER_TASK_SIZE);
+		int amount = client.getVarpValue(VarPlayerID.SLAYER_COUNT);
 		SlayerData task = null;
 		if (amount > 0)
 		{
+			int creatureId = client.getVarpValue(VarPlayerID.SLAYER_TARGET);
+			String bossName = null;
+			if (creatureId == SLAYER_BOSS_TASK_ID)
+				bossName = resolveBossName(client.getVarbitValue(VarbitID.SLAYER_TARGET_BOSSID));
+
 			task = new SlayerData(
-				client.getVarpValue(VarPlayer.SLAYER_TASK_CREATURE),
+				creatureId,
+				resolveTaskName(creatureId),
+				bossName,
 				amount,
 				client.getVarbitValue(Varbits.SLAYER_POINTS),
 				client.getVarbitValue(Varbits.SLAYER_TASK_STREAK));
@@ -515,6 +598,73 @@ public class SnapshotCollector
 		boolean changed = !Objects.equals(task, slayer);
 		slayer = task;
 		return changed;
+	}
+
+	/**
+	 * Resolves a slayer task id to its display name from the cache's slayer task table.
+	 *
+	 * @param taskId the slayer task id
+	 * @return the task name, or null when it cannot be resolved
+	 */
+	private String resolveTaskName(int taskId)
+	{
+		String cached = slayerTaskNames.get(taskId);
+		if (cached != null)
+			return cached;
+
+		List<Integer> rows = client.getDBRowsByValue(
+			DBTableID.SlayerTask.ID, DBTableID.SlayerTask.COL_ID, 0, taskId);
+		if (rows == null || rows.isEmpty())
+			return null;
+
+		String name = readTaskRowName(rows.get(0));
+		if (name != null)
+			slayerTaskNames.put(taskId, name);
+
+		return name;
+	}
+
+	/**
+	 * Resolves a boss-task boss id to the boss name via the slayer task sublist table.
+	 *
+	 * @param bossId the value of the slayer target boss varbit
+	 * @return the boss name, or null when it cannot be resolved
+	 */
+	private String resolveBossName(int bossId)
+	{
+		String cached = slayerBossNames.get(bossId);
+		if (cached != null)
+			return cached;
+
+		List<Integer> rows = client.getDBRowsByValue(
+			DBTableID.SlayerTaskSublist.ID, DBTableID.SlayerTaskSublist.COL_TASK_SUBTABLE_ID, 0, bossId);
+		if (rows == null || rows.isEmpty())
+			return null;
+
+		Object[] taskRow = client.getDBTableField(rows.get(0), DBTableID.SlayerTaskSublist.COL_TASK, 0);
+		if (taskRow == null || taskRow.length == 0 || !(taskRow[0] instanceof Integer))
+			return null;
+
+		String name = readTaskRowName((Integer) taskRow[0]);
+		if (name != null)
+			slayerBossNames.put(bossId, name);
+
+		return name;
+	}
+
+	/**
+	 * Reads the display name column of one slayer task table row.
+	 *
+	 * @param row the slayer task table row id
+	 * @return the name, or null when absent
+	 */
+	private String readTaskRowName(int row)
+	{
+		Object[] values = client.getDBTableField(row, DBTableID.SlayerTask.COL_NAME_UPPERCASE, 0);
+		if (values == null || values.length == 0 || !(values[0] instanceof String))
+			return null;
+
+		return (String) values[0];
 	}
 
 	/**
@@ -591,7 +741,7 @@ public class SnapshotCollector
 			data.vitals = buildVitals();
 
 		if (config.syncBank() && bankItems != null)
-			data.bank = new BankData(bankTotal, new ArrayList<>(bankItems));
+			data.bank = new BankData(bankTotal, new ArrayList<>(bankItems), copyBankTabs());
 
 		if (config.syncInventory())
 			data.inventory = new ArrayList<>(inventory);

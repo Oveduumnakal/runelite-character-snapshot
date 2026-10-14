@@ -236,30 +236,42 @@ public class CharacterSnapshot
 		public List<ItemEntry> items;
 
 		/**
-		 * Compatibility view: the flat list wrapped in a single tab, for consumers that expect the
-		 * tabbed shape (e.g. the osrs-companion MCP server). Individual tabs are not modelled.
+		 * The bank split into its real tabs: the main tab is {@code tabIndex} 0 and the numbered tabs
+		 * are 1 to 9. Never null when the bank is present; an export from before tabs were modelled
+		 * holds a single tab 0 wrapping the flat list.
 		 */
 		public List<BankTab> tabs;
 
 		/**
+		 * Creates bank data whose only tab is the main tab holding every item.
+		 *
 		 * @param totalItems distinct stack count
 		 * @param items      flat item list
 		 */
 		public BankData(int totalItems, List<ItemEntry> items)
 		{
+			this(totalItems, items, Collections.singletonList(new BankTab(0, items)));
+		}
+
+		/**
+		 * @param totalItems distinct stack count
+		 * @param items      flat item list
+		 * @param tabs       the real bank tabs
+		 */
+		public BankData(int totalItems, List<ItemEntry> items, List<BankTab> tabs)
+		{
 			this.totalItems = totalItems;
 			this.items = items;
-			this.tabs = Collections.singletonList(new BankTab(0, items));
+			this.tabs = tabs;
 		}
 	}
 
 	/**
-	 * A bank tab: an index and the items it holds. The exporter emits a single tab wrapping the flat
-	 * item list; it is a compatibility view, not a faithful per-tab breakdown.
+	 * A bank tab: an index (0 for the main tab, 1 to 9 for the numbered tabs) and the items it holds.
 	 */
 	public static class BankTab
 	{
-		/** Zero-based tab index. */
+		/** Tab index: 0 is the main tab, 1 to 9 are the numbered tabs. */
 		public int tabIndex;
 
 		/** Items in this tab. */
@@ -473,13 +485,19 @@ public class CharacterSnapshot
 	}
 
 	/**
-	 * The current slayer task. The creature is exported as its game id; consumers map it to a name.
+	 * The current slayer task. The creature is exported as its game id plus, when resolvable, its name.
 	 */
 	@EqualsAndHashCode
 	public static class SlayerData
 	{
 		/** Game id of the assigned creature. */
 		public int creatureId;
+
+		/** Display name of the assigned creature, or null when it could not be resolved. */
+		public String creatureName;
+
+		/** Specific boss name for boss tasks, or null for any other task. */
+		public String bossName;
 
 		/** Remaining kill count. */
 		public int amount;
@@ -491,14 +509,18 @@ public class CharacterSnapshot
 		public int streak;
 
 		/**
-		 * @param creatureId assigned-creature id
-		 * @param amount     remaining kills
-		 * @param points     reward points
-		 * @param streak     completion streak
+		 * @param creatureId   assigned-creature id
+		 * @param creatureName assigned-creature name, or null
+		 * @param bossName     boss name for boss tasks, or null
+		 * @param amount       remaining kills
+		 * @param points       reward points
+		 * @param streak       completion streak
 		 */
-		public SlayerData(int creatureId, int amount, int points, int streak)
+		public SlayerData(int creatureId, String creatureName, String bossName, int amount, int points, int streak)
 		{
 			this.creatureId = creatureId;
+			this.creatureName = creatureName;
+			this.bossName = bossName;
 			this.amount = amount;
 			this.points = points;
 			this.streak = streak;
