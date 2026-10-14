@@ -7,6 +7,8 @@
 
 - [com.oveduumnakal.charactersnapshot.CharacterSnapshotConfig](#comoveduumnakalcharactersnapshotcharactersnapshotconfig)
 - [com.oveduumnakal.charactersnapshot.CharacterSnapshotPlugin](#comoveduumnakalcharactersnapshotcharactersnapshotplugin)
+- [com.oveduumnakal.charactersnapshot.DiaryTasks](#comoveduumnakalcharactersnapshotdiarytasks)
+- [com.oveduumnakal.charactersnapshot.DiaryTasks.Task](#comoveduumnakalcharactersnapshotdiarytaskstask)
 - [com.oveduumnakal.charactersnapshot.SnapshotCollector](#comoveduumnakalcharactersnapshotsnapshotcollector)
 - [com.oveduumnakal.charactersnapshot.SnapshotWriter](#comoveduumnakalcharactersnapshotsnapshotwriter)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot](#comoveduumnakalcharactersnapshotmodelcharactersnapshot)
@@ -15,6 +17,7 @@
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementTask](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementtask)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiaryregion)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryTask](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiarytask)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.GeOffer](#comoveduumnakalcharactersnapshotmodelcharactersnapshotgeoffer)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.InventoryItem](#comoveduumnakalcharactersnapshotmodelcharactersnapshotinventoryitem)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry](#comoveduumnakalcharactersnapshotmodelcharactersnapshotitementry)
@@ -382,6 +385,442 @@ Initializes the collector and writer and computes the save interval.
 
 ---
 
+## com.oveduumnakal.charactersnapshot.DiaryTasks
+
+_class_
+
+`public final class DiaryTasks`
+
+Table of the individual achievement-diary tasks and where the game stores whether each is done.
+
+<p>RuneLite exposes no per-task API, so each task is read straight from client state in one of two
+ways: a single bit of a diary varp (`Task#isComplete(Client)` tests `(varp >> bit) & 1`),
+or a Karamja varbit that counts up from zero and is complete once it reaches a minimum value.
+A task is only listed when its storage location is known from a source; unsourced tasks are left
+out rather than guessed.
+
+<p><b>Source.</b> The task names, varps, bit positions, and Karamja varbits come from the Quest Helper
+RuneLite plugin (https://github.com/Zoinkwiz/quest-helper, BSD 2-Clause licence), package
+`com.questhelper.helpers.achievementdiaries`, where each task's "not done" requirement is a
+`VarplayerRequirement(VarPlayerID.*_ACHIEVEMENT_DIARY[2], false, bit)` or a
+`VarbitRequirement(VarbitID.ATJUN_*, ...)` and the task is titled by its panel. Quest Helper's
+panel titles are terse; the Falador task names were rewritten in plain English from that plugin's
+step text. Quest Helper's copyright notice and BSD 2-Clause licence terms apply to this derived table.
+
+<p>The table holds 492 tasks, matching the 492 tasks the wiki lists across the twelve diaries. Within a
+tier, varp tasks are ordered by varp then bit, which is not the in-game journal order.
+
+### Nested Type Summary
+
+| Type | Description |
+|---|---|
+| _class_ [`Task`](#comoveduumnakalcharactersnapshotdiarytaskstask) | One diary task and the client state that says whether it is complete. |
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private static final int` | `ARDOUGNE_1` | Varp `ARDOUNGE_ACHIEVEMENT_DIARY`. |
+| `private static final int` | `ARDOUGNE_2` | Varp `ARDOUNGE_ACHIEVEMENT_DIARY2`. |
+| `private static final int` | `DESERT_1` | Varp `DESERT_ACHIEVEMENT_DIARY`. |
+| `private static final int` | `DESERT_2` | Varp `DESERT_ACHIEVEMENT_DIARY2`. |
+| `private static final int` | `FALADOR_1` | Varp `FALADOR_ACHIEVEMENT_DIARY`. |
+| `private static final int` | `FALADOR_2` | Varp `FALADOR_ACHIEVEMENT_DIARY2`. |
+| `private static final int` | `FREMENNIK_1` | Varp `FREMENNIK_ACHIEVEMENT_DIARY`. |
+| `private static final int` | `FREMENNIK_2` | Varp `FREMENNIK_ACHIEVEMENT_DIARY2`. |
+| `private static final int` | `KANDARIN_1` | Varp `KANDARIN_ACHIEVEMENT_DIARY`. |
+| `private static final int` | `KANDARIN_2` | Varp `KANDARIN_ACHIEVEMENT_DIARY2`. |
+| `private static final int` | `KARAMJA_4` | Varp `ATJUN_TASKS_4`. |
+| `private static final int` | `KOUREND_1` | Varp `KOUREND_ACHIEVEMENT_DIARY`. |
+| `private static final int` | `KOUREND_2` | Varp `KOUREND_ACHIEVEMENT_DIARY2`. |
+| `private static final int` | `LUMBRIDGE_1` | Varp `LUMB_DRAY_ACHIEVEMENT_DIARY`. |
+| `private static final int` | `LUMBRIDGE_2` | Varp `LUMB_DRAY_ACHIEVEMENT_DIARY2`. |
+| `private static final int` | `MORYTANIA_1` | Varp `MORYTANIA_ACHIEVEMENT_DIARY`. |
+| `private static final int` | `MORYTANIA_2` | Varp `MORYTANIA_ACHIEVEMENT_DIARY2`. |
+| `private static final Map<String,Map<String,List<Task>>>` | `TABLE` | Region name to tier to tasks, in the same region order as the tier booleans. |
+| `public static final List<String>` | `TIERS` | Tier keys in easy to elite order. |
+| `private static final int` | `VARROCK_1` | Varp `VARROCK_ACHIEVEMENT_DIARY`. |
+| `private static final int` | `VARROCK_2` | Varp `VARROCK_ACHIEVEMENT_DIARY2`. |
+| `private static final int` | `WESTERN_1` | Varp `WESTERN_ACHIEVEMENT_DIARY`. |
+| `private static final int` | `WESTERN_2` | Varp `WESTERN_ACHIEVEMENT_DIARY2`. |
+| `private static final int` | `WILDERNESS_1` | Varp `WILDERNESS_ACHIEVEMENT_DIARY`. |
+| `private static final int` | `WILDERNESS_2` | Varp `WILDERNESS_ACHIEVEMENT_DIARY2`. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `DiaryTasks()` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `private static Map<String,List<Task>>` | `ardougne()` | Tasks of the Ardougne diary, by tier. |
+| `private static Map<String,Map<String,List<Task>>>` | `buildTable()` |  |
+| `private static Map<String,List<Task>>` | `desert()` | Tasks of the Desert diary, by tier. |
+| `private static Map<String,List<Task>>` | `falador()` | Tasks of the Falador diary, by tier. |
+| `private static Map<String,List<Task>>` | `fremennik()` | Tasks of the Fremennik diary, by tier. |
+| `private static Map<String,List<Task>>` | `kandarin()` | Tasks of the Kandarin diary, by tier. |
+| `private static Map<String,List<Task>>` | `karamja()` | Tasks of the Karamja diary, by tier. |
+| `private static Map<String,List<Task>>` | `kourend()` | Tasks of the Kourend diary, by tier. |
+| `private static Map<String,List<Task>>` | `lumbridge()` | Tasks of the Lumbridge diary, by tier. |
+| `private static Map<String,List<Task>>` | `morytania()` | Tasks of the Morytania diary, by tier. |
+| `public static Map<String,List<Task>>` | `tasks(String region)` | Returns the known tasks of a region. |
+| `private static Task` | `varbit(String name, int varbit, int minValue)` |  |
+| `private static Task` | `varp(String name, int varp, int bit)` |  |
+| `private static Map<String,List<Task>>` | `varrock()` | Tasks of the Varrock diary, by tier. |
+| `private static Map<String,List<Task>>` | `western()` | Tasks of the Western diary, by tier. |
+| `private static Map<String,List<Task>>` | `wilderness()` | Tasks of the Wilderness diary, by tier. |
+
+### Field Detail
+
+#### ARDOUGNE_1
+
+`private static final int ARDOUGNE_1`
+
+Varp `ARDOUNGE_ACHIEVEMENT_DIARY`.
+
+#### ARDOUGNE_2
+
+`private static final int ARDOUGNE_2`
+
+Varp `ARDOUNGE_ACHIEVEMENT_DIARY2`.
+
+#### DESERT_1
+
+`private static final int DESERT_1`
+
+Varp `DESERT_ACHIEVEMENT_DIARY`.
+
+#### DESERT_2
+
+`private static final int DESERT_2`
+
+Varp `DESERT_ACHIEVEMENT_DIARY2`.
+
+#### FALADOR_1
+
+`private static final int FALADOR_1`
+
+Varp `FALADOR_ACHIEVEMENT_DIARY`.
+
+#### FALADOR_2
+
+`private static final int FALADOR_2`
+
+Varp `FALADOR_ACHIEVEMENT_DIARY2`.
+
+#### FREMENNIK_1
+
+`private static final int FREMENNIK_1`
+
+Varp `FREMENNIK_ACHIEVEMENT_DIARY`.
+
+#### FREMENNIK_2
+
+`private static final int FREMENNIK_2`
+
+Varp `FREMENNIK_ACHIEVEMENT_DIARY2`.
+
+#### KANDARIN_1
+
+`private static final int KANDARIN_1`
+
+Varp `KANDARIN_ACHIEVEMENT_DIARY`.
+
+#### KANDARIN_2
+
+`private static final int KANDARIN_2`
+
+Varp `KANDARIN_ACHIEVEMENT_DIARY2`.
+
+#### KARAMJA_4
+
+`private static final int KARAMJA_4`
+
+Varp `ATJUN_TASKS_4`.
+
+#### KOUREND_1
+
+`private static final int KOUREND_1`
+
+Varp `KOUREND_ACHIEVEMENT_DIARY`.
+
+#### KOUREND_2
+
+`private static final int KOUREND_2`
+
+Varp `KOUREND_ACHIEVEMENT_DIARY2`.
+
+#### LUMBRIDGE_1
+
+`private static final int LUMBRIDGE_1`
+
+Varp `LUMB_DRAY_ACHIEVEMENT_DIARY`.
+
+#### LUMBRIDGE_2
+
+`private static final int LUMBRIDGE_2`
+
+Varp `LUMB_DRAY_ACHIEVEMENT_DIARY2`.
+
+#### MORYTANIA_1
+
+`private static final int MORYTANIA_1`
+
+Varp `MORYTANIA_ACHIEVEMENT_DIARY`.
+
+#### MORYTANIA_2
+
+`private static final int MORYTANIA_2`
+
+Varp `MORYTANIA_ACHIEVEMENT_DIARY2`.
+
+#### TABLE
+
+`private static final Map<String,Map<String,List<Task>>> TABLE`
+
+Region name to tier to tasks, in the same region order as the tier booleans.
+
+#### TIERS
+
+`public static final List<String> TIERS`
+
+Tier keys in easy to elite order.
+
+#### VARROCK_1
+
+`private static final int VARROCK_1`
+
+Varp `VARROCK_ACHIEVEMENT_DIARY`.
+
+#### VARROCK_2
+
+`private static final int VARROCK_2`
+
+Varp `VARROCK_ACHIEVEMENT_DIARY2`.
+
+#### WESTERN_1
+
+`private static final int WESTERN_1`
+
+Varp `WESTERN_ACHIEVEMENT_DIARY`.
+
+#### WESTERN_2
+
+`private static final int WESTERN_2`
+
+Varp `WESTERN_ACHIEVEMENT_DIARY2`.
+
+#### WILDERNESS_1
+
+`private static final int WILDERNESS_1`
+
+Varp `WILDERNESS_ACHIEVEMENT_DIARY`.
+
+#### WILDERNESS_2
+
+`private static final int WILDERNESS_2`
+
+Varp `WILDERNESS_ACHIEVEMENT_DIARY2`.
+
+### Constructor Detail
+
+#### DiaryTasks
+
+`private DiaryTasks()`
+
+### Method Detail
+
+#### ardougne
+
+`private static Map<String,List<Task>> ardougne()`
+
+Tasks of the Ardougne diary, by tier.
+
+- **Returns:** the tiers in easy to elite order
+
+#### buildTable
+
+`private static Map<String,Map<String,List<Task>>> buildTable()`
+
+#### desert
+
+`private static Map<String,List<Task>> desert()`
+
+Tasks of the Desert diary, by tier.
+
+- **Returns:** the tiers in easy to elite order
+
+#### falador
+
+`private static Map<String,List<Task>> falador()`
+
+Tasks of the Falador diary, by tier.
+
+- **Returns:** the tiers in easy to elite order
+
+#### fremennik
+
+`private static Map<String,List<Task>> fremennik()`
+
+Tasks of the Fremennik diary, by tier.
+
+- **Returns:** the tiers in easy to elite order
+
+#### kandarin
+
+`private static Map<String,List<Task>> kandarin()`
+
+Tasks of the Kandarin diary, by tier.
+
+- **Returns:** the tiers in easy to elite order
+
+#### karamja
+
+`private static Map<String,List<Task>> karamja()`
+
+Tasks of the Karamja diary, by tier.
+
+- **Returns:** the tiers in easy to elite order
+
+#### kourend
+
+`private static Map<String,List<Task>> kourend()`
+
+Tasks of the Kourend diary, by tier.
+
+- **Returns:** the tiers in easy to elite order
+
+#### lumbridge
+
+`private static Map<String,List<Task>> lumbridge()`
+
+Tasks of the Lumbridge diary, by tier.
+
+- **Returns:** the tiers in easy to elite order
+
+#### morytania
+
+`private static Map<String,List<Task>> morytania()`
+
+Tasks of the Morytania diary, by tier.
+
+- **Returns:** the tiers in easy to elite order
+
+#### tasks
+
+`public static Map<String,List<Task>> tasks(String region)`
+
+Returns the known tasks of a region.
+
+- **Parameter** `region` — region key such as `VARROCK`
+- **Returns:** tier key (`easy`, `medium`, `hard`, `elite`) to its tasks, or an
+        empty map when no task of the region is mapped
+
+#### varbit
+
+`private static Task varbit(String name, int varbit, int minValue)`
+
+#### varp
+
+`private static Task varp(String name, int varp, int bit)`
+
+#### varrock
+
+`private static Map<String,List<Task>> varrock()`
+
+Tasks of the Varrock diary, by tier.
+
+- **Returns:** the tiers in easy to elite order
+
+#### western
+
+`private static Map<String,List<Task>> western()`
+
+Tasks of the Western diary, by tier.
+
+- **Returns:** the tiers in easy to elite order
+
+#### wilderness
+
+`private static Map<String,List<Task>> wilderness()`
+
+Tasks of the Wilderness diary, by tier.
+
+- **Returns:** the tiers in easy to elite order
+
+---
+
+## com.oveduumnakal.charactersnapshot.DiaryTasks.Task
+
+_class_
+
+`public static final class Task`
+
+One diary task and the client state that says whether it is complete.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private final int` | `arg` |  |
+| `private final int` | `id` |  |
+| `public final String` | `name` | Task text shown in the export. |
+| `private final boolean` | `varbit` |  |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `Task(String name, boolean varbit, int id, int arg)` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `public boolean` | `isComplete(Client client)` | Reads this task's completion from the client. |
+
+### Field Detail
+
+#### arg
+
+`private final int arg`
+
+#### id
+
+`private final int id`
+
+#### name
+
+`public final String name`
+
+Task text shown in the export.
+
+#### varbit
+
+`private final boolean varbit`
+
+### Constructor Detail
+
+#### Task
+
+`private Task(String name, boolean varbit, int id, int arg)`
+
+### Method Detail
+
+#### isComplete
+
+`public boolean isComplete(Client client)`
+
+Reads this task's completion from the client.
+
+- **Parameter** `client` — the game client
+- **Returns:** whether the task is complete
+
+---
+
 ## com.oveduumnakal.charactersnapshot.SnapshotCollector
 
 _class_
@@ -445,7 +884,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public CharacterSnapshot` | `buildSnapshot()` | Assembles the export snapshot from the caches and cheap client reads, honouring the config toggles. |
 | `private VitalsData` | `buildVitals()` | Reads current combat vitals from boosted and real skill levels and run energy. |
 | `private List<BankTab>` | `copyBankTabs()` | Copies the cached bank tabs so a built snapshot does not share lists with the cache. |
-| `private DiaryRegion` | `diaryRegion(int easy, int medium, int hard, int elite)` | Reads a diary region's four tiers, each complete when its varbit equals 1. |
+| `private DiaryRegion` | `diaryRegion(String region, int easy, int medium, int hard, int elite)` | Reads a diary region's four tiers, each complete when its varbit equals 1. |
 | `private List<ItemEntry>` | `filterBankSlice(Item[] raw, int start, int end)` | Converts a slice of raw bank slots to item entries, dropping empty slots and placeholders. |
 | `private String` | `getItemName(int itemId)` | Resolves an item id to its display name. |
 | `private Map<Integer,CombatAchievementTask>` | `loadCombatAchievementMeta()` | Reads task names, tiers, and monsters from the game cache: each tier enum lists task structs, and each struct carries the task id, name, and monster category as params. |
@@ -453,7 +892,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public void` | `pollAllGeOffers()` | Rebuilds the Grand Exchange cache from the client's current offer array. |
 | `public void` | `pollAllSkills()` | Reads every skill from the client, plus a computed `OVERALL` total. |
 | `public boolean` | `pollCombatAchievements()` | Polls the six combat-achievement tier varbits and the per-task completion bits. |
-| `public boolean` | `pollDiaries()` | Polls achievement-diary completion for every region via named RuneLite varbits. |
+| `public boolean` | `pollDiaries()` | Polls achievement-diary completion for every region via named RuneLite varbits, and each mapped task via `DiaryTasks`. |
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
 | `public boolean` | `pollSlayer()` | Polls the current slayer task, clearing it when no task is assigned. |
 | `private String` | `readTaskRowName(int row)` | Reads the display name column of one slayer task table row. |
@@ -669,7 +1108,7 @@ Copies the cached bank tabs so a built snapshot does not share lists with the ca
 
 #### diaryRegion
 
-`private DiaryRegion diaryRegion(int easy, int medium, int hard, int elite)`
+`private DiaryRegion diaryRegion(String region, int easy, int medium, int hard, int elite)`
 
 Reads a diary region's four tiers, each complete when its varbit equals 1.
 
@@ -741,7 +1180,8 @@ Polls the six combat-achievement tier varbits and the per-task completion bits.
 
 `public boolean pollDiaries()`
 
-Polls achievement-diary completion for every region via named RuneLite varbits.
+Polls achievement-diary completion for every region via named RuneLite varbits, and each mapped
+task via `DiaryTasks`.
 
 - **Returns:** whether any diary completion changed since the last poll
 
@@ -995,7 +1435,8 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | _class_ [`BankTab`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbanktab) | A bank tab: an index (0 for the main tab, 1 to 9 for the numbered tabs) and the items it holds. |
 | _class_ [`CombatAchievementData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementdata) | Combat-achievement tier progress. |
 | _class_ [`CombatAchievementTask`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementtask) | A single combat-achievement task and whether it is complete. |
-| _class_ [`DiaryRegion`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiaryregion) | Completion of the four achievement-diary tiers for one region. |
+| _class_ [`DiaryRegion`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiaryregion) | Completion of the four achievement-diary tiers for one region, plus the individual tasks where known. |
+| _class_ [`DiaryTask`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiarytask) | One achievement-diary task and whether it is complete. |
 | _class_ [`GeOffer`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotgeoffer) | One active Grand Exchange offer. |
 | _class_ [`InventoryItem`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotinventoryitem) | An inventory item, carrying its slot index in addition to the item stack. |
 | _class_ [`ItemEntry`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotitementry) | One stack of items: id, resolved name, and quantity. |
@@ -1454,7 +1895,7 @@ _class_
 
 `public static class DiaryRegion`
 
-Completion of the four achievement-diary tiers for one region.
+Completion of the four achievement-diary tiers for one region, plus the individual tasks where known.
 
 ### Field Summary
 
@@ -1464,12 +1905,14 @@ Completion of the four achievement-diary tiers for one region.
 | `public boolean` | `elite` | Whether the elite tier is complete. |
 | `public boolean` | `hard` | Whether the hard tier is complete. |
 | `public boolean` | `medium` | Whether the medium tier is complete. |
+| `public Map<String,List<DiaryTask>>` | `tasks` | Individual task completion keyed by tier (`easy`, `medium`, `hard`, `elite`). |
 
 ### Constructor Summary
 
 | Constructor | Description |
 |---|---|
 | `DiaryRegion(boolean easy, boolean medium, boolean hard, boolean elite)` |  |
+| `DiaryRegion(boolean easy, boolean medium, boolean hard, boolean elite, Map<String,List<DiaryTask>> tasks)` |  |
 
 ### Field Detail
 
@@ -1497,6 +1940,14 @@ Whether the hard tier is complete.
 
 Whether the medium tier is complete.
 
+#### tasks
+
+`public Map<String,List<DiaryTask>> tasks`
+
+Individual task completion keyed by tier (`easy`, `medium`, `hard`,
+`elite`). Absent when no task of the region is mapped; a tier is absent when none of
+its tasks are mapped.
+
 ### Constructor Detail
 
 #### DiaryRegion
@@ -1507,6 +1958,62 @@ Whether the medium tier is complete.
 - **Parameter** `medium` — medium complete
 - **Parameter** `hard` — hard complete
 - **Parameter** `elite` — elite complete
+
+#### DiaryRegion
+
+`public DiaryRegion(boolean easy, boolean medium, boolean hard, boolean elite, Map<String,List<DiaryTask>> tasks)`
+
+- **Parameter** `easy` — easy complete
+- **Parameter** `medium` — medium complete
+- **Parameter** `hard` — hard complete
+- **Parameter** `elite` — elite complete
+- **Parameter** `tasks` — per-tier task completion, or `null` when none is mapped
+
+---
+
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryTask
+
+_class_
+
+`public static class DiaryTask`
+
+One achievement-diary task and whether it is complete.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public boolean` | `completed` | Whether the task is complete. |
+| `public String` | `name` | Task text. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `DiaryTask(String name, boolean completed)` |  |
+
+### Field Detail
+
+#### completed
+
+`public boolean completed`
+
+Whether the task is complete.
+
+#### name
+
+`public String name`
+
+Task text.
+
+### Constructor Detail
+
+#### DiaryTask
+
+`public DiaryTask(String name, boolean completed)`
+
+- **Parameter** `name` — task text
+- **Parameter** `completed` — whether the task is complete
 
 ---
 
