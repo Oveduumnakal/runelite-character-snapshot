@@ -2307,7 +2307,7 @@ Identity and account context of the logged-in character.
 |---|---|---|
 | `public String` | `accountType` | Account type, e.g. |
 | `public int` | `combatLevel` | Combat level. |
-| `public boolean` | `members` | Whether the current world is a members' world. |
+| `public Boolean` | `members` | Whether the current world is a members' world; `null` when account info is not exported. |
 | `public String` | `username` | In-game display name. |
 | `public int` | `world` | World the character is logged into. |
 
@@ -2315,7 +2315,7 @@ Identity and account context of the logged-in character.
 
 | Constructor | Description |
 |---|---|
-| `PlayerInfo(String username, int combatLevel, int world, String accountType, boolean members)` |  |
+| `PlayerInfo(String username, int combatLevel, int world, String accountType, Boolean members)` |  |
 
 ### Field Detail
 
@@ -2333,9 +2333,9 @@ Combat level.
 
 #### members
 
-`public boolean members`
+`public Boolean members`
 
-Whether the current world is a members' world.
+Whether the current world is a members' world; `null` when account info is not exported.
 
 #### username
 
@@ -2353,13 +2353,13 @@ World the character is logged into.
 
 #### PlayerInfo
 
-`public PlayerInfo(String username, int combatLevel, int world, String accountType, boolean members)`
+`public PlayerInfo(String username, int combatLevel, int world, String accountType, Boolean members)`
 
 - **Parameter** `username` — display name
 - **Parameter** `combatLevel` — combat level
 - **Parameter** `world` — current world
 - **Parameter** `accountType` — account-type name
-- **Parameter** `members` — whether on a members' world
+- **Parameter** `members` — whether on a members' world, or `null` when not exported
 
 ---
 

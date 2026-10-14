@@ -727,7 +727,7 @@ public class SnapshotCollector
 		data.lastUpdated = Instant.now().toString();
 
 		String accountType = null;
-		boolean members = false;
+		Boolean members = null;
 		if (config.syncAccountInfo())
 		{
 			AccountType type = client.getAccountType();
