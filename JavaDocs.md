@@ -280,6 +280,7 @@ makes no network calls of any kind.
 | `public void` | `onGrandExchangeOfferChanged(GrandExchangeOfferChanged event)` | Caches a changed Grand Exchange offer. |
 | `public void` | `onItemContainerChanged(ItemContainerChanged event)` | Caches bank, inventory, or equipment changes. |
 | `public void` | `onScriptPostFired(ScriptPostFired event)` | Captures the collection log page whenever the log redraws its item list. |
+| `public void` | `onScriptPreFired(ScriptPreFired event)` | Merges every obtained item the game reports while the player opens the collection log's Search. |
 | `public void` | `onStatChanged(StatChanged event)` | Caches a changed skill (real, experience, and boosted levels). |
 | `public void` | `onVarbitChanged(VarbitChanged event)` | Marks the quests stale on any varp or varbit change, since quest progress lives in those. |
 | `private void` | `pollPeriodic()` | Polls the data sources that are not event-driven, marking the snapshot dirty on any change. |
@@ -444,6 +445,15 @@ Caches bank, inventory, or equipment changes.
 Captures the collection log page whenever the log redraws its item list.
 
 - **Parameter** `event` — the script-post-fired event
+
+#### onScriptPreFired
+
+`public void onScriptPreFired(ScriptPreFired event)`
+
+Merges every obtained item the game reports while the player opens the collection log's Search. The
+pass is closed once per pass on a later game tick, not per item.
+
+- **Parameter** `event` — the script-pre-fired event
 
 #### onStatChanged
 
@@ -1819,6 +1829,9 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private static final int[]` | `CA_TIER_ENUMS` | Cache enums listing the task struct ids per tier, easy to grandmaster. |
 | `private static final String[]` | `CA_TIER_NAMES` |  |
 | `private static final int` | `CLOG_HEADER_TITLE_INDEX` | Index of the page title text among the children of the collection log header widget. |
+| `private static final int` | `CLOG_ITEM_ARG_ID` | Index of the item id in the argument array of `#CLOG_ITEM_SCRIPT_ID`; index 0 is the script id. |
+| `private static final int` | `CLOG_ITEM_ARG_QUANTITY` | Index of the quantity in the argument array of `#CLOG_ITEM_SCRIPT_ID`. |
+| `public static final int` | `CLOG_ITEM_SCRIPT_ID` | Id of the game's per-item collection log script, which the server runs once for every obtained item while the log's Search is opened. |
 | `private static final EquipmentInventorySlot[]` | `EQUIPMENT_SLOTS` |  |
 | `private static final int` | `KARAMJA_TIER_DONE` | Value of the Karamja easy, medium and hard tier varbits once the tier is complete; 1 only means started. |
 | `private static final int[]` | `RUNE_POUCH_ITEMS` | Every rune pouch variant; the contents varbits are shared by all of them. |
@@ -1836,8 +1849,11 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private int` | `caMetaRetries` | How many times a partial metadata load has been retried. |
 | `private Map<Integer,CombatAchievementTask>` | `caTaskMeta` | Cached task metadata by task id (completed flag unset); empty until resolved from the cache. |
 | `private final Client` | `client` |  |
+| `private final Map<Integer,ItemEntry>` | `clogItems` |  |
 | `private int` | `clogObtained` |  |
 | `private final Map<String,CollectionLogPage>` | `clogPages` |  |
+| `private boolean` | `clogSearchActive` |  |
+| `private boolean` | `clogSearchChanged` |  |
 | `private int` | `clogTotal` |  |
 | `private Instant` | `clogUpdated` |  |
 | `private final Map<String,Integer>` | `clueCounts` |  |
@@ -1879,7 +1895,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 
 | Modifier and Type | Method | Description |
 |---|---|---|
-| `private CollectionLogData` | `buildCollectionLog()` | Builds the exported collection log from the stored pages. |
+| `private CollectionLogData` | `buildCollectionLog()` | Builds the exported collection log. |
 | `private List<CombatAchievementTask>` | `buildCombatAchievementTasks()` | Combines the completion varps with the cached task metadata. |
 | `private LocationData` | `buildLocation(Player localPlayer)` | Reads the character's world location. |
 | `private Map<String,String>` | `buildSectionUpdated(CharacterSnapshot data)` | Collects the capture time of each item section present in the snapshot. |
@@ -1891,10 +1907,12 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private DiaryRegion` | `diaryRegion(String region, int easy, int medium, int hard, int elite)` | Reads a diary region whose four tier varbits are 0/1 completion flags. |
 | `private DiaryRegion` | `diaryRegion(String region, int easy, int medium, int hard, int elite, int doneValue)` | Reads a diary region's four tiers and its mapped tasks. |
 | `private List<ItemEntry>` | `filterBankSlice(Item[] raw, int start, int end)` | Converts a slice of raw bank slots to item entries, dropping empty slots and placeholders. |
+| `public boolean` | `finishCollectionLogSearch()` | Closes a search pass started by `#recordCollectionLogItem(Object[])`. |
 | `private String` | `getItemName(int itemId)` | Resolves an item id to its display name. |
 | `private boolean` | `hasRunePouch()` |  |
 | `private boolean` | `isVarpBoss(String key)` |  |
 | `private Map<Integer,CombatAchievementTask>` | `loadCombatAchievementMeta()` | Reads task names, tiers, and monsters from the game cache: each tier enum lists task structs, and each struct carries the task id, name, and monster category as params. |
+| `private boolean` | `mergeClogItem(ItemEntry item)` | Merges one obtained item into the whole-log item map. |
 | `private Map<String,Integer>` | `mergedKillCounts()` |  |
 | `public boolean` | `onChatMessage(String message)` | Reads a kill-count line from chat. |
 | `public boolean` | `onClueMessage(String message)` | Reads a treasure-trail completion line from chat. |
@@ -1918,6 +1936,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private List<ItemEntry>` | `readRunePouch()` | Reads the rune pouch slots from the client varbits. |
 | `private void` | `readSlayerDetails(SlayerData task)` | Fills in the slayer master, blocked tasks and reward unlocks of a task. |
 | `private String` | `readTaskRowName(int row)` | Reads the display name column of one slayer task table row. |
+| `public void` | `recordCollectionLogItem(Object[] args)` | Records one obtained item from the game's per-item collection log script, which runs for every obtained item while the player opens the log's Search. |
 | `private void` | `refreshOverall()` | Recomputes the `OVERALL` entry from the cached skills. |
 | `private void` | `reloadCombatAchievementMetaIfNeeded()` | Loads the task metadata when none is cached, and retries (at most `#CA_META_MAX_RETRIES` times) while the last load was partial, i.e. |
 | `public void` | `reset()` | Clears every cache. |
@@ -1992,6 +2011,26 @@ Cache enums listing the task struct ids per tier, easy to grandmaster. Not in th
 `private static final int CLOG_HEADER_TITLE_INDEX`
 
 Index of the page title text among the children of the collection log header widget.
+
+#### CLOG_ITEM_ARG_ID
+
+`private static final int CLOG_ITEM_ARG_ID`
+
+Index of the item id in the argument array of `#CLOG_ITEM_SCRIPT_ID`; index 0 is the script id.
+
+#### CLOG_ITEM_ARG_QUANTITY
+
+`private static final int CLOG_ITEM_ARG_QUANTITY`
+
+Index of the quantity in the argument array of `#CLOG_ITEM_SCRIPT_ID`.
+
+#### CLOG_ITEM_SCRIPT_ID
+
+`public static final int CLOG_ITEM_SCRIPT_ID`
+
+Id of the game's per-item collection log script, which the server runs once for every obtained item
+while the log's Search is opened. Arguments, after the script id itself in the event array: item id,
+quantity. Taken from WikiSync (script 4100, `collection_delayed_transmit`).
 
 #### EQUIPMENT_SLOTS
 
@@ -2078,6 +2117,10 @@ Cached task metadata by task id (completed flag unset); empty until resolved fro
 
 `private final Client client`
 
+#### clogItems
+
+`private final Map<Integer,ItemEntry> clogItems`
+
 #### clogObtained
 
 `private int clogObtained`
@@ -2085,6 +2128,14 @@ Cached task metadata by task id (completed flag unset); empty until resolved fro
 #### clogPages
 
 `private final Map<String,CollectionLogPage> clogPages`
+
+#### clogSearchActive
+
+`private boolean clogSearchActive`
+
+#### clogSearchChanged
+
+`private boolean clogSearchChanged`
 
 #### clogTotal
 
@@ -2232,10 +2283,10 @@ Creates a collector that cannot read other plugins' stored data.
 
 `private CollectionLogData buildCollectionLog()`
 
-Builds the exported collection log from the stored pages. The flat item list holds each obtained
-item id once, taking the quantity from the first page it appears on.
+Builds the exported collection log. The flat item list holds each obtained item id once, from the
+search pass and from every captured page.
 
-- **Returns:** the collection log, or `null` when no page has been captured
+- **Returns:** the collection log, or `null` when nothing has been captured
 
 #### buildCombatAchievementTasks
 
@@ -2346,6 +2397,15 @@ Converts a slice of raw bank slots to item entries, dropping empty slots and pla
 - **Parameter** `end` — last slot of the slice, exclusive
 - **Returns:** the item entries in the slice
 
+#### finishCollectionLogSearch
+
+`public boolean finishCollectionLogSearch()`
+
+Closes a search pass started by `#recordCollectionLogItem(Object[])`. Called on a later game
+tick, once the script has stopped firing; reads the overall counters and stamps the section.
+
+- **Returns:** whether the pass changed the collection log
+
 #### getItemName
 
 `private String getItemName(int itemId)`
@@ -2374,6 +2434,15 @@ and each struct carries the task id, name, and monster category as params.
 
 - **Returns:** the metadata by task id, or empty if the cache is not readable yet; also sets
         `#caMetaPartial`
+
+#### mergeClogItem
+
+`private boolean mergeClogItem(ItemEntry item)`
+
+Merges one obtained item into the whole-log item map.
+
+- **Parameter** `item` — the obtained item
+- **Returns:** whether the map changed
 
 #### mergedKillCounts
 
@@ -2569,6 +2638,17 @@ Reads the display name column of one slayer task table row.
 
 - **Parameter** `row` — the slayer task table row id
 - **Returns:** the name, or null when absent
+
+#### recordCollectionLogItem
+
+`public void recordCollectionLogItem(Object[] args)`
+
+Records one obtained item from the game's per-item collection log script, which runs for every
+obtained item while the player opens the log's Search. An event with no quantity is ignored rather than
+counted as obtained. Only merges into the item map; the pass is
+closed by `#finishCollectionLogSearch()` so the caller marks the data dirty once per pass.
+
+- **Parameter** `args` — the script arguments, including the script id at index 0
 
 #### refreshOverall
 

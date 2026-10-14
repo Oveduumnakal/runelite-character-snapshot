@@ -1,6 +1,9 @@
 /*
  * Copyright (c) 2026, isaac
  * Copyright (c) 2026, Oveduumnakal
+ * Collection log search script id and argument layout derived from WikiSync
+ * (https://github.com/weirdgloop/WikiSync), BSD 2-Clause:
+ * Copyright (c) 2021, andmcadams
  * All rights reserved.
  */
 package com.oveduumnakal.charactersnapshot;
@@ -254,6 +257,9 @@ public class SnapshotCollector
 		runePouch = null;
 		spellbook = null;
 		clogPages.clear();
+		clogItems.clear();
+		clogSearchActive = false;
+		clogSearchChanged = false;
 		clogObtained = 0;
 		clogTotal = 0;
 		clogUpdated = null;
@@ -550,10 +556,19 @@ public class SnapshotCollector
 
 		Instant clogTime = sectionTime(times, "collectionLog", fallback);
 		if (clogUpdated == null && clogTime != null && previous.collectionLog != null
-				&& previous.collectionLog.pages != null)
+				&& (previous.collectionLog.pages != null || previous.collectionLog.items != null))
 		{
 			clogPages.clear();
-			clogPages.putAll(previous.collectionLog.pages);
+			if (previous.collectionLog.pages != null)
+				clogPages.putAll(previous.collectionLog.pages);
+
+			clogItems.clear();
+			if (previous.collectionLog.items != null)
+			{
+				for (ItemEntry item : previous.collectionLog.items)
+					clogItems.put(item.itemId, item);
+			}
+
 			clogObtained = previous.collectionLog.obtained;
 			clogTotal = previous.collectionLog.total;
 			clogUpdated = clogTime;
@@ -1563,7 +1578,26 @@ public class SnapshotCollector
 	/** Index of the page title text among the children of the collection log header widget. */
 	private static final int CLOG_HEADER_TITLE_INDEX = 0;
 
+	/**
+	 * Id of the game's per-item collection log script, which the server runs once for every obtained item
+	 * while the log's Search is opened. Arguments, after the script id itself in the event array: item id,
+	 * quantity. Taken from WikiSync (script 4100, {@code collection_delayed_transmit}).
+	 */
+	public static final int CLOG_ITEM_SCRIPT_ID = 4100;
+
+	/** Index of the item id in the argument array of {@link #CLOG_ITEM_SCRIPT_ID}; index 0 is the script id. */
+	private static final int CLOG_ITEM_ARG_ID = 1;
+
+	/** Index of the quantity in the argument array of {@link #CLOG_ITEM_SCRIPT_ID}. */
+	private static final int CLOG_ITEM_ARG_QUANTITY = 2;
+
 	private final Map<String, CollectionLogPage> clogPages = new LinkedHashMap<>();
+
+	private final Map<Integer, ItemEntry> clogItems = new LinkedHashMap<>();
+
+	private boolean clogSearchActive = false;
+
+	private boolean clogSearchChanged = false;
 
 	private int clogObtained = 0;
 
@@ -1607,6 +1641,8 @@ public class SnapshotCollector
 		CollectionLogPage page = new CollectionLogPage(total, obtainedItems.size(), obtainedItems);
 		boolean changed = !page.equals(clogPages.get(title.getText()));
 		clogPages.put(title.getText(), page);
+		for (ItemEntry item : obtainedItems)
+			changed |= mergeClogItem(item);
 
 		int obtained = client.getVarpValue(VarPlayerID.COLLECTION_COUNT);
 		int max = client.getVarpValue(VarPlayerID.COLLECTION_COUNT_MAX);
@@ -1620,27 +1656,92 @@ public class SnapshotCollector
 	}
 
 	/**
-	 * Builds the exported collection log from the stored pages. The flat item list holds each obtained
-	 * item id once, taking the quantity from the first page it appears on.
+	 * Merges one obtained item into the whole-log item map.
 	 *
-	 * @return the collection log, or {@code null} when no page has been captured
+	 * @param item the obtained item
+	 * @return whether the map changed
+	 */
+	private boolean mergeClogItem(ItemEntry item)
+	{
+		ItemEntry old = clogItems.get(item.itemId);
+		if (old != null && old.quantity == item.quantity)
+			return false;
+
+		clogItems.put(item.itemId, item);
+		return true;
+	}
+
+	/**
+	 * Records one obtained item from the game's per-item collection log script, which runs for every
+	 * obtained item while the player opens the log's Search. An event with no quantity is ignored rather than
+	 * counted as obtained. Only merges into the item map; the pass is
+	 * closed by {@link #finishCollectionLogSearch()} so the caller marks the data dirty once per pass.
+	 *
+	 * @param args the script arguments, including the script id at index 0
+	 */
+	public void recordCollectionLogItem(Object[] args)
+	{
+		if (args == null || args.length <= CLOG_ITEM_ARG_QUANTITY
+				|| !(args[CLOG_ITEM_ARG_ID] instanceof Integer) || !(args[CLOG_ITEM_ARG_QUANTITY] instanceof Integer))
+			return;
+
+		int itemId = (Integer) args[CLOG_ITEM_ARG_ID];
+		if (itemId <= 0)
+			return;
+
+		int quantity = (Integer) args[CLOG_ITEM_ARG_QUANTITY];
+		if (quantity <= 0)
+			return;
+
+		clogSearchActive = true;
+		clogSearchChanged |= mergeClogItem(new ItemEntry(itemId, getItemName(itemId), quantity));
+	}
+
+	/**
+	 * Closes a search pass started by {@link #recordCollectionLogItem(Object[])}. Called on a later game
+	 * tick, once the script has stopped firing; reads the overall counters and stamps the section.
+	 *
+	 * @return whether the pass changed the collection log
+	 */
+	public boolean finishCollectionLogSearch()
+	{
+		if (!clogSearchActive)
+			return false;
+
+		boolean changed = clogSearchChanged;
+		clogSearchActive = false;
+		clogSearchChanged = false;
+
+		int obtained = client.getVarpValue(VarPlayerID.COLLECTION_COUNT);
+		int max = client.getVarpValue(VarPlayerID.COLLECTION_COUNT_MAX);
+		changed |= obtained != clogObtained || max != clogTotal;
+		clogObtained = obtained;
+		clogTotal = max;
+		if (changed || clogUpdated == null)
+			clogUpdated = Instant.now();
+
+		return changed;
+	}
+
+	/**
+	 * Builds the exported collection log. The flat item list holds each obtained item id once, from the
+	 * search pass and from every captured page.
+	 *
+	 * @return the collection log, or {@code null} when nothing has been captured
 	 */
 	private CollectionLogData buildCollectionLog()
 	{
-		if (clogPages.isEmpty())
+		if (clogPages.isEmpty() && clogItems.isEmpty())
 			return null;
 
-		Map<Integer, ItemEntry> flat = new LinkedHashMap<>();
 		Map<String, CollectionLogPage> pages = new LinkedHashMap<>();
 		for (Map.Entry<String, CollectionLogPage> e : clogPages.entrySet())
 		{
 			CollectionLogPage page = e.getValue();
 			pages.put(e.getKey(), new CollectionLogPage(page.total, page.obtained, new ArrayList<>(page.items)));
-			for (ItemEntry item : page.items)
-				flat.putIfAbsent(item.itemId, item);
 		}
 
-		return new CollectionLogData(clogObtained, clogTotal, new ArrayList<>(flat.values()), pages);
+		return new CollectionLogData(clogObtained, clogTotal, new ArrayList<>(clogItems.values()), pages);
 	}
 
 	/** Identity captured by the last snapshot built with a live local player; cleared by {@link #reset()}. */
