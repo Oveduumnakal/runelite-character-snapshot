@@ -21,10 +21,12 @@ import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.Player;
+import net.runelite.api.ScriptID;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.GrandExchangeOfferChanged;
 import net.runelite.api.events.ItemContainerChanged;
+import net.runelite.api.events.ScriptPostFired;
 import net.runelite.api.events.StatChanged;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.client.RuneLite;
@@ -192,6 +194,9 @@ public class CharacterSnapshotPlugin extends Plugin
 		else if (id == InventoryID.INV && config.syncInventory())
 		{
 			collector.updateInventory(event.getItemContainer());
+			if (config.syncRunePouch())
+				collector.pollRunePouch();
+
 			dirty = true;
 		}
 		else if (id == InventoryID.WORN && config.syncEquipment())
@@ -199,6 +204,27 @@ public class CharacterSnapshotPlugin extends Plugin
 			collector.updateEquipment(event.getItemContainer());
 			dirty = true;
 		}
+		else if (SnapshotCollector.storageKey(id) != null && config.syncStorages())
+		{
+			collector.updateStorage(SnapshotCollector.storageKey(id), event.getItemContainer());
+			dirty = true;
+		}
+	}
+
+	/**
+	 * Captures the collection log page whenever the log redraws its item list.
+	 *
+	 * @param event the script-post-fired event
+	 */
+	@Subscribe
+	public void onScriptPostFired(ScriptPostFired event)
+	{
+		if (event.getScriptId() != ScriptID.COLLECTION_DRAW_LIST || collector == null
+				|| !config.syncCollectionLog())
+			return;
+
+		if (collector.captureCollectionLog())
+			dirty = true;
 	}
 
 	/**
@@ -280,6 +306,12 @@ public class CharacterSnapshotPlugin extends Plugin
 		if (config.syncSlayer())
 			changed |= collector.pollSlayer();
 
+		if (config.syncRunePouch())
+			changed |= collector.pollRunePouch();
+
+		if (config.syncAccountInfo())
+			changed |= collector.pollSpellbook();
+
 		if (changed)
 			dirty = true;
 	}
@@ -313,6 +345,16 @@ public class CharacterSnapshotPlugin extends Plugin
 				collector.updateEquipment(equip);
 		}
 
+		if (config.syncStorages())
+		{
+			for (int containerId : SnapshotCollector.storageContainerIds())
+			{
+				ItemContainer storage = client.getItemContainer(containerId);
+				if (storage != null)
+					collector.updateStorage(SnapshotCollector.storageKey(containerId), storage);
+			}
+		}
+
 		if (config.syncQuests())
 			collector.pollQuests();
 
@@ -325,8 +367,14 @@ public class CharacterSnapshotPlugin extends Plugin
 		if (config.syncSlayer())
 			collector.pollSlayer();
 
+		if (config.syncAccountInfo())
+			collector.pollSpellbook();
+
 		if (config.syncGrandExchange())
 			collector.pollAllGeOffers();
+
+		if (config.syncRunePouch())
+			collector.pollRunePouch();
 	}
 
 	/**
