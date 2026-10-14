@@ -6,6 +6,9 @@
 package com.oveduumnakal.charactersnapshot;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.concurrent.ScheduledExecutorService;
 import javax.inject.Inject;
 
@@ -49,16 +52,22 @@ public class CharacterSnapshotPlugin extends Plugin
 	private static final int POLL_INTERVAL_TICKS = 30;
 
 	@Inject
-	private Client client;
+	Client client;
 
 	@Inject
-	private CharacterSnapshotConfig config;
+	CharacterSnapshotConfig config;
 
 	@Inject
-	private ScheduledExecutorService executor;
+	ScheduledExecutorService executor;
 
 	@Inject
-	private Gson gson;
+	Gson gson;
+
+	/** Default export folder; replaced in tests so they never touch the real RuneLite directory. */
+	File defaultDir = new File(RuneLite.RUNELITE_DIR, "osrs-companion");
+
+	/** The last invalid custom folder a warning was logged for, so the warning is not repeated. */
+	private String warnedInvalidDir = null;
 
 	private SnapshotCollector collector;
 
@@ -343,18 +352,51 @@ public class CharacterSnapshotPlugin extends Plugin
 	}
 
 	/**
-	 * Resolves the export directory: the configured folder if set, else the default under the
-	 * RuneLite directory.
+	 * Resolves the export directory: the configured folder if it can be created and written to, else
+	 * the default under the RuneLite directory. An unusable folder is logged once, not per save.
 	 *
 	 * @return the directory to write export files into
 	 */
-	private File resolveSyncDir()
+	File resolveSyncDir()
 	{
 		String custom = config.saveDirectory();
-		if (custom != null && !custom.trim().isEmpty())
-			return new File(custom.trim());
+		if (custom == null || custom.trim().isEmpty())
+			return defaultDir;
 
-		return new File(RuneLite.RUNELITE_DIR, "osrs-companion");
+		String trimmed = custom.trim();
+		if (isUsableDirectory(trimmed))
+		{
+			warnedInvalidDir = null;
+			return new File(trimmed);
+		}
+
+		if (!trimmed.equals(warnedInvalidDir))
+		{
+			warnedInvalidDir = trimmed;
+			log.warn("Character Snapshot: save folder '{}' is not usable, using {}", trimmed, defaultDir);
+		}
+
+		return defaultDir;
+	}
+
+	/**
+	 * Checks that a folder exists (creating it if absent) and is writable.
+	 *
+	 * @param path the folder path
+	 * @return whether exports can be written there
+	 */
+	private static boolean isUsableDirectory(String path)
+	{
+		try
+		{
+			Path dir = new File(path).toPath();
+			Files.createDirectories(dir);
+			return Files.isDirectory(dir) && Files.isWritable(dir);
+		}
+		catch (IOException | RuntimeException e)
+		{
+			return false;
+		}
 	}
 
 	/**
