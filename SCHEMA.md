@@ -36,6 +36,8 @@ missing sections as "not exported", not "empty".
 | `activityCounts` | object | Optional. Agility laps and other non-boss running totals keyed by lower-case name. |
 | `clueCounts` | object | Completed treasure trails per tier. |
 | `timers` | object | Farming patch and birdhouse timers. |
+| `dailies` | object | Daily rewards: unlocked and claimed today. See below. |
+| `miscellania` | object | Kingdom of Miscellania approval and coffer. See below. |
 
 ## player
 
@@ -291,6 +293,23 @@ Decoding tables (patch list, varbit value to crop/state/stage, growth timings) a
 Tracking plugin as of RuneLite 1.13.1 (BSD 2-Clause, headers in `FarmingData.java`); a RuneLite update that
 adds crops or patches leaves those patches out of `farming` until the tables are refreshed. The tables were
 verified identical to the 1.13.1 client's own (patches, crop timings, and every varbit value 0 to 1023).
+
+## dailies / miscellania
+
+`dailies` maps a reward key to `{ unlocked, claimed, claimedCount?, max? }`, in this order: `herbBoxes`
+(NMZ, 15 a day, never for ironmen), `battlestaves` (Zaff, Varrock easy), `pureEssence` (Wizard Cromperty,
+Ardougne medium), `randomRunes` (Lundail, Wilderness easy), `sand` (Bert, The Hand in the Sand, not for
+ultimate ironmen), `bowstrings` (Flax keeper, Kandarin easy), `ogreArrows` (Rantz, Western easy), `bonemeal`
+(Robin, 13 per Morytania tier from medium), `dynamite` (Thirus, Kourend medium). `claimedCount` and `max` are
+set only for herb boxes and bonemeal. The game clears claims at 00:00 UTC, so a `claimed: true` read before
+the reset is stale after it — compare with `lastUpdated`. Conditions mirror RuneLite's Daily Task
+Indicators plugin. Absent when the Daily rewards toggle is off.
+
+`miscellania` is `{ approvalPercent, coffer, lastChanged }`, present once Throne of Miscellania is done. The
+game only sends the values inside the kingdom, so away from it the values RuneLite's Kingdom of Miscellania
+plugin stored on the last visit are used, with that visit's `lastChanged`; `lastChanged` is null when the
+values were read live and the plugin has no matching record. Approval and coffer decay daily after
+`lastChanged`.
 
 ## Versioning
 

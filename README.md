@@ -51,6 +51,9 @@ assistant. The plugin makes **no network calls of any kind** — nothing leaves 
 - **Farming and birdhouses.** When each patch and birdhouse will be ready, from RuneLite's own Time
   Tracking data.
 
+- **Daily rewards.** Which dailies (herb boxes, battlestaves, sand, flax...) are unlocked and still
+  unclaimed today, plus Kingdom of Miscellania approval and coffer.
+
 ### Yours to tune
 
 - **Toggle every category** so you export only what you want.

@@ -9,6 +9,7 @@
 - [com.oveduumnakal.charactersnapshot.CharacterSnapshotPlugin](#comoveduumnakalcharactersnapshotcharactersnapshotplugin)
 - [com.oveduumnakal.charactersnapshot.ChatCounts](#comoveduumnakalcharactersnapshotchatcounts)
 - [com.oveduumnakal.charactersnapshot.ClueChat](#comoveduumnakalcharactersnapshotcluechat)
+- [com.oveduumnakal.charactersnapshot.Dailies](#comoveduumnakalcharactersnapshotdailies)
 - [com.oveduumnakal.charactersnapshot.DiaryTasks](#comoveduumnakalcharactersnapshotdiarytasks)
 - [com.oveduumnakal.charactersnapshot.DiaryTasks.Task](#comoveduumnakalcharactersnapshotdiarytaskstask)
 - [com.oveduumnakal.charactersnapshot.FarmingData](#comoveduumnakalcharactersnapshotfarmingdata)
@@ -31,6 +32,7 @@
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CollectionLogPage](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogpage)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementTask](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementtask)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DailyTask](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdailytask)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiaryregion)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryTask](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiarytask)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.FarmingTimer](#comoveduumnakalcharactersnapshotmodelcharactersnapshotfarmingtimer)
@@ -38,6 +40,7 @@
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.InventoryItem](#comoveduumnakalcharactersnapshotmodelcharactersnapshotinventoryitem)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry](#comoveduumnakalcharactersnapshotmodelcharactersnapshotitementry)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.LocationData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotlocationdata)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.MiscellaniaData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotmiscellaniadata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.PlayerInfo](#comoveduumnakalcharactersnapshotmodelcharactersnapshotplayerinfo)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.QuestEntry](#comoveduumnakalcharactersnapshotmodelcharactersnapshotquestentry)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SkillEntry](#comoveduumnakalcharactersnapshotmodelcharactersnapshotskillentry)
@@ -75,6 +78,7 @@ for each category of data written to the export file.
 | `default boolean` | `syncClueCounts()` |  |
 | `default boolean` | `syncCollectionLog()` |  |
 | `default boolean` | `syncCombatAchievements()` |  |
+| `default boolean` | `syncDailies()` |  |
 | `default boolean` | `syncDiaries()` |  |
 | `default boolean` | `syncEquipment()` |  |
 | `default boolean` | `syncGrandExchange()` |  |
@@ -148,6 +152,12 @@ Storage section: where and how often data is written.
 `default boolean syncCombatAchievements()`
 
 - **Returns:** whether to include combat-achievement tier progress
+
+#### syncDailies
+
+`default boolean syncDailies()`
+
+- **Returns:** whether to include daily reward claim status and the Kingdom of Miscellania
 
 #### syncDiaries
 
@@ -669,6 +679,147 @@ first.
 - **Parameter** `message` — the raw chat message
 - **Returns:** the lower-case tier and the number of trails completed, or `null` when the line is not a
         completion line for a known tier
+
+---
+
+## com.oveduumnakal.charactersnapshot.Dailies
+
+_class_
+
+`final class Dailies`
+
+Reads the claimable daily rewards and the Kingdom of Miscellania state. Every read runs on the client
+thread.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `static final int` | `BONEMEAL_PER_DIARY` | Robin's bonemeal and slime per day for each Morytania diary tier from medium up. |
+| `static final int` | `HERB_BOX_MAX` | NMZ herb boxes purchasable per day. |
+| `static final String` | `KINGDOM_GROUP` | Config group of RuneLite's Kingdom of Miscellania plugin (RuneScape-profile scoped). |
+| `private static final int[]` | `KINGDOM_REGIONS` | Map regions of Miscellania and Etceteria, where the game sends the kingdom values. |
+| `static final int` | `MAX_APPROVAL` | Kingdom approval varbit maximum, i.e. |
+| `static final int` | `SAND_QUEST_COMPLETE` | The Hand in the Sand progress value once Bert's daily sand is unlocked. |
+| `static final int` | `ULTIMATE_IRONMAN` | `VarbitID.IRONMAN` value of an ultimate ironman, who cannot claim Bert's sand. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `Dailies()` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `private static DailyTask` | `bonemeal(Client client)` | Builds Robin's bonemeal and slime reward, whose daily maximum grows with each Morytania diary tier. |
+| `private static DailyTask` | `flag(Client client, int unlockVarbit, int claimedVarbit)` | Builds a reward unlocked by one varbit and marked claimed by another being non-zero. |
+| `private static boolean` | `inKingdom(Client client)` | Checks whether the player stands in Miscellania or Etceteria. |
+| `static Map<String,DailyTask>` | `read(Client client)` | Reads every daily reward. |
+| `static MiscellaniaData` | `readMiscellania(Client client, ConfigManager configManager)` | Reads the kingdom's approval and coffer. |
+
+### Field Detail
+
+#### BONEMEAL_PER_DIARY
+
+`static final int BONEMEAL_PER_DIARY`
+
+Robin's bonemeal and slime per day for each Morytania diary tier from medium up.
+
+#### HERB_BOX_MAX
+
+`static final int HERB_BOX_MAX`
+
+NMZ herb boxes purchasable per day.
+
+#### KINGDOM_GROUP
+
+`static final String KINGDOM_GROUP`
+
+Config group of RuneLite's Kingdom of Miscellania plugin (RuneScape-profile scoped).
+
+#### KINGDOM_REGIONS
+
+`private static final int[] KINGDOM_REGIONS`
+
+Map regions of Miscellania and Etceteria, where the game sends the kingdom values.
+
+#### MAX_APPROVAL
+
+`static final int MAX_APPROVAL`
+
+Kingdom approval varbit maximum, i.e. 100 percent.
+
+#### SAND_QUEST_COMPLETE
+
+`static final int SAND_QUEST_COMPLETE`
+
+The Hand in the Sand progress value once Bert's daily sand is unlocked.
+
+#### ULTIMATE_IRONMAN
+
+`static final int ULTIMATE_IRONMAN`
+
+`VarbitID.IRONMAN` value of an ultimate ironman, who cannot claim Bert's sand.
+
+### Constructor Detail
+
+#### Dailies
+
+`private Dailies()`
+
+### Method Detail
+
+#### bonemeal
+
+`private static DailyTask bonemeal(Client client)`
+
+Builds Robin's bonemeal and slime reward, whose daily maximum grows with each Morytania diary tier.
+
+- **Parameter** `client` — the client
+- **Returns:** the reward state
+
+#### flag
+
+`private static DailyTask flag(Client client, int unlockVarbit, int claimedVarbit)`
+
+Builds a reward unlocked by one varbit and marked claimed by another being non-zero.
+
+- **Parameter** `client` — the client
+- **Parameter** `unlockVarbit` — varbit that is 1 once the reward is unlocked
+- **Parameter** `claimedVarbit` — varbit that is non-zero once today's reward is claimed
+- **Returns:** the reward state
+
+#### inKingdom
+
+`private static boolean inKingdom(Client client)`
+
+Checks whether the player stands in Miscellania or Etceteria.
+
+- **Parameter** `client` — the client
+- **Returns:** whether the player is in the kingdom
+
+#### read
+
+`static Map<String,DailyTask> read(Client client)`
+
+Reads every daily reward.
+
+- **Parameter** `client` — the client
+- **Returns:** reward key to its state, in a fixed order
+
+#### readMiscellania
+
+`static MiscellaniaData readMiscellania(Client client, ConfigManager configManager)`
+
+Reads the kingdom's approval and coffer. The live varbits are used while the player is in the kingdom
+(or both are non-zero, as the Kingdom of Miscellania plugin does); otherwise the values that plugin
+stored on the last visit.
+
+- **Parameter** `client` — the client
+- **Parameter** `configManager` — source of the Kingdom of Miscellania plugin's stored values, may be `null`
+- **Returns:** the kingdom state, or `null` before Throne of Miscellania or when nothing is known
 
 ---
 
@@ -1963,6 +2114,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private CombatAchievementData` | `combatAchievements` |  |
 | `private final CharacterSnapshotConfig` | `config` |  |
 | `private final ConfigManager` | `configManager` |  |
+| `private Map<String,DailyTask>` | `dailies` |  |
 | `private Map<String,DiaryRegion>` | `diaries` |  |
 | `private Map<String,ItemEntry>` | `equipment` |  |
 | `private Instant` | `equipmentUpdated` |  |
@@ -1972,6 +2124,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private final Map<String,Integer>` | `killCounts` |  |
 | `private LocationData` | `lastLocation` | Location captured by the last snapshot built with a live local player; cleared by `#reset()`. |
 | `private PlayerInfo` | `lastPlayer` | Identity captured by the last snapshot built with a live local player; cleared by `#reset()`. |
+| `private MiscellaniaData` | `miscellania` |  |
 | `private Integer` | `polledEnergy` |  |
 | `private WorldPoint` | `polledLocation` |  |
 | `private Integer` | `questPoints` |  |
@@ -2027,6 +2180,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public void` | `pollAllGeOffers()` | Rebuilds the Grand Exchange cache from the client's current offer array. |
 | `public void` | `pollAllSkills()` | Reads every skill from the client, plus a computed `OVERALL` total. |
 | `public boolean` | `pollCombatAchievements()` | Polls the six combat-achievement tier varbits and the per-task completion bits. |
+| `public boolean` | `pollDailies()` | Polls the daily rewards and the Kingdom of Miscellania state. |
 | `public boolean` | `pollDiaries()` | Polls achievement-diary completion for every region via named RuneLite varbits, and each mapped task via `DiaryTasks`. |
 | `public boolean` | `pollKillCounts()` | Reads every boss kill-count varp (authoritative, exact and current), then merges the counts the Chat Commands plugin stored in the RuneScape-profile config (group `killcount`, key = lower-cased name) as a fallback for bosses without a varp. |
 | `public boolean` | `pollMovement()` | Compares the character's real-world location and run energy against the previous call. |
@@ -2276,6 +2430,10 @@ Cached task metadata by task id (completed flag unset); empty until resolved fro
 
 `private final ConfigManager configManager`
 
+#### dailies
+
+`private Map<String,DailyTask> dailies`
+
 #### diaries
 
 `private Map<String,DiaryRegion> diaries`
@@ -2315,6 +2473,10 @@ Location captured by the last snapshot built with a live local player; cleared b
 `private PlayerInfo lastPlayer`
 
 Identity captured by the last snapshot built with a live local player; cleared by `#reset()`.
+
+#### miscellania
+
+`private MiscellaniaData miscellania`
 
 #### polledEnergy
 
@@ -2639,6 +2801,14 @@ Reads every skill from the client, plus a computed `OVERALL` total.
 Polls the six combat-achievement tier varbits and the per-task completion bits.
 
 - **Returns:** whether any tier value or task completion changed since the last poll
+
+#### pollDailies
+
+`public boolean pollDailies()`
+
+Polls the daily rewards and the Kingdom of Miscellania state.
+
+- **Returns:** whether either changed since the last poll
 
 #### pollDiaries
 
@@ -3072,6 +3242,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | _class_ [`CollectionLogPage`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogpage) | One collection log page as last seen: how many of its slots there are and which are obtained. |
 | _class_ [`CombatAchievementData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementdata) | Combat-achievement tier progress. |
 | _class_ [`CombatAchievementTask`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementtask) | A single combat-achievement task and whether it is complete. |
+| _class_ [`DailyTask`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdailytask) | One claimable daily reward. |
 | _class_ [`DiaryRegion`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiaryregion) | Completion of the four achievement-diary tiers for one region, plus the individual tasks where known. |
 | _class_ [`DiaryTask`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiarytask) | One achievement-diary task and whether it is complete. |
 | _class_ [`FarmingTimer`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotfarmingtimer) | The projected state of one farming patch or compost bin. |
@@ -3079,6 +3250,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | _class_ [`InventoryItem`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotinventoryitem) | An inventory item, carrying its slot index in addition to the item stack. |
 | _class_ [`ItemEntry`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotitementry) | One stack of items: id, resolved name, and quantity. |
 | _class_ [`LocationData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotlocationdata) | World location of the character. |
+| _class_ [`MiscellaniaData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotmiscellaniadata) | Kingdom of Miscellania state. |
 | _class_ [`PlayerInfo`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotplayerinfo) | Identity and account context of the logged-in character. |
 | _class_ [`QuestEntry`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotquestentry) | Completion state of one quest. |
 | _class_ [`SkillEntry`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotskillentry) | Real level and experience for one skill, plus the current boosted level. |
@@ -3097,12 +3269,14 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | `public Map<String,Integer>` | `clueCounts` | Completed treasure trails per tier (`beginner` to `master`), in tier order. |
 | `public CollectionLogData` | `collectionLog` | Collection log contents captured while the log was open, carried over between sessions. |
 | `public CombatAchievementData` | `combatAchievements` | Combat-achievement tier progress. |
+| `public Map<String,DailyTask>` | `dailies` | Claimable daily rewards keyed by name (`herbBoxes`, `battlestaves`, ...), whether each is unlocked and whether today's is already claimed. |
 | `public Map<String,ItemEntry>` | `equipment` | Worn equipment keyed by slot name. |
 | `public List<GeOffer>` | `grandExchange` | Active Grand Exchange offers by slot. |
 | `public List<InventoryItem>` | `inventory` | Inventory contents, one entry per slot (empty slots have item id -1). |
 | `public Map<String,Integer>` | `killCounts` | Boss kill counts keyed by lower-case boss name, sorted by name. |
 | `public String` | `lastUpdated` | ISO-8601 instant at which this snapshot was built. |
 | `public LocationData` | `location` | Current world location of the character. |
+| `public MiscellaniaData` | `miscellania` | Kingdom of Miscellania approval and coffer; absent before Throne of Miscellania or when the toggle is off. |
 | `public PlayerInfo` | `player` | Identity and account context of the logged-in character. |
 | `public Integer` | `questPoints` | Total quest points. |
 | `public List<QuestEntry>` | `quests` | Quest completion state, one entry per quest. |
@@ -3156,6 +3330,14 @@ Collection log contents captured while the log was open, carried over between se
 
 Combat-achievement tier progress.
 
+#### dailies
+
+`public Map<String,DailyTask> dailies`
+
+Claimable daily rewards keyed by name (`herbBoxes`, `battlestaves`, ...), whether each is
+unlocked and whether today's is already claimed. The game resets claims at 00:00 UTC; compare with
+`#lastUpdated`. Absent when the toggle is off.
+
 #### equipment
 
 `public Map<String,ItemEntry> equipment`
@@ -3192,6 +3374,12 @@ ISO-8601 instant at which this snapshot was built.
 `public LocationData location`
 
 Current world location of the character.
+
+#### miscellania
+
+`public MiscellaniaData miscellania`
+
+Kingdom of Miscellania approval and coffer; absent before Throne of Miscellania or when the toggle is off.
 
 #### player
 
@@ -3919,6 +4107,68 @@ Tier name (EASY to GRANDMASTER), or null if unresolved.
 
 ---
 
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DailyTask
+
+_class_
+
+`public static class DailyTask`
+
+One claimable daily reward.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public boolean` | `claimed` | Whether today's reward has been claimed in full. |
+| `public Integer` | `claimedCount` | Amount claimed today, for rewards claimed in parts (herb boxes, bonemeal); null otherwise. |
+| `public Integer` | `max` | Daily maximum for rewards claimed in parts; null otherwise. |
+| `public boolean` | `unlocked` | Whether the reward is unlocked (diary tier, quest or account type allows it). |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `DailyTask(boolean unlocked, boolean claimed, Integer claimedCount, Integer max)` |  |
+
+### Field Detail
+
+#### claimed
+
+`public boolean claimed`
+
+Whether today's reward has been claimed in full.
+
+#### claimedCount
+
+`public Integer claimedCount`
+
+Amount claimed today, for rewards claimed in parts (herb boxes, bonemeal); null otherwise.
+
+#### max
+
+`public Integer max`
+
+Daily maximum for rewards claimed in parts; null otherwise.
+
+#### unlocked
+
+`public boolean unlocked`
+
+Whether the reward is unlocked (diary tier, quest or account type allows it).
+
+### Constructor Detail
+
+#### DailyTask
+
+`public DailyTask(boolean unlocked, boolean claimed, Integer claimedCount, Integer max)`
+
+- **Parameter** `unlocked` — whether the reward is unlocked
+- **Parameter** `claimed` — whether today's reward is claimed
+- **Parameter** `claimedCount` — amount claimed today, or null
+- **Parameter** `max` — daily maximum, or null
+
+---
+
 ## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion
 
 _class_
@@ -4415,6 +4665,61 @@ World y coordinate.
 - **Parameter** `y` — world y
 - **Parameter** `plane` — plane
 - **Parameter** `instanced` — whether the character is in an instanced region
+
+---
+
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.MiscellaniaData
+
+_class_
+
+`public static class MiscellaniaData`
+
+Kingdom of Miscellania state. The game only sends the values while the player is in the kingdom, so they
+are as fresh as `#lastChanged`; RuneLite's Kingdom of Miscellania plugin data fills the gap.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public int` | `approvalPercent` | Approval, 0 to 100 percent. |
+| `public int` | `coffer` | Coins in the coffer. |
+| `public String` | `lastChanged` | ISO-8601 instant the values were last seen changing; null when unknown. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `MiscellaniaData(int approvalPercent, int coffer, String lastChanged)` |  |
+
+### Field Detail
+
+#### approvalPercent
+
+`public int approvalPercent`
+
+Approval, 0 to 100 percent.
+
+#### coffer
+
+`public int coffer`
+
+Coins in the coffer.
+
+#### lastChanged
+
+`public String lastChanged`
+
+ISO-8601 instant the values were last seen changing; null when unknown.
+
+### Constructor Detail
+
+#### MiscellaniaData
+
+`public MiscellaniaData(int approvalPercent, int coffer, String lastChanged)`
+
+- **Parameter** `approvalPercent` — approval percentage
+- **Parameter** `coffer` — coins in the coffer
+- **Parameter** `lastChanged` — last-change instant, or null
 
 ---
 

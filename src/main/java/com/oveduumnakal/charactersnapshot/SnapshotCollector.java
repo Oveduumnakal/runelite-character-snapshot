@@ -28,12 +28,14 @@ import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CollectionLogD
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CollectionLogPage;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementTask;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DailyTask;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryTask;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.GeOffer;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.InventoryItem;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.LocationData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.MiscellaniaData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.PlayerInfo;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.QuestEntry;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SkillEntry;
@@ -276,6 +278,8 @@ public class SnapshotCollector
 		activityCounts.clear();
 		clueCounts.clear();
 		timers = null;
+		dailies = null;
+		miscellania = null;
 	}
 
 	/**
@@ -1220,6 +1224,12 @@ public class SnapshotCollector
 		if (config.syncGrandExchange() && !geOffers.isEmpty())
 			data.grandExchange = new ArrayList<>(geOffers.values());
 
+		if (config.syncDailies() && dailies != null)
+		{
+			data.dailies = new LinkedHashMap<>(dailies);
+			data.miscellania = miscellania;
+		}
+
 		return data;
 	}
 
@@ -1873,5 +1883,24 @@ public class SnapshotCollector
 		LocalPoint local = localPlayer.getLocalLocation();
 		WorldPoint mapped = local != null ? WorldPoint.fromLocalInstance(client, local) : null;
 		return mapped != null ? mapped : localPlayer.getWorldLocation();
+	}
+
+	private Map<String, DailyTask> dailies = null;
+
+	private MiscellaniaData miscellania = null;
+
+	/**
+	 * Polls the daily rewards and the Kingdom of Miscellania state.
+	 *
+	 * @return whether either changed since the last poll
+	 */
+	public boolean pollDailies()
+	{
+		Map<String, DailyTask> fresh = Dailies.read(client);
+		MiscellaniaData kingdom = Dailies.readMiscellania(client, configManager);
+		boolean changed = !Objects.equals(fresh, dailies) || !Objects.equals(kingdom, miscellania);
+		dailies = fresh;
+		miscellania = kingdom;
+		return changed;
 	}
 }
