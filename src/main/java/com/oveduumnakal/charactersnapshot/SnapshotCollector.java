@@ -754,7 +754,7 @@ public class SnapshotCollector
 		if (config.syncInventory())
 			data.inventory = new ArrayList<>(inventory);
 
-		if (config.syncEquipment() && !equipment.isEmpty())
+		if (config.syncEquipment() && equipmentUpdated != null)
 			data.equipment = new LinkedHashMap<>(equipment);
 
 		data.sectionUpdated = buildSectionUpdated(data);

@@ -403,6 +403,35 @@ public class SnapshotCollectorTest
 	}
 
 	/**
+	 * Wearing nothing exports an empty equipment object once equipment was captured, with its capture time.
+	 */
+	@Test
+	public void emptyEquipmentIsExportedAsEmptyObject()
+	{
+		Client client = loggedInClient("Zezima");
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.updateEquipment(container(item(-1, 0)));
+		CharacterSnapshot data = collector.buildSnapshot();
+
+		assertNotNull(data.equipment);
+		assertTrue(data.equipment.isEmpty());
+		assertNotNull(data.sectionUpdated.get("equipment"));
+	}
+
+	/**
+	 * Equipment is omitted until it has been captured, so unknown data is not reported as empty.
+	 */
+	@Test
+	public void equipmentOmittedBeforeCapture()
+	{
+		Client client = loggedInClient("Zezima");
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		assertNull(collector.buildSnapshot().equipment);
+	}
+
+	/**
 	 * Builds a previous export with a bank (own capture time), an equipped helm and one inventory item
 	 * (both falling back to the build time).
 	 *
