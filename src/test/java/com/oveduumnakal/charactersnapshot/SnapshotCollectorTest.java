@@ -19,6 +19,7 @@ import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankTab;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.InventoryItem;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.PlayerInfo;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SkillEntry;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SlayerData;
 import org.junit.Test;
 
@@ -28,6 +29,7 @@ import net.runelite.api.Item;
 import net.runelite.api.ItemComposition;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.Player;
+import net.runelite.api.Skill;
 import net.runelite.api.WorldType;
 import net.runelite.api.gameval.DBTableID;
 import net.runelite.api.gameval.VarPlayerID;
@@ -403,32 +405,51 @@ public class SnapshotCollectorTest
 	}
 
 	/**
-	 * Wearing nothing exports an empty equipment object once equipment was captured, with its capture time.
+	 * A level-up after the login poll is reflected in the OVERALL total level and experience.
 	 */
 	@Test
-	public void emptyEquipmentIsExportedAsEmptyObject()
+	public void overallFollowsSkillUpdates()
 	{
 		Client client = loggedInClient("Zezima");
+		for (Skill skill : Skill.values())
+		{
+			when(client.getRealSkillLevel(skill)).thenReturn(10);
+			when(client.getSkillExperience(skill)).thenReturn(1000);
+			when(client.getBoostedSkillLevel(skill)).thenReturn(10);
+		}
+
 		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+		collector.pollAllSkills();
+		int skillCount = 0;
+		for (Skill skill : Skill.values())
+		{
+			if (!"OVERALL".equals(skill.name()))
+				skillCount++;
+		}
 
-		collector.updateEquipment(container(item(-1, 0)));
-		CharacterSnapshot data = collector.buildSnapshot();
+		SkillEntry before = collector.buildSnapshot().skills.get("OVERALL");
+		assertEquals(10 * skillCount, before.level);
 
-		assertNotNull(data.equipment);
-		assertTrue(data.equipment.isEmpty());
-		assertNotNull(data.sectionUpdated.get("equipment"));
+		collector.updateSkill(Skill.ATTACK, 11, 1200, 11);
+		Map<String, SkillEntry> after = collector.buildSnapshot().skills;
+		SkillEntry overall = after.get("OVERALL");
+
+		assertEquals(10 * skillCount + 1, overall.level);
+		assertEquals(1000L * skillCount + 200, overall.xp);
 	}
 
 	/**
-	 * Equipment is omitted until it has been captured, so unknown data is not reported as empty.
+	 * Skill updates arriving before the full login poll do not export a partial OVERALL total.
 	 */
 	@Test
-	public void equipmentOmittedBeforeCapture()
+	public void overallAbsentUntilAllSkillsKnown()
 	{
 		Client client = loggedInClient("Zezima");
 		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
 
-		assertNull(collector.buildSnapshot().equipment);
+		collector.updateSkill(Skill.ATTACK, 11, 1200, 11);
+
+		assertNull(collector.buildSnapshot().skills.get("OVERALL"));
 	}
 
 	/**
@@ -617,5 +638,34 @@ public class SnapshotCollectorTest
 		ItemComposition comp = mock(ItemComposition.class);
 		when(comp.getName()).thenReturn(name);
 		return comp;
+	}
+
+	/**
+	 * Wearing nothing exports an empty equipment object once equipment was captured, with its capture time.
+	 */
+	@Test
+	public void emptyEquipmentIsExportedAsEmptyObject()
+	{
+		Client client = loggedInClient("Zezima");
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.updateEquipment(container(item(-1, 0)));
+		CharacterSnapshot data = collector.buildSnapshot();
+
+		assertNotNull(data.equipment);
+		assertTrue(data.equipment.isEmpty());
+		assertNotNull(data.sectionUpdated.get("equipment"));
+	}
+
+	/**
+	 * Equipment is omitted until it has been captured, so unknown data is not reported as empty.
+	 */
+	@Test
+	public void equipmentOmittedBeforeCapture()
+	{
+		Client client = loggedInClient("Zezima");
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		assertNull(collector.buildSnapshot().equipment);
 	}
 }
