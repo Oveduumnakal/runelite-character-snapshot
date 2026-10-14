@@ -98,8 +98,20 @@ of the corresponding RuneLite combat-achievement tier varbit. A tier's value is 
 tier is claimed; treat the exact number as opaque and compare `> 0` for "claimed".
 
 Compatibility fields (derived, for the osrs-companion MCP server): `easyComplete`, `mediumComplete`,
-`hardComplete`, `eliteComplete` — booleans equal to `tier* > 0` — and `completedTasks`, always an
-empty array (individual tasks are not enumerated). The `tier*` integers are the source of truth.
+`hardComplete`, `eliteComplete` — booleans equal to `tier* > 0` — and `completedTasks`, an array of
+strings: the names of completed tasks (only tasks whose name resolved; never invented). The `tier*`
+integers are the source of truth.
+
+`tasks` is an array of `{ id, name, tier, monster, completed }` covering every task, completed or not.
+`id` is the task id (bit `id % 32` of the `id / 32`th `VarPlayerID.CA_TASK_COMPLETED_n` varp, n = 0..20).
+`name`, `tier` (`EASY` to `GRANDMASTER`) and `monster` are read from the game cache at runtime and are
+`null` when unresolved. If the cache metadata cannot be read, `tasks` holds only the completed ids with
+null `name`/`tier`/`monster`.
+
+Cache ids relied on (from the community cache dump tooling, e.g. ReinhardtR/runeprofile
+`scripts/ts-scripts/lib/combat-achievements.ts`; not in the RuneLite API and NOT verified in-client):
+tier enums 3981 to 3986 (easy to grandmaster; values are task struct ids), monster enum 3971
+(monster category id to name), struct params 1306 (task id), 1308 (name), 1312 (monster category id).
 
 ## slayer
 

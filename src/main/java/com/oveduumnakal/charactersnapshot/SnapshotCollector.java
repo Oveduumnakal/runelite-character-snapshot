@@ -20,6 +20,7 @@ import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankTab;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementTask;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.GeOffer;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.InventoryItem;
@@ -32,6 +33,7 @@ import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SlayerData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.VitalsData;
 
 import net.runelite.api.Client;
+import net.runelite.api.EnumComposition;
 import net.runelite.api.EquipmentInventorySlot;
 import net.runelite.api.GrandExchangeOffer;
 import net.runelite.api.GrandExchangeOfferState;
@@ -42,6 +44,7 @@ import net.runelite.api.Player;
 import net.runelite.api.Quest;
 import net.runelite.api.QuestState;
 import net.runelite.api.Skill;
+import net.runelite.api.StructComposition;
 import net.runelite.api.VarPlayer;
 import net.runelite.api.Varbits;
 import net.runelite.api.WorldType;
@@ -60,6 +63,33 @@ import net.runelite.api.vars.AccountType;
  */
 public class SnapshotCollector
 {
+	private static final int[] CA_COMPLETED_VARPS = {
+		VarPlayerID.CA_TASK_COMPLETED_0, VarPlayerID.CA_TASK_COMPLETED_1, VarPlayerID.CA_TASK_COMPLETED_2,
+		VarPlayerID.CA_TASK_COMPLETED_3, VarPlayerID.CA_TASK_COMPLETED_4, VarPlayerID.CA_TASK_COMPLETED_5,
+		VarPlayerID.CA_TASK_COMPLETED_6, VarPlayerID.CA_TASK_COMPLETED_7, VarPlayerID.CA_TASK_COMPLETED_8,
+		VarPlayerID.CA_TASK_COMPLETED_9, VarPlayerID.CA_TASK_COMPLETED_10, VarPlayerID.CA_TASK_COMPLETED_11,
+		VarPlayerID.CA_TASK_COMPLETED_12, VarPlayerID.CA_TASK_COMPLETED_13, VarPlayerID.CA_TASK_COMPLETED_14,
+		VarPlayerID.CA_TASK_COMPLETED_15, VarPlayerID.CA_TASK_COMPLETED_16, VarPlayerID.CA_TASK_COMPLETED_17,
+		VarPlayerID.CA_TASK_COMPLETED_18, VarPlayerID.CA_TASK_COMPLETED_19, VarPlayerID.CA_TASK_COMPLETED_20
+	};
+
+	/** Cache enums listing the task struct ids per tier, easy to grandmaster. Not in the RuneLite API. */
+	private static final int[] CA_TIER_ENUMS = {3981, 3982, 3983, 3984, 3985, 3986};
+
+	private static final String[] CA_TIER_NAMES = {"EASY", "MEDIUM", "HARD", "ELITE", "MASTER", "GRANDMASTER"};
+
+	/** Cache enum mapping monster category id to display name. */
+	private static final int CA_MONSTER_ENUM = 3971;
+
+	/** Task struct param: task id (the completion bit index). */
+	private static final int CA_PARAM_ID = 1306;
+
+	/** Task struct param: task name. */
+	private static final int CA_PARAM_NAME = 1308;
+
+	/** Task struct param: monster category id, a key of {@link #CA_MONSTER_ENUM}. */
+	private static final int CA_PARAM_MONSTER = 1312;
+
 	private static final int SLAYER_BOSS_TASK_ID = 98;
 
 	private static final EquipmentInventorySlot[] EQUIPMENT_SLOTS = {
@@ -110,6 +140,9 @@ public class SnapshotCollector
 	private Map<String, DiaryRegion> diaries = null;
 
 	private CombatAchievementData combatAchievements = null;
+
+	/** Cached task metadata by task id (completed flag unset); empty until resolved from the cache. */
+	private Map<Integer, CombatAchievementTask> caTaskMeta = new TreeMap<>();
 
 	private SlayerData slayer = null;
 
@@ -439,9 +472,9 @@ public class SnapshotCollector
 	}
 
 	/**
-	 * Polls the six combat-achievement tier varbits.
+	 * Polls the six combat-achievement tier varbits and the per-task completion bits.
 	 *
-	 * @return whether any tier value changed since the last poll
+	 * @return whether any tier value or task completion changed since the last poll
 	 */
 	@SuppressWarnings("deprecation")
 	public boolean pollCombatAchievements()
@@ -452,10 +485,88 @@ public class SnapshotCollector
 			client.getVarbitValue(Varbits.COMBAT_ACHIEVEMENT_TIER_HARD),
 			client.getVarbitValue(Varbits.COMBAT_ACHIEVEMENT_TIER_ELITE),
 			client.getVarbitValue(Varbits.COMBAT_ACHIEVEMENT_TIER_MASTER),
-			client.getVarbitValue(Varbits.COMBAT_ACHIEVEMENT_TIER_GRANDMASTER));
+			client.getVarbitValue(Varbits.COMBAT_ACHIEVEMENT_TIER_GRANDMASTER),
+			buildCombatAchievementTasks());
 		boolean changed = !ca.equals(combatAchievements);
 		combatAchievements = ca;
 		return changed;
+	}
+
+	/**
+	 * Combines the completion varps with the cached task metadata. Task id {@code N} is bit
+	 * {@code N % 32} of the {@code N / 32}th entry of {@link #CA_COMPLETED_VARPS}.
+	 *
+	 * @return every known task with its completion flag, plus any completed id missing from the metadata
+	 */
+	private List<CombatAchievementTask> buildCombatAchievementTasks()
+	{
+		if (caTaskMeta.isEmpty())
+			caTaskMeta = loadCombatAchievementMeta();
+
+		Map<Integer, CombatAchievementTask> byId = new TreeMap<>();
+		for (CombatAchievementTask meta : caTaskMeta.values())
+			byId.put(meta.id, meta);
+
+		for (int block = 0; block < CA_COMPLETED_VARPS.length; block++)
+		{
+			int value = client.getVarpValue(CA_COMPLETED_VARPS[block]);
+			for (int bit = 0; bit < 32; bit++)
+			{
+				int id = block * 32 + bit;
+				boolean done = (value & (1 << bit)) != 0;
+				CombatAchievementTask meta = byId.get(id);
+				if (meta != null)
+					byId.put(id, new CombatAchievementTask(id, meta.name, meta.tier, meta.monster, done));
+				else if (done)
+					byId.put(id, new CombatAchievementTask(id, null, null, null, true));
+			}
+		}
+
+		return new ArrayList<>(byId.values());
+	}
+
+	/**
+	 * Reads task names, tiers, and monsters from the game cache: each tier enum lists task structs,
+	 * and each struct carries the task id, name, and monster category as params.
+	 *
+	 * @return the metadata by task id, or empty if the cache is not readable yet
+	 */
+	private Map<Integer, CombatAchievementTask> loadCombatAchievementMeta()
+	{
+		Map<Integer, CombatAchievementTask> out = new TreeMap<>();
+		EnumComposition monsterEnum = client.getEnum(CA_MONSTER_ENUM);
+		Map<Integer, String> monsters = new LinkedHashMap<>();
+		if (monsterEnum != null && monsterEnum.getKeys() != null && monsterEnum.getStringVals() != null)
+		{
+			int[] keys = monsterEnum.getKeys();
+			String[] vals = monsterEnum.getStringVals();
+			for (int i = 0; i < keys.length && i < vals.length; i++)
+				monsters.put(keys[i], vals[i]);
+		}
+
+		for (int t = 0; t < CA_TIER_ENUMS.length; t++)
+		{
+			EnumComposition tierEnum = client.getEnum(CA_TIER_ENUMS[t]);
+			if (tierEnum == null || tierEnum.getIntVals() == null)
+				continue;
+
+			for (int structId : tierEnum.getIntVals())
+			{
+				StructComposition struct = client.getStructComposition(structId);
+				if (struct == null)
+					continue;
+
+				String name = struct.getStringValue(CA_PARAM_NAME);
+				if (name == null || name.isEmpty() || "null".equals(name))
+					continue;
+
+				int id = struct.getIntValue(CA_PARAM_ID);
+				String monster = monsters.get(struct.getIntValue(CA_PARAM_MONSTER));
+				out.put(id, new CombatAchievementTask(id, name, CA_TIER_NAMES[t], monster, false));
+			}
+		}
+
+		return out;
 	}
 
 	/**

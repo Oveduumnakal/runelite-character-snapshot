@@ -13,6 +13,7 @@
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbankdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankTab](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbanktab)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementdata)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementTask](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementtask)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiaryregion)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.GeOffer](#comoveduumnakalcharactersnapshotmodelcharactersnapshotgeoffer)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.InventoryItem](#comoveduumnakalcharactersnapshotmodelcharactersnapshotinventoryitem)
@@ -398,12 +399,20 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | Modifier and Type | Field | Description |
 |---|---|---|
 | `private static final int[]` | `BANK_TAB_VARBITS` |  |
+| `private static final int[]` | `CA_COMPLETED_VARPS` |  |
+| `private static final int` | `CA_MONSTER_ENUM` | Cache enum mapping monster category id to display name. |
+| `private static final int` | `CA_PARAM_ID` | Task struct param: task id (the completion bit index). |
+| `private static final int` | `CA_PARAM_MONSTER` | Task struct param: monster category id, a key of `#CA_MONSTER_ENUM`. |
+| `private static final int` | `CA_PARAM_NAME` | Task struct param: task name. |
+| `private static final int[]` | `CA_TIER_ENUMS` | Cache enums listing the task struct ids per tier, easy to grandmaster. |
+| `private static final String[]` | `CA_TIER_NAMES` |  |
 | `private static final EquipmentInventorySlot[]` | `EQUIPMENT_SLOTS` |  |
 | `private static final int` | `SLAYER_BOSS_TASK_ID` |  |
 | `private List<ItemEntry>` | `bankItems` |  |
 | `private List<BankTab>` | `bankTabs` |  |
 | `private int` | `bankTotal` |  |
 | `private Instant` | `bankUpdated` |  |
+| `private Map<Integer,CombatAchievementTask>` | `caTaskMeta` | Cached task metadata by task id (completed flag unset); empty until resolved from the cache. |
 | `private final Client` | `client` |  |
 | `private CombatAchievementData` | `combatAchievements` |  |
 | `private final CharacterSnapshotConfig` | `config` |  |
@@ -430,6 +439,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 
 | Modifier and Type | Method | Description |
 |---|---|---|
+| `private List<CombatAchievementTask>` | `buildCombatAchievementTasks()` | Combines the completion varps with the cached task metadata. |
 | `private LocationData` | `buildLocation(Player localPlayer)` | Reads the character's world location. |
 | `private Map<String,String>` | `buildSectionUpdated(CharacterSnapshot data)` | Collects the capture time of each item section present in the snapshot. |
 | `public CharacterSnapshot` | `buildSnapshot()` | Assembles the export snapshot from the caches and cheap client reads, honouring the config toggles. |
@@ -438,10 +448,11 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private DiaryRegion` | `diaryRegion(int easy, int medium, int hard, int elite)` | Reads a diary region's four tiers, each complete when its varbit equals 1. |
 | `private List<ItemEntry>` | `filterBankSlice(Item[] raw, int start, int end)` | Converts a slice of raw bank slots to item entries, dropping empty slots and placeholders. |
 | `private String` | `getItemName(int itemId)` | Resolves an item id to its display name. |
+| `private Map<Integer,CombatAchievementTask>` | `loadCombatAchievementMeta()` | Reads task names, tiers, and monsters from the game cache: each tier enum lists task structs, and each struct carries the task id, name, and monster category as params. |
 | `private static Instant` | `parseInstant(String value)` | Parses an ISO-8601 instant, tolerating a missing or malformed value. |
 | `public void` | `pollAllGeOffers()` | Rebuilds the Grand Exchange cache from the client's current offer array. |
 | `public void` | `pollAllSkills()` | Reads every skill from the client, plus a computed `OVERALL` total. |
-| `public boolean` | `pollCombatAchievements()` | Polls the six combat-achievement tier varbits. |
+| `public boolean` | `pollCombatAchievements()` | Polls the six combat-achievement tier varbits and the per-task completion bits. |
 | `public boolean` | `pollDiaries()` | Polls achievement-diary completion for every region via named RuneLite varbits. |
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
 | `public boolean` | `pollSlayer()` | Polls the current slayer task, clearing it when no task is assigned. |
@@ -464,6 +475,44 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 #### BANK_TAB_VARBITS
 
 `private static final int[] BANK_TAB_VARBITS`
+
+#### CA_COMPLETED_VARPS
+
+`private static final int[] CA_COMPLETED_VARPS`
+
+#### CA_MONSTER_ENUM
+
+`private static final int CA_MONSTER_ENUM`
+
+Cache enum mapping monster category id to display name.
+
+#### CA_PARAM_ID
+
+`private static final int CA_PARAM_ID`
+
+Task struct param: task id (the completion bit index).
+
+#### CA_PARAM_MONSTER
+
+`private static final int CA_PARAM_MONSTER`
+
+Task struct param: monster category id, a key of `#CA_MONSTER_ENUM`.
+
+#### CA_PARAM_NAME
+
+`private static final int CA_PARAM_NAME`
+
+Task struct param: task name.
+
+#### CA_TIER_ENUMS
+
+`private static final int[] CA_TIER_ENUMS`
+
+Cache enums listing the task struct ids per tier, easy to grandmaster. Not in the RuneLite API.
+
+#### CA_TIER_NAMES
+
+`private static final String[] CA_TIER_NAMES`
 
 #### EQUIPMENT_SLOTS
 
@@ -488,6 +537,12 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 #### bankUpdated
 
 `private Instant bankUpdated`
+
+#### caTaskMeta
+
+`private Map<Integer,CombatAchievementTask> caTaskMeta`
+
+Cached task metadata by task id (completed flag unset); empty until resolved from the cache.
 
 #### client
 
@@ -559,6 +614,15 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 - **Parameter** `config` — the plugin configuration
 
 ### Method Detail
+
+#### buildCombatAchievementTasks
+
+`private List<CombatAchievementTask> buildCombatAchievementTasks()`
+
+Combines the completion varps with the cached task metadata. Task id `N` is bit
+`N % 32` of the `N / 32`th entry of `#CA_COMPLETED_VARPS`.
+
+- **Returns:** every known task with its completion flag, plus any completed id missing from the metadata
 
 #### buildLocation
 
@@ -635,6 +699,15 @@ Resolves an item id to its display name.
 - **Parameter** `itemId` — the item id
 - **Returns:** the item name, or `null` when it cannot be resolved
 
+#### loadCombatAchievementMeta
+
+`private Map<Integer,CombatAchievementTask> loadCombatAchievementMeta()`
+
+Reads task names, tiers, and monsters from the game cache: each tier enum lists task structs,
+and each struct carries the task id, name, and monster category as params.
+
+- **Returns:** the metadata by task id, or empty if the cache is not readable yet
+
 #### parseInstant
 
 `private static Instant parseInstant(String value)`
@@ -660,9 +733,9 @@ Reads every skill from the client, plus a computed `OVERALL` total.
 
 `public boolean pollCombatAchievements()`
 
-Polls the six combat-achievement tier varbits.
+Polls the six combat-achievement tier varbits and the per-task completion bits.
 
-- **Returns:** whether any tier value changed since the last poll
+- **Returns:** whether any tier value or task completion changed since the last poll
 
 #### pollDiaries
 
@@ -921,6 +994,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | _class_ [`BankData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbankdata) | Bank contents: total distinct item count and a flat list of the stacks it holds. |
 | _class_ [`BankTab`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbanktab) | A bank tab: an index (0 for the main tab, 1 to 9 for the numbered tabs) and the items it holds. |
 | _class_ [`CombatAchievementData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementdata) | Combat-achievement tier progress. |
+| _class_ [`CombatAchievementTask`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementtask) | A single combat-achievement task and whether it is complete. |
 | _class_ [`DiaryRegion`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiaryregion) | Completion of the four achievement-diary tiers for one region. |
 | _class_ [`GeOffer`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotgeoffer) | One active Grand Exchange offer. |
 | _class_ [`InventoryItem`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotinventoryitem) | An inventory item, carrying its slot index in addition to the item stack. |
@@ -1181,11 +1255,12 @@ Combat-achievement tier progress. Each field is the raw value of the correspondi
 
 | Modifier and Type | Field | Description |
 |---|---|---|
-| `public List<String>` | `completedTasks` | Compatibility field: always empty; individual tasks are not enumerated. |
+| `public List<String>` | `completedTasks` | Compatibility field: names of completed tasks whose name resolved from the game cache. |
 | `public boolean` | `easyComplete` | Compatibility flag: whether the easy tier has any progress (`tierEasy > 0`). |
 | `public boolean` | `eliteComplete` | Compatibility flag: whether the elite tier has any progress. |
 | `public boolean` | `hardComplete` | Compatibility flag: whether the hard tier has any progress. |
 | `public boolean` | `mediumComplete` | Compatibility flag: whether the medium tier has any progress. |
+| `public List<CombatAchievementTask>` | `tasks` | Every combat-achievement task with its completion flag. |
 | `public int` | `tierEasy` | Raw easy-tier varbit value. |
 | `public int` | `tierElite` | Raw elite-tier varbit value. |
 | `public int` | `tierGrandmaster` | Raw grandmaster-tier varbit value. |
@@ -1198,6 +1273,7 @@ Combat-achievement tier progress. Each field is the raw value of the correspondi
 | Constructor | Description |
 |---|---|
 | `CombatAchievementData(int tierEasy, int tierMedium, int tierHard, int tierElite, int tierMaster, int tierGrandmaster)` |  |
+| `CombatAchievementData(int tierEasy, int tierMedium, int tierHard, int tierElite, int tierMaster, int tierGrandmaster, List<CombatAchievementTask> tasks)` |  |
 
 ### Field Detail
 
@@ -1205,7 +1281,8 @@ Combat-achievement tier progress. Each field is the raw value of the correspondi
 
 `public List<String> completedTasks`
 
-Compatibility field: always empty; individual tasks are not enumerated.
+Compatibility field: names of completed tasks whose name resolved from the game cache. Always a
+list of strings; external consumers depend on that.
 
 #### easyComplete
 
@@ -1230,6 +1307,13 @@ Compatibility flag: whether the hard tier has any progress.
 `public boolean mediumComplete`
 
 Compatibility flag: whether the medium tier has any progress.
+
+#### tasks
+
+`public List<CombatAchievementTask> tasks`
+
+Every combat-achievement task with its completion flag. When the cache metadata cannot be
+resolved, holds only the completed task ids with null name, tier, and monster.
 
 #### tierEasy
 
@@ -1279,6 +1363,88 @@ Raw medium-tier varbit value.
 - **Parameter** `tierElite` — elite varbit value
 - **Parameter** `tierMaster` — master varbit value
 - **Parameter** `tierGrandmaster` — grandmaster varbit value
+
+#### CombatAchievementData
+
+`public CombatAchievementData(int tierEasy, int tierMedium, int tierHard, int tierElite, int tierMaster, int tierGrandmaster, List<CombatAchievementTask> tasks)`
+
+- **Parameter** `tierEasy` — easy varbit value
+- **Parameter** `tierMedium` — medium varbit value
+- **Parameter** `tierHard` — hard varbit value
+- **Parameter** `tierElite` — elite varbit value
+- **Parameter** `tierMaster` — master varbit value
+- **Parameter** `tierGrandmaster` — grandmaster varbit value
+- **Parameter** `tasks` — per-task detail; `completedTasks` is derived from it
+
+---
+
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementTask
+
+_class_
+
+`public static class CombatAchievementTask`
+
+A single combat-achievement task and whether it is complete.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public boolean` | `completed` | Whether the task is complete. |
+| `public int` | `id` | Task id; completion is bit `id % 32` of the `id / 32`th completion varp. |
+| `public String` | `monster` | Monster or category name from the game cache, or null if unresolved. |
+| `public String` | `name` | Task name from the game cache, or null if unresolved. |
+| `public String` | `tier` | Tier name (EASY to GRANDMASTER), or null if unresolved. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `CombatAchievementTask(int id, String name, String tier, String monster, boolean completed)` |  |
+
+### Field Detail
+
+#### completed
+
+`public boolean completed`
+
+Whether the task is complete.
+
+#### id
+
+`public int id`
+
+Task id; completion is bit `id % 32` of the `id / 32`th completion varp.
+
+#### monster
+
+`public String monster`
+
+Monster or category name from the game cache, or null if unresolved.
+
+#### name
+
+`public String name`
+
+Task name from the game cache, or null if unresolved.
+
+#### tier
+
+`public String tier`
+
+Tier name (EASY to GRANDMASTER), or null if unresolved.
+
+### Constructor Detail
+
+#### CombatAchievementTask
+
+`public CombatAchievementTask(int id, String name, String tier, String monster, boolean completed)`
+
+- **Parameter** `id` — task id
+- **Parameter** `name` — task name, or null
+- **Parameter** `tier` — tier name, or null
+- **Parameter** `monster` — monster name, or null
+- **Parameter** `completed` — whether the task is complete
 
 ---
 
