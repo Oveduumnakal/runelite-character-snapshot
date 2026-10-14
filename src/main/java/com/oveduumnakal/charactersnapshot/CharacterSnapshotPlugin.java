@@ -23,6 +23,7 @@ import net.runelite.api.events.GameTick;
 import net.runelite.api.events.GrandExchangeOfferChanged;
 import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.StatChanged;
+import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.client.RuneLite;
 import net.runelite.client.config.ConfigManager;
@@ -49,22 +50,24 @@ public class CharacterSnapshotPlugin extends Plugin
 	private static final int POLL_INTERVAL_TICKS = 30;
 
 	@Inject
-	private Client client;
+	Client client;
 
 	@Inject
-	private CharacterSnapshotConfig config;
+	CharacterSnapshotConfig config;
 
 	@Inject
-	private ScheduledExecutorService executor;
+	ScheduledExecutorService executor;
 
 	@Inject
-	private Gson gson;
+	Gson gson;
 
-	private SnapshotCollector collector;
+	SnapshotCollector collector;
 
-	private SnapshotWriter writer;
+	SnapshotWriter writer;
 
 	private volatile boolean dirty = false;
+
+	private volatile boolean questsStale = false;
 
 	private int tickCounter = 0;
 
@@ -208,6 +211,18 @@ public class CharacterSnapshotPlugin extends Plugin
 	}
 
 	/**
+	 * Marks the quests stale on any varp or varbit change, since quest progress lives in those. The next
+	 * periodic poll then re-reads the quests; without a change they are not polled again.
+	 *
+	 * @param event the varbit-changed event
+	 */
+	@Subscribe
+	public void onVarbitChanged(VarbitChanged event)
+	{
+		questsStale = true;
+	}
+
+	/**
 	 * Drives the initial collection, periodic polling, and interval-gated saves.
 	 *
 	 * @param event the game-tick event
@@ -259,8 +274,12 @@ public class CharacterSnapshotPlugin extends Plugin
 	private void pollPeriodic()
 	{
 		boolean changed = false;
-		if (config.syncQuests())
-			changed |= collector.pollQuests();
+		if (questsStale)
+		{
+			questsStale = false;
+			if (config.syncQuests())
+				changed |= collector.pollQuests();
+		}
 
 		if (config.syncDiaries())
 			changed |= collector.pollDiaries();
@@ -304,6 +323,7 @@ public class CharacterSnapshotPlugin extends Plugin
 				collector.updateEquipment(equip);
 		}
 
+		questsStale = false;
 		if (config.syncQuests())
 			collector.pollQuests();
 
