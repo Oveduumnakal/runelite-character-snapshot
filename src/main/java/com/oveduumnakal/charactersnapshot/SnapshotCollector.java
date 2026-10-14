@@ -281,6 +281,7 @@ public class SnapshotCollector
 		dailies = null;
 		miscellania = null;
 		minigamePoints = null;
+		toolLeprechaun = null;
 	}
 
 	/**
@@ -1234,6 +1235,9 @@ public class SnapshotCollector
 		if (config.syncMinigamePoints() && minigamePoints != null)
 			data.minigamePoints = new LinkedHashMap<>(minigamePoints);
 
+		if (config.syncStorages() && toolLeprechaun != null)
+			data.toolLeprechaun = new LinkedHashMap<>(toolLeprechaun);
+
 		return data;
 	}
 
@@ -1522,6 +1526,9 @@ public class SnapshotCollector
 	 * one the legacy {@code InventoryID.GROUP_STORAGE} constant held; the current API names it
 	 * {@code INV_GROUP_TEMP}.
 	 */
+	/** Storage key of the plank sack, which the game keeps in varbits rather than an item container. */
+	private static final String PLANK_SACK_KEY = "plankSack";
+
 	private static final Map<Integer, String> STORAGE_KEYS = new LinkedHashMap<>();
 
 	static
@@ -1529,6 +1536,8 @@ public class SnapshotCollector
 		STORAGE_KEYS.put(InventoryID.LOOTING_BAG, "lootingBag");
 		STORAGE_KEYS.put(InventoryID.SEED_VAULT, "seedVault");
 		STORAGE_KEYS.put(InventoryID.INV_GROUP_TEMP, "groupStorage");
+		STORAGE_KEYS.put(InventoryID.SEED_BOX, "seedBox");
+		STORAGE_KEYS.put(InventoryID.TACKLE_BOX, "tackleBox");
 	}
 
 	private final Map<String, List<ItemEntry>> storages = new LinkedHashMap<>();
@@ -1920,6 +1929,39 @@ public class SnapshotCollector
 		Map<String, Integer> fresh = MinigamePoints.read(client);
 		boolean changed = !fresh.equals(minigamePoints);
 		minigamePoints = fresh;
+		return changed;
+	}
+
+	private Map<String, Integer> toolLeprechaun = null;
+
+	/**
+	 * Polls the varbit-backed skilling storages: the plank sack (kept under {@code storages.plankSack} once it
+	 * has held planks) and the tool leprechaun.
+	 *
+	 * @return whether either changed since the last poll
+	 */
+	public boolean pollSkillingStorages()
+	{
+		List<ItemEntry> planks = new ArrayList<>();
+		for (Map.Entry<Integer, Integer> entry : SkillingStorage.PLANK_SACK.entrySet())
+		{
+			int amount = client.getVarbitValue(entry.getValue());
+			if (amount > 0)
+				planks.add(new ItemEntry(entry.getKey(), getItemName(entry.getKey()), amount));
+		}
+
+		boolean changed = false;
+		List<ItemEntry> previous = storages.get(PLANK_SACK_KEY);
+		if ((previous != null || !planks.isEmpty()) && !planks.equals(previous))
+		{
+			storages.put(PLANK_SACK_KEY, planks);
+			storageUpdated.put(PLANK_SACK_KEY, Instant.now());
+			changed = true;
+		}
+
+		Map<String, Integer> tools = SkillingStorage.readToolLeprechaun(client);
+		changed |= !Objects.equals(tools, toolLeprechaun);
+		toolLeprechaun = tools;
 		return changed;
 	}
 }

@@ -21,6 +21,7 @@
 - [com.oveduumnakal.charactersnapshot.KillCountVarps](#comoveduumnakalcharactersnapshotkillcountvarps)
 - [com.oveduumnakal.charactersnapshot.MinigamePoints](#comoveduumnakalcharactersnapshotminigamepoints)
 - [com.oveduumnakal.charactersnapshot.PrayerMagic](#comoveduumnakalcharactersnapshotprayermagic)
+- [com.oveduumnakal.charactersnapshot.SkillingStorage](#comoveduumnakalcharactersnapshotskillingstorage)
 - [com.oveduumnakal.charactersnapshot.SlayerInfo](#comoveduumnakalcharactersnapshotslayerinfo)
 - [com.oveduumnakal.charactersnapshot.SnapshotCollector](#comoveduumnakalcharactersnapshotsnapshotcollector)
 - [com.oveduumnakal.charactersnapshot.SnapshotWriter](#comoveduumnakalcharactersnapshotsnapshotwriter)
@@ -2037,6 +2038,69 @@ Lists the unlocked reward prayers.
 
 ---
 
+## com.oveduumnakal.charactersnapshot.SkillingStorage
+
+_class_
+
+`final class SkillingStorage`
+
+Tables for the skilling storages the game keeps in varbits rather than item containers: the plank sack and
+the tool leprechaun. Every read runs on the client thread.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `static final Map<Integer,Integer>` | `PLANK_SACK` | Plank item id to the varbit holding how many of that plank the plank sack holds. |
+| `static final Map<String,Integer>` | `TOOL_LEPRECHAUN` | Tool leprechaun storage key to its varbit. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `SkillingStorage()` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `static Map<String,Integer>` | `readToolLeprechaun(Client client)` | Reads the tool leprechaun's storage. |
+
+### Field Detail
+
+#### PLANK_SACK
+
+`static final Map<Integer,Integer> PLANK_SACK`
+
+Plank item id to the varbit holding how many of that plank the plank sack holds.
+
+#### TOOL_LEPRECHAUN
+
+`static final Map<String,Integer> TOOL_LEPRECHAUN`
+
+Tool leprechaun storage key to its varbit. Values are the raw varbit values: 0/1 for single tools, a type
+index for the watering can and bottomless bucket, and counts for buckets, compost and plant cure, where
+the `extra*` varbits hold the higher part of counts above the base varbit's range.
+
+### Constructor Detail
+
+#### SkillingStorage
+
+`private SkillingStorage()`
+
+### Method Detail
+
+#### readToolLeprechaun
+
+`static Map<String,Integer> readToolLeprechaun(Client client)`
+
+Reads the tool leprechaun's storage.
+
+- **Parameter** `client` — the client
+- **Returns:** storage key to raw varbit value, in table order, or `null` when everything is zero
+
+---
+
 ## com.oveduumnakal.charactersnapshot.SlayerInfo
 
 _class_
@@ -2156,12 +2220,13 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public static final int` | `CLOG_ITEM_SCRIPT_ID` | Id of the game's per-item collection log script, which the server runs once for every obtained item while the log's Search is opened. |
 | `private static final EquipmentInventorySlot[]` | `EQUIPMENT_SLOTS` |  |
 | `private static final int` | `KARAMJA_TIER_DONE` | Value of the Karamja easy, medium and hard tier varbits once the tier is complete; 1 only means started. |
+| `private static final String` | `PLANK_SACK_KEY` | Storage key of the plank sack, which the game keeps in varbits rather than an item container. |
 | `private static final int[]` | `RUNE_POUCH_ITEMS` | Every rune pouch variant; the contents varbits are shared by all of them. |
 | `private static final int[]` | `RUNE_POUCH_QUANTITY_VARBITS` |  |
 | `private static final int[]` | `RUNE_POUCH_TYPE_VARBITS` |  |
 | `private static final int` | `SLAYER_BOSS_TASK_ID` |  |
 | `private static final String[]` | `SPELLBOOK_NAMES` | Spellbook varbit values 0 to 3, in order; any other value is reported as unknown. |
-| `private static final Map<Integer,String>` | `STORAGE_KEYS` | Storage containers captured when opened, keyed by container id to export key. |
+| `private static final Map<Integer,String>` | `STORAGE_KEYS` |  |
 | `private final Map<String,Integer>` | `activityCounts` |  |
 | `private Boolean` | `autocastDefensive` |  |
 | `private String` | `autocastSpell` |  |
@@ -2210,6 +2275,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private final Map<String,Instant>` | `storageUpdated` |  |
 | `private final Map<String,List<ItemEntry>>` | `storages` |  |
 | `private TimersData` | `timers` |  |
+| `private Map<String,Integer>` | `toolLeprechaun` |  |
 | `private List<String>` | `unlockedPrayers` |  |
 | `private final Map<String,Integer>` | `varpKillCounts` |  |
 
@@ -2259,6 +2325,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollPrayerMagic()` | Polls the unlocked reward prayers, the selected quick prayers and the autocast spell. |
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
 | `public boolean` | `pollRunePouch()` | Polls the rune pouch contents. |
+| `public boolean` | `pollSkillingStorages()` | Polls the varbit-backed skilling storages: the plank sack (kept under `storages.plankSack` once it has held planks) and the tool leprechaun. |
 | `public boolean` | `pollSlayer()` | Polls the slayer state. |
 | `public boolean` | `pollSpellbook()` | Polls the active spellbook from the spellbook varbit (0 standard, 1 ancient, 2 lunar, 3 arceuus). |
 | `public boolean` | `pollTimers()` | Re-reads the farming and birdhouse timers from the Time Tracking plugin's stored data. |
@@ -2376,6 +2443,12 @@ quantity. Taken from WikiSync (script 4100, `collection_delayed_transmit`).
 Value of the Karamja easy, medium and hard tier varbits once the tier is complete; 1 only means started.
 The Karamja elite varbit and every other region's tier varbits are plain 0/1 flags.
 
+#### PLANK_SACK_KEY
+
+`private static final String PLANK_SACK_KEY`
+
+Storage key of the plank sack, which the game keeps in varbits rather than an item container.
+
 #### RUNE_POUCH_ITEMS
 
 `private static final int[] RUNE_POUCH_ITEMS`
@@ -2403,10 +2476,6 @@ Spellbook varbit values 0 to 3, in order; any other value is reported as unknown
 #### STORAGE_KEYS
 
 `private static final Map<Integer,String> STORAGE_KEYS`
-
-Storage containers captured when opened, keyed by container id to export key. The group storage id is the
-one the legacy `InventoryID.GROUP_STORAGE` constant held; the current API names it
-`INV_GROUP_TEMP`.
 
 #### activityCounts
 
@@ -2609,6 +2678,10 @@ Identity captured by the last snapshot built with a live local player; cleared b
 #### timers
 
 `private TimersData timers`
+
+#### toolLeprechaun
+
+`private Map<String,Integer> toolLeprechaun`
 
 #### unlockedPrayers
 
@@ -2949,6 +3022,15 @@ of the six slots pairs a rune-type varbit with a quantity varbit, and the rune t
 through the `EnumID#RUNEPOUCH_RUNE` cache enum. Empty slots and unresolvable runes are skipped.
 
 - **Returns:** whether the pouch contents (or its presence) changed since the last poll
+
+#### pollSkillingStorages
+
+`public boolean pollSkillingStorages()`
+
+Polls the varbit-backed skilling storages: the plank sack (kept under `storages.plankSack` once it
+has held planks) and the tool leprechaun.
+
+- **Returns:** whether either changed since the last poll
 
 #### pollSlayer
 
@@ -3372,6 +3454,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | `public SlayerData` | `slayer` | Slayer state; points and streak always set once polled, task fields null/0 when no task. |
 | `public Map<String,List<ItemEntry>>` | `storages` | Last known contents of storage containers that are only readable when opened, keyed by storage (`lootingBag`, `seedVault`, `groupStorage`); a storage never opened is absent. |
 | `public TimersData` | `timers` | Farming patch and birdhouse timers decoded from RuneLite's Time Tracking data. |
+| `public Map<String,Integer>` | `toolLeprechaun` | Tool leprechaun storage as raw varbit values keyed by tool (`rake`, `buckets`, ...); see `SCHEMA.md`. |
 | `public VitalsData` | `vitals` | Current combat vitals (hitpoints, prayer, run energy). |
 
 ### Field Detail
@@ -3537,6 +3620,13 @@ Last known contents of storage containers that are only readable when opened, ke
 
 Farming patch and birdhouse timers decoded from RuneLite's Time Tracking data. Only as fresh as the
 player's last visit to each patch. Absent when the toggle is off or Time Tracking has no data.
+
+#### toolLeprechaun
+
+`public Map<String,Integer> toolLeprechaun`
+
+Tool leprechaun storage as raw varbit values keyed by tool (`rake`, `buckets`, ...); see
+`SCHEMA.md`. Absent when nothing is stored or the storages toggle is off.
 
 #### vitals
 

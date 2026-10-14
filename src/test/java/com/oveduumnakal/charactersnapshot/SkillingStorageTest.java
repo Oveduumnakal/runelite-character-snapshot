@@ -1,0 +1,156 @@
+/*
+ * Copyright (c) 2026, Oveduumnakal
+ * All rights reserved.
+ */
+package com.oveduumnakal.charactersnapshot;
+
+import java.util.EnumSet;
+import java.util.List;
+
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry;
+import org.junit.Test;
+
+import net.runelite.api.Client;
+import net.runelite.api.Item;
+import net.runelite.api.ItemComposition;
+import net.runelite.api.ItemContainer;
+import net.runelite.api.Player;
+import net.runelite.api.WorldType;
+import net.runelite.api.gameval.InventoryID;
+import net.runelite.api.gameval.ItemID;
+import net.runelite.api.gameval.VarbitID;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
+/**
+ * Tests the skilling storages: seed box and tackle box containers, the plank sack and the tool leprechaun.
+ */
+public class SkillingStorageTest
+{
+	/**
+	 * The seed box and tackle box are storage containers with their own keys.
+	 */
+	@Test
+	public void seedAndTackleBoxesAreStorages()
+	{
+		assertEquals("seedBox", SnapshotCollector.storageKey(InventoryID.SEED_BOX));
+		assertEquals("tackleBox", SnapshotCollector.storageKey(InventoryID.TACKLE_BOX));
+
+		Client client = loggedInClient();
+		SnapshotCollector collector = new SnapshotCollector(client, config(true));
+		ItemContainer box = mock(ItemContainer.class);
+		when(box.getItems()).thenReturn(new Item[]{new Item(ItemID.RANARR_SEED, 40)});
+		collector.updateStorage("seedBox", box);
+
+		CharacterSnapshot snapshot = collector.buildSnapshot();
+		List<ItemEntry> seeds = snapshot.storages.get("seedBox");
+		assertEquals(40, seeds.get(0).quantity);
+		assertNotNull(snapshot.sectionUpdated.get("storages.seedBox"));
+	}
+
+	/**
+	 * The plank sack lists only planks it holds, with a capture time, and reports a change once.
+	 */
+	@Test
+	public void plankSackFromVarbits()
+	{
+		Client client = loggedInClient();
+		when(client.getVarbitValue(VarbitID.PLANK_SACK_MAHOGANY)).thenReturn(28);
+		SnapshotCollector collector = new SnapshotCollector(client, config(true));
+
+		assertTrue(collector.pollSkillingStorages());
+		assertFalse(collector.pollSkillingStorages());
+		CharacterSnapshot snapshot = collector.buildSnapshot();
+		List<ItemEntry> sack = snapshot.storages.get("plankSack");
+
+		assertEquals(1, sack.size());
+		assertEquals(ItemID.PLANK_MAHOGANY, sack.get(0).itemId);
+		assertEquals(28, sack.get(0).quantity);
+		assertNotNull(snapshot.sectionUpdated.get("storages.plankSack"));
+	}
+
+	/**
+	 * An empty plank sack never seen holding planks is not exported; one emptied later exports as empty.
+	 */
+	@Test
+	public void plankSackOnlyOnceUsed()
+	{
+		Client client = loggedInClient();
+		SnapshotCollector collector = new SnapshotCollector(client, config(true));
+
+		assertFalse(collector.pollSkillingStorages());
+		assertNull(collector.buildSnapshot().storages);
+
+		when(client.getVarbitValue(VarbitID.PLANK_SACK_OAK)).thenReturn(5);
+		collector.pollSkillingStorages();
+		when(client.getVarbitValue(VarbitID.PLANK_SACK_OAK)).thenReturn(0);
+
+		assertTrue(collector.pollSkillingStorages());
+		List<ItemEntry> sack = collector.buildSnapshot().storages.get("plankSack");
+		assertTrue(sack.isEmpty());
+	}
+
+	/**
+	 * The tool leprechaun is exported as raw values once anything is stored, and honours the toggle.
+	 */
+	@Test
+	public void toolLeprechaunRawValues()
+	{
+		Client client = loggedInClient();
+		CharacterSnapshotConfig config = config(true);
+		SnapshotCollector collector = new SnapshotCollector(client, config);
+		collector.pollSkillingStorages();
+		assertNull(collector.buildSnapshot().toolLeprechaun);
+
+		when(client.getVarbitValue(VarbitID.FARMING_TOOLS_RAKE)).thenReturn(1);
+		when(client.getVarbitValue(VarbitID.FARMING_TOOLS_ULTRACOMPOST)).thenReturn(150);
+		assertTrue(collector.pollSkillingStorages());
+		CharacterSnapshot snapshot = collector.buildSnapshot();
+
+		assertEquals(Integer.valueOf(1), snapshot.toolLeprechaun.get("rake"));
+		assertEquals(Integer.valueOf(150), snapshot.toolLeprechaun.get("ultracompost"));
+		assertEquals(SkillingStorage.TOOL_LEPRECHAUN.size(), snapshot.toolLeprechaun.size());
+
+		when(config.syncStorages()).thenReturn(false);
+		assertNull(collector.buildSnapshot().toolLeprechaun);
+	}
+
+	/**
+	 * Builds a client with a logged-in player and item names for any id.
+	 *
+	 * @return the mock client
+	 */
+	private static Client loggedInClient()
+	{
+		Client client = mock(Client.class);
+		Player player = mock(Player.class);
+		when(player.getName()).thenReturn("Zezima");
+		when(client.getLocalPlayer()).thenReturn(player);
+		when(client.getWorldType()).thenReturn(EnumSet.noneOf(WorldType.class));
+		ItemComposition item = mock(ItemComposition.class);
+		when(item.getName()).thenReturn("Item");
+		when(client.getItemDefinition(anyInt())).thenReturn(item);
+		return client;
+	}
+
+	/**
+	 * Builds a config with only the storages toggle set.
+	 *
+	 * @param storages the storages toggle
+	 * @return the mock config
+	 */
+	private static CharacterSnapshotConfig config(boolean storages)
+	{
+		CharacterSnapshotConfig config = mock(CharacterSnapshotConfig.class);
+		when(config.syncStorages()).thenReturn(storages);
+		return config;
+	}
+}
