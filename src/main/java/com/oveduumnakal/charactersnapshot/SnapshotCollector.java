@@ -196,7 +196,35 @@ public class SnapshotCollector
 	 */
 	public void updateSkill(Skill skill, int level, int xp, int boostedLevel)
 	{
+		if ("OVERALL".equals(skill.name()))
+			return;
+
 		skills.put(skill.name(), new SkillEntry(level, xp, boostedLevel));
+		refreshOverall();
+	}
+
+	/**
+	 * Recomputes the {@code OVERALL} entry from the cached skills. Does nothing until every real skill is
+	 * cached, so a partial total is never exported.
+	 */
+	private void refreshOverall()
+	{
+		int totalLevel = 0;
+		long totalXp = 0;
+		for (Skill skill : Skill.values())
+		{
+			if ("OVERALL".equals(skill.name()))
+				continue;
+
+			SkillEntry entry = skills.get(skill.name());
+			if (entry == null)
+				return;
+
+			totalLevel += entry.level;
+			totalXp += entry.xp;
+		}
+
+		skills.put("OVERALL", new SkillEntry(totalLevel, totalXp, totalLevel));
 	}
 
 	/**
@@ -754,7 +782,7 @@ public class SnapshotCollector
 		if (config.syncInventory())
 			data.inventory = new ArrayList<>(inventory);
 
-		if (config.syncEquipment() && !equipment.isEmpty())
+		if (config.syncEquipment() && equipmentUpdated != null)
 			data.equipment = new LinkedHashMap<>(equipment);
 
 		data.sectionUpdated = buildSectionUpdated(data);
