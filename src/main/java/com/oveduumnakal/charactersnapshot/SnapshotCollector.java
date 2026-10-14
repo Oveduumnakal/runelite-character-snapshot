@@ -19,6 +19,7 @@ import java.util.TreeMap;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankTab;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BlockedTask;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementTask;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion;
@@ -673,6 +674,7 @@ public class SnapshotCollector
 			amount,
 			client.getVarbitValue(Varbits.SLAYER_POINTS),
 			client.getVarbitValue(Varbits.SLAYER_TASK_STREAK));
+		readSlayerDetails(task);
 
 		boolean changed = !Objects.equals(task, slayer);
 		slayer = task;
@@ -1036,5 +1038,70 @@ public class SnapshotCollector
 	{
 		ItemComposition def = client.getItemDefinition(itemId);
 		return def != null ? def.getName() : null;
+	}
+
+	/**
+	 * Fills in the slayer master, blocked tasks and reward unlocks of a task.
+	 *
+	 * @param task the slayer data to complete
+	 */
+	private void readSlayerDetails(SlayerData task)
+	{
+		int masterId = client.getVarbitValue(VarbitID.SLAYER_MASTER);
+		task.masterId = masterId;
+		task.masterName = SlayerInfo.masterName(masterId);
+		task.blockedTasks = readBlockedTasks();
+		task.unlockedTasks = readFlags(SlayerInfo.UNLOCK_VARBITS);
+		task.extendedTasks = readFlags(SlayerInfo.EXTEND_VARBITS);
+	}
+
+	/**
+	 * Reads every master's blocked task slots, falling back to the legacy shared block list when no
+	 * per-master slot is filled.
+	 *
+	 * @return the blocked tasks, never null
+	 */
+	private List<BlockedTask> readBlockedTasks()
+	{
+		List<BlockedTask> blocked = new ArrayList<>();
+		for (Map.Entry<String, int[]> entry : SlayerInfo.blockVarbits().entrySet())
+		{
+			for (int varbit : entry.getValue())
+			{
+				int taskId = client.getVarbitValue(varbit);
+				if (taskId > 0)
+					blocked.add(new BlockedTask(taskId, resolveTaskName(taskId), entry.getKey()));
+			}
+		}
+
+		if (!blocked.isEmpty())
+			return blocked;
+
+		for (int varbit : SlayerInfo.LEGACY_BLOCK_VARBITS)
+		{
+			int taskId = client.getVarbitValue(varbit);
+			if (taskId > 0)
+				blocked.add(new BlockedTask(taskId, resolveTaskName(taskId), null));
+		}
+
+		return blocked;
+	}
+
+	/**
+	 * Lists the keys whose varbit is non-zero.
+	 *
+	 * @param varbits key to varbit id
+	 * @return the keys of the set flags, in table order
+	 */
+	private List<String> readFlags(Map<String, Integer> varbits)
+	{
+		List<String> keys = new ArrayList<>();
+		for (Map.Entry<String, Integer> entry : varbits.entrySet())
+		{
+			if (client.getVarbitValue(entry.getValue()) != 0)
+				keys.add(entry.getKey());
+		}
+
+		return keys;
 	}
 }

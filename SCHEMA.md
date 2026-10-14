@@ -144,6 +144,11 @@ Present whenever slayer has been read. `points` and `streak` are always exported
 | `amount` | int | Remaining kills. |
 | `points` | int | Slayer reward points. |
 | `streak` | int | Task-completion streak. |
+| `masterId` | int | Current slayer master id (1 Turael, 2 Mazchna, 3 Vannaka, 4 Chaeldar, 5 Duradel, 6 Nieve, 7 Krystilia, 8 Konar, 9 Spria, 10 Mortimer); 0 when none. Absent in older files. |
+| `masterName` | string or null | Master name for `masterId`; null when 0 or unknown. Absent in older files. |
+| `blockedTasks` | array | Blocked tasks, `{ taskId, name, master }`. `name` is null when unresolved. `master` is the master whose block list holds the task, or null for the legacy shared list (used only when no per-master slot is filled). Empty when nothing is blocked. Absent in older files. |
+| `unlockedTasks` | array of string | Purchased task-assignment unlocks, e.g. `BOSSES`, `RED_DRAGONS`, `SUPERIOR_MONSTERS`. Absent in older files. |
+| `extendedTasks` | array of string | Tasks with a purchased extension, e.g. `ANKOU`, `BLACK_DRAGONS`. Absent in older files. |
 
 ## location
 

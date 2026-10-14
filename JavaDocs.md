@@ -9,11 +9,13 @@
 - [com.oveduumnakal.charactersnapshot.CharacterSnapshotPlugin](#comoveduumnakalcharactersnapshotcharactersnapshotplugin)
 - [com.oveduumnakal.charactersnapshot.DiaryTasks](#comoveduumnakalcharactersnapshotdiarytasks)
 - [com.oveduumnakal.charactersnapshot.DiaryTasks.Task](#comoveduumnakalcharactersnapshotdiarytaskstask)
+- [com.oveduumnakal.charactersnapshot.SlayerInfo](#comoveduumnakalcharactersnapshotslayerinfo)
 - [com.oveduumnakal.charactersnapshot.SnapshotCollector](#comoveduumnakalcharactersnapshotsnapshotcollector)
 - [com.oveduumnakal.charactersnapshot.SnapshotWriter](#comoveduumnakalcharactersnapshotsnapshotwriter)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot](#comoveduumnakalcharactersnapshotmodelcharactersnapshot)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbankdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankTab](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbanktab)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BlockedTask](#comoveduumnakalcharactersnapshotmodelcharactersnapshotblockedtask)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementTask](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementtask)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiaryregion)
@@ -822,6 +824,94 @@ Reads this task's completion from the client.
 
 ---
 
+## com.oveduumnakal.charactersnapshot.SlayerInfo
+
+_class_
+
+`final class SlayerInfo`
+
+Static tables describing where the game stores the slayer master, per-master blocked task slots and the
+task-assignment reward unlocks. Master ids follow `VarbitID.SLAYER_MASTER`; ids 1 to 10 were matched
+against the slayer master NPC constants in the API (`NpcID.SLAYER_MASTER_n`).
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `static final Map<String,int[]>` | `BLOCK_VARBITS` | Master name to the varbits holding that master's blocked task ids (0 = empty slot). |
+| `static final Map<String,Integer>` | `EXTEND_VARBITS` | Task key to the varbit that is non-zero once that task's extension is purchased. |
+| `static final int[]` | `LEGACY_BLOCK_VARBITS` | Legacy shared block-list varbits, used only when no per-master slot is filled. |
+| `static final String[]` | `MASTER_NAMES` | Master id to display name. |
+| `static final Map<String,Integer>` | `UNLOCK_VARBITS` | Unlock key to the varbit that is non-zero once the task-assignment unlock is purchased. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `SlayerInfo()` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `static Map<String,int[]>` | `blockVarbits()` |  |
+| `static String` | `masterName(int masterId)` |  |
+
+### Field Detail
+
+#### BLOCK_VARBITS
+
+`static final Map<String,int[]> BLOCK_VARBITS`
+
+Master name to the varbits holding that master's blocked task ids (0 = empty slot).
+
+#### EXTEND_VARBITS
+
+`static final Map<String,Integer> EXTEND_VARBITS`
+
+Task key to the varbit that is non-zero once that task's extension is purchased.
+
+#### LEGACY_BLOCK_VARBITS
+
+`static final int[] LEGACY_BLOCK_VARBITS`
+
+Legacy shared block-list varbits, used only when no per-master slot is filled.
+
+#### MASTER_NAMES
+
+`static final String[] MASTER_NAMES`
+
+Master id to display name. Index is the master id; index 0 is unused.
+
+#### UNLOCK_VARBITS
+
+`static final Map<String,Integer> UNLOCK_VARBITS`
+
+Unlock key to the varbit that is non-zero once the task-assignment unlock is purchased.
+
+### Constructor Detail
+
+#### SlayerInfo
+
+`private SlayerInfo()`
+
+### Method Detail
+
+#### blockVarbits
+
+`static Map<String,int[]> blockVarbits()`
+
+- **Returns:** an unmodifiable view of the per-master block varbits
+
+#### masterName
+
+`static String masterName(int masterId)`
+
+- **Parameter** `masterId` — the value of the slayer master varbit
+- **Returns:** the master's name, or null when the id is 0 or unknown
+
+---
+
 ## com.oveduumnakal.charactersnapshot.SnapshotCollector
 
 _class_
@@ -901,6 +991,9 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollDiaries()` | Polls achievement-diary completion for every region via named RuneLite varbits, and each mapped task via `DiaryTasks`. |
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
 | `public boolean` | `pollSlayer()` | Polls the slayer state. |
+| `private List<BlockedTask>` | `readBlockedTasks()` | Reads every master's blocked task slots, falling back to the legacy shared block list when no per-master slot is filled. |
+| `private List<String>` | `readFlags(Map<String,Integer> varbits)` | Lists the keys whose varbit is non-zero. |
+| `private void` | `readSlayerDetails(SlayerData task)` | Fills in the slayer master, blocked tasks and reward unlocks of a task. |
 | `private String` | `readTaskRowName(int row)` | Reads the display name column of one slayer task table row. |
 | `private void` | `refreshOverall()` | Recomputes the `OVERALL` entry from the cached skills. |
 | `private void` | `reloadCombatAchievementMetaIfNeeded()` | Loads the task metadata when none is cached, and retries (at most `#CA_META_MAX_RETRIES` times) while the last load was partial, i.e. |
@@ -1252,6 +1345,32 @@ assigned.
 
 - **Returns:** whether the slayer state changed since the last poll
 
+#### readBlockedTasks
+
+`private List<BlockedTask> readBlockedTasks()`
+
+Reads every master's blocked task slots, falling back to the legacy shared block list when no
+per-master slot is filled.
+
+- **Returns:** the blocked tasks, never null
+
+#### readFlags
+
+`private List<String> readFlags(Map<String,Integer> varbits)`
+
+Lists the keys whose varbit is non-zero.
+
+- **Parameter** `varbits` — key to varbit id
+- **Returns:** the keys of the set flags, in table order
+
+#### readSlayerDetails
+
+`private void readSlayerDetails(SlayerData task)`
+
+Fills in the slayer master, blocked tasks and reward unlocks of a task.
+
+- **Parameter** `task` — the slayer data to complete
+
 #### readTaskRowName
 
 `private String readTaskRowName(int row)`
@@ -1499,6 +1618,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 |---|---|
 | _class_ [`BankData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbankdata) | Bank contents: total distinct item count and a flat list of the stacks it holds. |
 | _class_ [`BankTab`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbanktab) | A bank tab: an index (0 for the main tab, 1 to 9 for the numbered tabs) and the items it holds. |
+| _class_ [`BlockedTask`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotblockedtask) | One blocked slayer task slot. |
 | _class_ [`CombatAchievementData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementdata) | Combat-achievement tier progress. |
 | _class_ [`CombatAchievementTask`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementtask) | A single combat-achievement task and whether it is complete. |
 | _class_ [`DiaryRegion`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiaryregion) | Completion of the four achievement-diary tiers for one region, plus the individual tasks where known. |
@@ -1747,6 +1867,60 @@ Tab index: 0 is the main tab, 1 to 9 are the numbered tabs.
 
 - **Parameter** `tabIndex` — the tab index
 - **Parameter** `items` — the items in the tab
+
+---
+
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BlockedTask
+
+_class_
+
+`public static class BlockedTask`
+
+One blocked slayer task slot.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public String` | `master` | Name of the slayer master whose block list holds this task, or null for the legacy shared list. |
+| `public String` | `name` | Task name, or null when it could not be resolved. |
+| `public int` | `taskId` | Slayer task id (same id space as the slayer creature id). |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `BlockedTask(int taskId, String name, String master)` |  |
+
+### Field Detail
+
+#### master
+
+`public String master`
+
+Name of the slayer master whose block list holds this task, or null for the legacy shared list.
+
+#### name
+
+`public String name`
+
+Task name, or null when it could not be resolved.
+
+#### taskId
+
+`public int taskId`
+
+Slayer task id (same id space as the slayer creature id).
+
+### Constructor Detail
+
+#### BlockedTask
+
+`public BlockedTask(int taskId, String name, String master)`
+
+- **Parameter** `taskId` — slayer task id
+- **Parameter** `name` — task name, or null
+- **Parameter** `master` — master name, or null
 
 ---
 
@@ -2597,11 +2771,16 @@ points and streak stay. The creature is exported as its game id plus, when resol
 | Modifier and Type | Field | Description |
 |---|---|---|
 | `public int` | `amount` | Remaining kill count. |
+| `public List<BlockedTask>` | `blockedTasks` | Blocked tasks across all masters, or null in files written before this field existed. |
 | `public String` | `bossName` | Specific boss name for boss tasks, or null for any other task. |
 | `public int` | `creatureId` | Game id of the assigned creature. |
 | `public String` | `creatureName` | Display name of the assigned creature, or null when it could not be resolved. |
+| `public List<String>` | `extendedTasks` | Keys of tasks whose extension is purchased, or null in files written before this field existed. |
+| `public Integer` | `masterId` | Id of the current slayer master, 0 when unknown. |
+| `public String` | `masterName` | Name of the current slayer master, or null when unresolved. |
 | `public int` | `points` | Slayer reward points. |
 | `public int` | `streak` | Current task-completion streak. |
+| `public List<String>` | `unlockedTasks` | Keys of purchased task-assignment unlocks, or null in files written before this field existed. |
 
 ### Constructor Summary
 
@@ -2616,6 +2795,12 @@ points and streak stay. The creature is exported as its game id plus, when resol
 `public int amount`
 
 Remaining kill count.
+
+#### blockedTasks
+
+`public List<BlockedTask> blockedTasks`
+
+Blocked tasks across all masters, or null in files written before this field existed.
 
 #### bossName
 
@@ -2635,6 +2820,24 @@ Game id of the assigned creature.
 
 Display name of the assigned creature, or null when it could not be resolved.
 
+#### extendedTasks
+
+`public List<String> extendedTasks`
+
+Keys of tasks whose extension is purchased, or null in files written before this field existed.
+
+#### masterId
+
+`public Integer masterId`
+
+Id of the current slayer master, 0 when unknown. Null in files written before this field existed.
+
+#### masterName
+
+`public String masterName`
+
+Name of the current slayer master, or null when unresolved.
+
 #### points
 
 `public int points`
@@ -2646,6 +2849,12 @@ Slayer reward points.
 `public int streak`
 
 Current task-completion streak.
+
+#### unlockedTasks
+
+`public List<String> unlockedTasks`
+
+Keys of purchased task-assignment unlocks, or null in files written before this field existed.
 
 ### Constructor Detail
 

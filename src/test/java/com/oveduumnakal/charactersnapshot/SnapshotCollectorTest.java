@@ -16,6 +16,7 @@ import java.util.Map;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankTab;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BlockedTask;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.InventoryItem;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.PlayerInfo;
@@ -556,6 +557,71 @@ public class SnapshotCollectorTest
 		assertEquals(9999, slayer.creatureId);
 		assertNull(slayer.creatureName);
 		assertNull(slayer.bossName);
+	}
+
+	/**
+	 * The slayer master id resolves to a name and per-master blocked slots resolve to task names.
+	 */
+	@Test
+	public void slayerMasterAndBlockedTasksAreExported()
+	{
+		Client client = loggedInClient("Zezima");
+		stubSlayerTask(client, 40, 18, "Trolls");
+		stubSlayerTask(client, 40, 7, "Abyssal demons");
+		when(client.getVarbitValue(VarbitID.SLAYER_MASTER)).thenReturn(8);
+		when(client.getVarbitValue(VarbitID.SLAYER_BLOCKED_KONAR_1)).thenReturn(7);
+		when(client.getVarbitValue(VarbitID.SLAYER_BLOCKED_MORTIMER_2)).thenReturn(18);
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.pollSlayer();
+		SlayerData slayer = collector.buildSnapshot().slayer;
+
+		assertEquals(Integer.valueOf(8), slayer.masterId);
+		assertEquals("Konar", slayer.masterName);
+		assertEquals(2, slayer.blockedTasks.size());
+		assertEquals(new BlockedTask(7, "Abyssal demons", "Konar"), slayer.blockedTasks.get(0));
+		assertEquals(new BlockedTask(18, "Trolls", "Mortimer"), slayer.blockedTasks.get(1));
+	}
+
+	/**
+	 * The legacy shared block list is read only when no per-master slot is filled.
+	 */
+	@Test
+	public void slayerLegacyBlockListIsFallback()
+	{
+		Client client = loggedInClient("Zezima");
+		stubSlayerTask(client, 40, 7, "Abyssal demons");
+		when(client.getVarbitValue(VarbitID.SLAYER_BLOCKED_1_OLD)).thenReturn(7);
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.pollSlayer();
+		SlayerData slayer = collector.buildSnapshot().slayer;
+
+		assertEquals(1, slayer.blockedTasks.size());
+		assertEquals(new BlockedTask(7, "Abyssal demons", null), slayer.blockedTasks.get(0));
+	}
+
+	/**
+	 * An unknown master id gives a null name, and unlock and extend flags list only the purchased entries.
+	 */
+	@Test
+	public void slayerUnknownMasterAndUnlockFlags()
+	{
+		Client client = loggedInClient("Zezima");
+		stubSlayerTask(client, 40, 7, "Abyssal demons");
+		when(client.getVarbitValue(VarbitID.SLAYER_MASTER)).thenReturn(99);
+		when(client.getVarbitValue(VarbitID.SLAYER_UNLOCK_BOSSES)).thenReturn(1);
+		when(client.getVarbitValue(VarbitID.SLAYER_LONGER_ANKOU)).thenReturn(1);
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.pollSlayer();
+		SlayerData slayer = collector.buildSnapshot().slayer;
+
+		assertEquals(Integer.valueOf(99), slayer.masterId);
+		assertNull(slayer.masterName);
+		assertTrue(slayer.blockedTasks.isEmpty());
+		assertEquals(Collections.singletonList("BOSSES"), slayer.unlockedTasks);
+		assertEquals(Collections.singletonList("ANKOU"), slayer.extendedTasks);
 	}
 
 	/**
