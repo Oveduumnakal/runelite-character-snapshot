@@ -19,6 +19,7 @@ import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryTask;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.GeOffer;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.InventoryItem;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry;
@@ -311,7 +312,8 @@ public class SnapshotCollector
 	}
 
 	/**
-	 * Polls achievement-diary completion for every region via named RuneLite varbits.
+	 * Polls achievement-diary completion for every region via named RuneLite varbits, and each mapped
+	 * task via {@link DiaryTasks}.
 	 *
 	 * @return whether any diary completion changed since the last poll
 	 */
@@ -319,40 +321,40 @@ public class SnapshotCollector
 	public boolean pollDiaries()
 	{
 		Map<String, DiaryRegion> map = new LinkedHashMap<>();
-		map.put("ARDOUGNE", diaryRegion(
+		map.put("ARDOUGNE", diaryRegion("ARDOUGNE",
 			Varbits.DIARY_ARDOUGNE_EASY, Varbits.DIARY_ARDOUGNE_MEDIUM,
 			Varbits.DIARY_ARDOUGNE_HARD, Varbits.DIARY_ARDOUGNE_ELITE));
-		map.put("DESERT", diaryRegion(
+		map.put("DESERT", diaryRegion("DESERT",
 			Varbits.DIARY_DESERT_EASY, Varbits.DIARY_DESERT_MEDIUM,
 			Varbits.DIARY_DESERT_HARD, Varbits.DIARY_DESERT_ELITE));
-		map.put("FALADOR", diaryRegion(
+		map.put("FALADOR", diaryRegion("FALADOR",
 			Varbits.DIARY_FALADOR_EASY, Varbits.DIARY_FALADOR_MEDIUM,
 			Varbits.DIARY_FALADOR_HARD, Varbits.DIARY_FALADOR_ELITE));
-		map.put("FREMENNIK", diaryRegion(
+		map.put("FREMENNIK", diaryRegion("FREMENNIK",
 			Varbits.DIARY_FREMENNIK_EASY, Varbits.DIARY_FREMENNIK_MEDIUM,
 			Varbits.DIARY_FREMENNIK_HARD, Varbits.DIARY_FREMENNIK_ELITE));
-		map.put("KANDARIN", diaryRegion(
+		map.put("KANDARIN", diaryRegion("KANDARIN",
 			Varbits.DIARY_KANDARIN_EASY, Varbits.DIARY_KANDARIN_MEDIUM,
 			Varbits.DIARY_KANDARIN_HARD, Varbits.DIARY_KANDARIN_ELITE));
-		map.put("KARAMJA", diaryRegion(
+		map.put("KARAMJA", diaryRegion("KARAMJA",
 			Varbits.DIARY_KARAMJA_EASY, Varbits.DIARY_KARAMJA_MEDIUM,
 			Varbits.DIARY_KARAMJA_HARD, Varbits.DIARY_KARAMJA_ELITE));
-		map.put("KOUREND", diaryRegion(
+		map.put("KOUREND", diaryRegion("KOUREND",
 			Varbits.DIARY_KOUREND_EASY, Varbits.DIARY_KOUREND_MEDIUM,
 			Varbits.DIARY_KOUREND_HARD, Varbits.DIARY_KOUREND_ELITE));
-		map.put("LUMBRIDGE", diaryRegion(
+		map.put("LUMBRIDGE", diaryRegion("LUMBRIDGE",
 			Varbits.DIARY_LUMBRIDGE_EASY, Varbits.DIARY_LUMBRIDGE_MEDIUM,
 			Varbits.DIARY_LUMBRIDGE_HARD, Varbits.DIARY_LUMBRIDGE_ELITE));
-		map.put("MORYTANIA", diaryRegion(
+		map.put("MORYTANIA", diaryRegion("MORYTANIA",
 			Varbits.DIARY_MORYTANIA_EASY, Varbits.DIARY_MORYTANIA_MEDIUM,
 			Varbits.DIARY_MORYTANIA_HARD, Varbits.DIARY_MORYTANIA_ELITE));
-		map.put("VARROCK", diaryRegion(
+		map.put("VARROCK", diaryRegion("VARROCK",
 			Varbits.DIARY_VARROCK_EASY, Varbits.DIARY_VARROCK_MEDIUM,
 			Varbits.DIARY_VARROCK_HARD, Varbits.DIARY_VARROCK_ELITE));
-		map.put("WESTERN", diaryRegion(
+		map.put("WESTERN", diaryRegion("WESTERN",
 			Varbits.DIARY_WESTERN_EASY, Varbits.DIARY_WESTERN_MEDIUM,
 			Varbits.DIARY_WESTERN_HARD, Varbits.DIARY_WESTERN_ELITE));
-		map.put("WILDERNESS", diaryRegion(
+		map.put("WILDERNESS", diaryRegion("WILDERNESS",
 			Varbits.DIARY_WILDERNESS_EASY, Varbits.DIARY_WILDERNESS_MEDIUM,
 			Varbits.DIARY_WILDERNESS_HARD, Varbits.DIARY_WILDERNESS_ELITE));
 
@@ -578,13 +580,24 @@ public class SnapshotCollector
 	 * @param elite  the elite-tier varbit id
 	 * @return the region's completion state
 	 */
-	private DiaryRegion diaryRegion(int easy, int medium, int hard, int elite)
+	private DiaryRegion diaryRegion(String region, int easy, int medium, int hard, int elite)
 	{
+		Map<String, List<DiaryTask>> tasks = new LinkedHashMap<>();
+		for (Map.Entry<String, List<DiaryTasks.Task>> tier : DiaryTasks.tasks(region).entrySet())
+		{
+			List<DiaryTask> list = new ArrayList<>();
+			for (DiaryTasks.Task task : tier.getValue())
+				list.add(new DiaryTask(task.name, task.isComplete(client)));
+
+			tasks.put(tier.getKey(), list);
+		}
+
 		return new DiaryRegion(
 			client.getVarbitValue(easy) == 1,
 			client.getVarbitValue(medium) == 1,
 			client.getVarbitValue(hard) == 1,
-			client.getVarbitValue(elite) == 1);
+			client.getVarbitValue(elite) == 1,
+			tasks.isEmpty() ? null : tasks);
 	}
 
 	/**

@@ -304,7 +304,7 @@ public class CharacterSnapshot
 	}
 
 	/**
-	 * Completion of the four achievement-diary tiers for one region.
+	 * Completion of the four achievement-diary tiers for one region, plus the individual tasks where known.
 	 */
 	@EqualsAndHashCode
 	public static class DiaryRegion
@@ -322,6 +322,13 @@ public class CharacterSnapshot
 		public boolean elite;
 
 		/**
+		 * Individual task completion keyed by tier ({@code easy}, {@code medium}, {@code hard},
+		 * {@code elite}). Absent when no task of the region is mapped; a tier is absent when none of
+		 * its tasks are mapped.
+		 */
+		public Map<String, List<DiaryTask>> tasks;
+
+		/**
 		 * @param easy   easy complete
 		 * @param medium medium complete
 		 * @param hard   hard complete
@@ -329,10 +336,47 @@ public class CharacterSnapshot
 		 */
 		public DiaryRegion(boolean easy, boolean medium, boolean hard, boolean elite)
 		{
+			this(easy, medium, hard, elite, null);
+		}
+
+		/**
+		 * @param easy   easy complete
+		 * @param medium medium complete
+		 * @param hard   hard complete
+		 * @param elite  elite complete
+		 * @param tasks  per-tier task completion, or {@code null} when none is mapped
+		 */
+		public DiaryRegion(boolean easy, boolean medium, boolean hard, boolean elite,
+			Map<String, List<DiaryTask>> tasks)
+		{
 			this.easy = easy;
 			this.medium = medium;
 			this.hard = hard;
 			this.elite = elite;
+			this.tasks = tasks;
+		}
+	}
+
+	/**
+	 * One achievement-diary task and whether it is complete.
+	 */
+	@EqualsAndHashCode
+	public static class DiaryTask
+	{
+		/** Task text. */
+		public String name;
+
+		/** Whether the task is complete. */
+		public boolean completed;
+
+		/**
+		 * @param name      task text
+		 * @param completed whether the task is complete
+		 */
+		public DiaryTask(String name, boolean completed)
+		{
+			this.name = name;
+			this.completed = completed;
 		}
 	}
 

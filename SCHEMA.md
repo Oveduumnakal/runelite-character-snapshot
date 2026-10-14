@@ -88,7 +88,14 @@ time.
   `FINISHED`.
 - `achievementDiaries` maps a region (`ARDOUGNE`, `DESERT`, `FALADOR`, `FREMENNIK`, `KANDARIN`,
   `KARAMJA`, `KOUREND`, `LUMBRIDGE`, `MORYTANIA`, `VARROCK`, `WESTERN`, `WILDERNESS`) to
-  `{ easy, medium, hard, elite }` booleans.
+  `{ easy, medium, hard, elite, tasks }`. `easy`/`medium`/`hard`/`elite` are the tier-complete booleans.
+- `tasks` (additive, optional) lists the individual diary tasks and whether each is done:
+  `{ easy: [{ name, completed }], medium: [...], hard: [...], elite: [...] }`. `completed` is a boolean;
+  `name` is the task text. All 492 tasks of the twelve diaries are listed. Order within a tier follows the
+  game's storage order, not the in-game journal order. Task names are short labels and may be reworded
+  between releases; do not key on them across versions. A tier or the whole `tasks` field is absent for
+  a region with no mapped task. Task state comes from client varps and varbits and is as current as the
+  last poll; a tier's boolean may lag the tasks until the in-game reward is claimed.
 
 ## combatAchievements
 
