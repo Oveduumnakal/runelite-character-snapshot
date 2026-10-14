@@ -29,6 +29,7 @@ missing sections as "not exported", not "empty".
 | `slayer` | object | Current task, or absent when none is assigned. |
 | `location` | object | Region and world coordinates. |
 | `grandExchange` | array | Active GE offers, by slot. |
+| `timers` | object | Farming patch and birdhouse timers. |
 
 ## player
 
@@ -142,6 +143,50 @@ Present only when a task is assigned:
 Array of `{ slot, itemId, name, state, quantitySold, totalQuantity, price, spent }`. `state` is one
 of `EMPTY`, `BUYING`, `BOUGHT`, `SELLING`, `SOLD`, `CANCELLED_BUY`, `CANCELLED_SELL` (empty slots
 are not exported).
+
+## timers
+
+`{ farming: [...], birdhouses: [...] }`. **Only as fresh as the player's last visit.** The game sends a
+patch's state only while the player is near it, so the plugin cannot see a patch it has not been near. The
+data is RuneLite's built-in Time Tracking plugin's: it records each patch (and birdhouse space) when you
+walk past, and this plugin decodes that record read-only through `ConfigManager` (group `timetracking`,
+keys `<regionId>.<varbit>` and `birdhouse.<varp>`, values `<value>:<unixSeconds>`) and projects the growth
+forward to now with the same tick maths. Consequences a consumer must respect:
+
+- If Time Tracking is disabled, or has never seen a patch, that patch is simply absent (no data), and a
+  disabled plugin stops updating the rest. When nothing is known `timers` is omitted.
+- Every entry carries `lastChecked`, the instant its state was last recorded. A crop planted, harvested or
+  killed by disease after that is not reflected until the player is next near the patch.
+- Harvestable is a prediction for a growing crop: `state` becomes `HARVESTABLE` once `readyAt` has passed,
+  even though the game has not shown it yet. Disease can still strike a crop between visits.
+
+`farming[]` entries (one per patch with stored data, including compost bins, in a fixed table order):
+
+| Field | Type | Notes |
+|---|---|---|
+| `patch` | string | e.g. `Catherby herb`, `Ardougne allotment (North)`. |
+| `region` | string | e.g. `Catherby`. |
+| `type` | string | `herb`, `allotment`, `flower`, `bush`, `fruit tree`, `tree`, `hardwood tree`, `hops`, `cactus`, `compost`, ... |
+| `crop` | string | e.g. `Ranarr`; `Weeds` for an empty or overgrown patch. |
+| `state` | string | `GROWING`, `HARVESTABLE`, `DISEASED`, `DEAD`, `EMPTY`, `FILLING` (compost bin filling). Weeds read `EMPTY`. |
+| `stage` / `stages` | int | Projected growth stage and the stage count of the current phase. |
+| `readyAt` | string or absent | ISO-8601 instant the crop finishes (or finished) growing; present only for a growing crop. |
+| `lastChecked` | string | ISO-8601 instant the state was last recorded. |
+
+`birdhouses[]` entries (one per space with stored data):
+
+| Field | Type | Notes |
+|---|---|---|
+| `space` | string | `Mushroom Meadow (North)`, `Mushroom Meadow (South)`, `Verdant Valley (Northeast)`, `Verdant Valley (Southwest)`. |
+| `house` | string or absent | Birdhouse type, e.g. `Oak Bird House`; absent when the space is empty. |
+| `state` | string | `EMPTY`, `BUILT` (built, not seeded), `SEEDED`, `READY` (seeded and 50 minutes elapsed), `UNKNOWN`. |
+| `readyAt` | string or absent | ISO-8601 instant a seeded birdhouse finishes (50 minutes after it was recorded seeded). |
+| `lastChecked` | string | ISO-8601 instant the state was last recorded. |
+
+Decoding tables (patch list, varbit value to crop/state/stage, growth timings) are copied from the Time
+Tracking plugin as of RuneLite 1.13.1 (BSD 2-Clause, headers in `FarmingData.java`); a RuneLite update that
+adds crops or patches leaves those patches out of `farming` until the tables are refreshed. The tables were
+verified identical to the 1.13.1 client's own (patches, crop timings, and every varbit value 0 to 1023).
 
 ## Versioning
 

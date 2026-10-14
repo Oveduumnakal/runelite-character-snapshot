@@ -251,4 +251,20 @@ public interface CharacterSnapshotConfig extends Config
 	{
 		return true;
 	}
+
+	/**
+	 * @return whether to include farming patch and birdhouse timers
+	 */
+	@ConfigItem(
+		keyName = "syncTimers",
+		name = "Farming and birdhouse timers",
+		description = "Include farming patch and birdhouse timers read from the Time Tracking plugin's data "
+			+ "(only as fresh as your last visit to each patch)",
+		section = dataSection,
+		position = 14
+	)
+	default boolean syncTimers()
+	{
+		return true;
+	}
 }

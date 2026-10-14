@@ -55,6 +55,9 @@ public class CharacterSnapshotPlugin extends Plugin
 	private CharacterSnapshotConfig config;
 
 	@Inject
+	private ConfigManager configManager;
+
+	@Inject
 	private ScheduledExecutorService executor;
 
 	@Inject
@@ -80,7 +83,7 @@ public class CharacterSnapshotPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
-		collector = new SnapshotCollector(client, config);
+		collector = new SnapshotCollector(client, config, configManager);
 		writer = new SnapshotWriter(gson);
 		recalcSyncThreshold();
 	}
@@ -271,6 +274,9 @@ public class CharacterSnapshotPlugin extends Plugin
 		if (config.syncSlayer())
 			changed |= collector.pollSlayer();
 
+		if (config.syncTimers())
+			changed |= collector.pollTimers();
+
 		if (changed)
 			dirty = true;
 	}
@@ -318,6 +324,9 @@ public class CharacterSnapshotPlugin extends Plugin
 
 		if (config.syncGrandExchange())
 			collector.pollAllGeOffers();
+
+		if (config.syncTimers())
+			collector.pollTimers();
 	}
 
 	/**
