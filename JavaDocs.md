@@ -898,6 +898,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
 | `public boolean` | `pollSlayer()` | Polls the current slayer task, clearing it when no task is assigned. |
 | `private String` | `readTaskRowName(int row)` | Reads the display name column of one slayer task table row. |
+| `private void` | `refreshOverall()` | Recomputes the `OVERALL` entry from the cached skills. |
 | `public void` | `reset()` | Clears every cache. |
 | `private String` | `resolveBossName(int bossId)` | Resolves a boss-task boss id to the boss name via the slayer task sublist table. |
 | `private String` | `resolveTaskName(int taskId)` | Resolves a slayer task id to its display name from the cache's slayer task table. |
@@ -1234,6 +1235,13 @@ Reads the display name column of one slayer task table row.
 
 - **Parameter** `row` — the slayer task table row id
 - **Returns:** the name, or null when absent
+
+#### refreshOverall
+
+`private void refreshOverall()`
+
+Recomputes the `OVERALL` entry from the cached skills. Does nothing until every real skill is
+cached, so a partial total is never exported.
 
 #### reset
 
