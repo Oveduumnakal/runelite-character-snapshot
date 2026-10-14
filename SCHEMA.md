@@ -22,6 +22,7 @@ missing sections as "not exported", not "empty".
 | `bank` | object | Flat bank contents; captured when the bank is opened, carried over from the previous session until then. |
 | `inventory` | array | One entry per slot; empty slots have `itemId` -1. |
 | `equipment` | object | Map of slot name → item entry. |
+| `storages` | object | Last known looting bag, seed vault and group storage contents. See below. |
 | `quests` | array | One entry per quest. |
 | `questPoints` | int | Total quest points. |
 | `achievementDiaries` | object | Map of region name → tier completion. |
@@ -71,13 +72,20 @@ An **item entry** is `{ itemId, name, quantity }`; `name` is null for an unresol
 - `equipment`: map of slot name (`HEAD`, `CAPE`, `AMULET`, `WEAPON`, `BODY`, `SHIELD`, `LEGS`,
   `GLOVES`, `BOOTS`, `RING`, `AMMO`) → item entry; empty slots are omitted.
 
+- `storages` (additive, optional): `{ lootingBag: [...], seedVault: [...], groupStorage: [...] }`, each an
+  array of item entries (empty slots omitted). A storage appears only once it has been captured: the client
+  exposes these containers only when the player opens them, so each key is the last known copy and is
+  carried over between sessions like the bank. A storage never opened is absent; one opened while empty is `[]`.
+  The whole field is absent when none has been captured. Capture times are in `sectionUpdated` as
+  `storages.lootingBag`, `storages.seedVault` and `storages.groupStorage`.
+
 ### Carried-over sections and `sectionUpdated`
 
 On login the plugin reloads the character's own previous file and keeps its `bank`, `inventory`, and
 `equipment` until each is captured again. Inventory and equipment are re-captured almost at once; the
 bank is re-captured only when the player opens it. So the bank in a file can be from an earlier session.
 
-`sectionUpdated` maps each present item section (`bank`, `inventory`, `equipment`) to the ISO-8601
+`sectionUpdated` maps each present item section (`bank`, `inventory`, `equipment`, and `storages.<name>`) to the ISO-8601
 instant it was last captured from the client. A value earlier than `lastUpdated` means that section was
 carried over. A consumer can show it as, e.g., "bank as of 2 days ago". The field is additive: files
 written before it existed simply lack it, and a section missing from the map has an unknown capture

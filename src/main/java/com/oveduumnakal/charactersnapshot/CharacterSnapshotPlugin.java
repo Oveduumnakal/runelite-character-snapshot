@@ -190,6 +190,11 @@ public class CharacterSnapshotPlugin extends Plugin
 			collector.updateEquipment(event.getItemContainer());
 			dirty = true;
 		}
+		else if (SnapshotCollector.storageKey(id) != null && config.syncStorages())
+		{
+			collector.updateStorage(SnapshotCollector.storageKey(id), event.getItemContainer());
+			dirty = true;
+		}
 	}
 
 	/**
@@ -302,6 +307,16 @@ public class CharacterSnapshotPlugin extends Plugin
 			ItemContainer equip = client.getItemContainer(InventoryID.WORN);
 			if (equip != null)
 				collector.updateEquipment(equip);
+		}
+
+		if (config.syncStorages())
+		{
+			for (int containerId : SnapshotCollector.storageContainerIds())
+			{
+				ItemContainer storage = client.getItemContainer(containerId);
+				if (storage != null)
+					collector.updateStorage(SnapshotCollector.storageKey(containerId), storage);
+			}
 		}
 
 		if (config.syncQuests())

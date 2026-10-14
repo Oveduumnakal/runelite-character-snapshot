@@ -53,6 +53,12 @@ public class CharacterSnapshot
 	/** Worn equipment keyed by slot name. */
 	public Map<String, ItemEntry> equipment;
 
+	/**
+	 * Last known contents of storage containers that are only readable when opened, keyed by storage
+	 * ({@code lootingBag}, {@code seedVault}, {@code groupStorage}); a storage never opened is absent.
+	 */
+	public Map<String, List<ItemEntry>> storages;
+
 	/** Quest completion state, one entry per quest. */
 	public List<QuestEntry> quests;
 
