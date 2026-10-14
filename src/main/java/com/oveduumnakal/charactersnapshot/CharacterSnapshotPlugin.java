@@ -278,6 +278,9 @@ public class CharacterSnapshotPlugin extends Plugin
 			return;
 		}
 
+		if (collector.pollMovement())
+			dirty = true;
+
 		if (tickCounter % POLL_INTERVAL_TICKS == 0)
 			pollPeriodic();
 
