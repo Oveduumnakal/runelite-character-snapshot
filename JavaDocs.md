@@ -7,6 +7,7 @@
 
 - [com.oveduumnakal.charactersnapshot.CharacterSnapshotConfig](#comoveduumnakalcharactersnapshotcharactersnapshotconfig)
 - [com.oveduumnakal.charactersnapshot.CharacterSnapshotPlugin](#comoveduumnakalcharactersnapshotcharactersnapshotplugin)
+- [com.oveduumnakal.charactersnapshot.ClueChat](#comoveduumnakalcharactersnapshotcluechat)
 - [com.oveduumnakal.charactersnapshot.DiaryTasks](#comoveduumnakalcharactersnapshotdiarytasks)
 - [com.oveduumnakal.charactersnapshot.DiaryTasks.Task](#comoveduumnakalcharactersnapshotdiarytaskstask)
 - [com.oveduumnakal.charactersnapshot.SnapshotCollector](#comoveduumnakalcharactersnapshotsnapshotcollector)
@@ -54,6 +55,7 @@ for each category of data written to the export file.
 | `default String` | `saveDirectory()` |  |
 | `default boolean` | `syncAccountInfo()` |  |
 | `default boolean` | `syncBank()` |  |
+| `default boolean` | `syncClueCounts()` |  |
 | `default boolean` | `syncCombatAchievements()` |  |
 | `default boolean` | `syncDiaries()` |  |
 | `default boolean` | `syncEquipment()` |  |
@@ -106,6 +108,12 @@ Storage section: where and how often data is written.
 `default boolean syncBank()`
 
 - **Returns:** whether to include bank contents (captured when the bank is opened)
+
+#### syncClueCounts
+
+`default boolean syncClueCounts()`
+
+- **Returns:** whether to include completed clue scroll counts
 
 #### syncCombatAchievements
 
@@ -209,6 +217,7 @@ makes no network calls of any kind.
 |---|---|---|
 | `private void` | `doFullCollection()` | Runs a one-off full collection of every enabled data source after login. |
 | `private void` | `doSave()` | Builds a snapshot on the client thread and writes it off-thread. |
+| `public void` | `onChatMessage(ChatMessage event)` | Reads treasure-trail completion lines from game messages. |
 | `public void` | `onConfigChanged(ConfigChanged event)` | Recomputes the save interval when this plugin's configuration changes. |
 | `public void` | `onGameStateChanged(GameStateChanged event)` | Schedules the initial collection on login and clears state on logout or world hop so one character's data cannot leak into another's file. |
 | `public void` | `onGameTick(GameTick event)` | Drives the initial collection, periodic polling, and interval-gated saves. |
@@ -290,6 +299,14 @@ Runs a one-off full collection of every enabled data source after login.
 
 Builds a snapshot on the client thread and writes it off-thread. Clears the dirty flag
 optimistically and re-sets it if the write fails, so a failed write is retried.
+
+#### onChatMessage
+
+`public void onChatMessage(ChatMessage event)`
+
+Reads treasure-trail completion lines from game messages.
+
+- **Parameter** `event` — the chat-message event
 
 #### onConfigChanged
 
@@ -382,6 +399,73 @@ Writes a final snapshot when still logged in, then releases resources.
 `protected void startUp()`
 
 Initializes the collector and writer and computes the save interval.
+
+---
+
+## com.oveduumnakal.charactersnapshot.ClueChat
+
+_class_
+
+`final class ClueChat`
+
+Parses the treasure-trail completion chat line. None of RuneLite's built-in plugins keeps a clue
+completion count (Chat Commands asks the hiscores over the network), so the chat line is the only
+offline source.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private static final Pattern` | `PATTERN` |  |
+| `private static final Pattern` | `TAGS` |  |
+| `static final List<String>` | `TIERS` | Clue tiers in export order. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `ClueChat()` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `static Map.Entry<String,Integer>` | `parse(String message)` | Parses a line such as `You have completed 12 medium Treasure Trails.` Colour tags are stripped first. |
+
+### Field Detail
+
+#### PATTERN
+
+`private static final Pattern PATTERN`
+
+#### TAGS
+
+`private static final Pattern TAGS`
+
+#### TIERS
+
+`static final List<String> TIERS`
+
+Clue tiers in export order.
+
+### Constructor Detail
+
+#### ClueChat
+
+`private ClueChat()`
+
+### Method Detail
+
+#### parse
+
+`static Map.Entry<String,Integer> parse(String message)`
+
+Parses a line such as `You have completed 12 medium Treasure Trails.` Colour tags are stripped
+first.
+
+- **Parameter** `message` — the raw chat message
+- **Returns:** the lower-case tier and the number of trails completed, or `null` when the line is not a
+        completion line for a known tier
 
 ---
 
@@ -854,6 +938,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private Instant` | `bankUpdated` |  |
 | `private Map<Integer,CombatAchievementTask>` | `caTaskMeta` | Cached task metadata by task id (completed flag unset); empty until resolved from the cache. |
 | `private final Client` | `client` |  |
+| `private final Map<String,Integer>` | `clueCounts` |  |
 | `private CombatAchievementData` | `combatAchievements` |  |
 | `private final CharacterSnapshotConfig` | `config` |  |
 | `private Map<String,DiaryRegion>` | `diaries` |  |
@@ -890,6 +975,8 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private List<ItemEntry>` | `filterBankSlice(Item[] raw, int start, int end)` | Converts a slice of raw bank slots to item entries, dropping empty slots and placeholders. |
 | `private String` | `getItemName(int itemId)` | Resolves an item id to its display name. |
 | `private Map<Integer,CombatAchievementTask>` | `loadCombatAchievementMeta()` | Reads task names, tiers, and monsters from the game cache: each tier enum lists task structs, and each struct carries the task id, name, and monster category as params. |
+| `public boolean` | `onClueMessage(String message)` | Reads a treasure-trail completion line from chat. |
+| `private Map<String,Integer>` | `orderedClueCounts()` | Copies the known clue counts in tier order, beginner first. |
 | `private static Instant` | `parseInstant(String value)` | Parses an ISO-8601 instant, tolerating a missing or malformed value. |
 | `public void` | `pollAllGeOffers()` | Rebuilds the Grand Exchange cache from the client's current offer array. |
 | `public void` | `pollAllSkills()` | Reads every skill from the client, plus a computed `OVERALL` total. |
@@ -995,6 +1082,10 @@ Cached task metadata by task id (completed flag unset); empty until resolved fro
 #### client
 
 `private final Client client`
+
+#### clueCounts
+
+`private final Map<String,Integer> clueCounts`
 
 #### combatAchievements
 
@@ -1171,6 +1262,24 @@ Reads task names, tiers, and monsters from the game cache: each tier enum lists 
 and each struct carries the task id, name, and monster category as params.
 
 - **Returns:** the metadata by task id, or empty if the cache is not readable yet
+
+#### onClueMessage
+
+`public boolean onClueMessage(String message)`
+
+Reads a treasure-trail completion line from chat. The game prints the new running total, so a parsed
+value replaces the cached one.
+
+- **Parameter** `message` — the raw chat message
+- **Returns:** whether the cached clue counts changed
+
+#### orderedClueCounts
+
+`private Map<String,Integer> orderedClueCounts()`
+
+Copies the known clue counts in tier order, beginner first.
+
+- **Returns:** tier name to completed count, only for tiers seen
 
 #### parseInstant
 
@@ -1478,6 +1587,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 |---|---|---|
 | `public Map<String,DiaryRegion>` | `achievementDiaries` | Achievement diary completion keyed by region name. |
 | `public BankData` | `bank` | Bank contents as a flat item list, captured when the bank is opened and carried over from the previous session until then. |
+| `public Map<String,Integer>` | `clueCounts` | Completed treasure trails per tier (`beginner` to `master`), in tier order. |
 | `public CombatAchievementData` | `combatAchievements` | Combat-achievement tier progress. |
 | `public Map<String,ItemEntry>` | `equipment` | Worn equipment keyed by slot name. |
 | `public List<GeOffer>` | `grandExchange` | Active Grand Exchange offers by slot. |
@@ -1507,6 +1617,13 @@ Achievement diary completion keyed by region name.
 
 Bank contents as a flat item list, captured when the bank is opened and carried over from the
 previous session until then.
+
+#### clueCounts
+
+`public Map<String,Integer> clueCounts`
+
+Completed treasure trails per tier (`beginner` to `master`), in tier order. Only tiers whose
+count has been seen are present. Absent when the toggle is off or no tier is known yet.
 
 #### combatAchievements
 

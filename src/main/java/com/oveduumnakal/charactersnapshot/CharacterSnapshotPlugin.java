@@ -14,10 +14,12 @@ import com.google.inject.Provides;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot;
 import lombok.extern.slf4j.Slf4j;
 
+import net.runelite.api.ChatMessageType;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.Player;
+import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.GrandExchangeOfferChanged;
@@ -190,6 +192,21 @@ public class CharacterSnapshotPlugin extends Plugin
 			collector.updateEquipment(event.getItemContainer());
 			dirty = true;
 		}
+	}
+
+	/**
+	 * Reads treasure-trail completion lines from game messages.
+	 *
+	 * @param event the chat-message event
+	 */
+	@Subscribe
+	public void onChatMessage(ChatMessage event)
+	{
+		if (collector == null || !config.syncClueCounts() || event.getType() != ChatMessageType.GAMEMESSAGE)
+			return;
+
+		if (collector.onClueMessage(event.getMessage()))
+			dirty = true;
 	}
 
 	/**

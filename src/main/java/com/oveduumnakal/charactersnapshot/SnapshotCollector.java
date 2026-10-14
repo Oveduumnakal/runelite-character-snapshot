@@ -116,6 +116,8 @@ public class SnapshotCollector
 
 	private final CharacterSnapshotConfig config;
 
+	private final Map<String, Integer> clueCounts = new HashMap<>();
+
 	private final Map<String, SkillEntry> skills = new LinkedHashMap<>();
 
 	private final Map<Integer, GeOffer> geOffers = new TreeMap<>();
@@ -184,6 +186,7 @@ public class SnapshotCollector
 		diaries = null;
 		combatAchievements = null;
 		slayer = null;
+		clueCounts.clear();
 	}
 
 	/**
@@ -390,12 +393,38 @@ public class SnapshotCollector
 			inventoryUpdated = inventoryTime;
 		}
 
+		if (previous.clueCounts != null)
+		{
+			for (Map.Entry<String, Integer> entry : previous.clueCounts.entrySet())
+			{
+				if (ClueChat.TIERS.contains(entry.getKey()) && entry.getValue() != null)
+					clueCounts.merge(entry.getKey(), entry.getValue(), Math::max);
+			}
+		}
+
 		Instant equipmentTime = sectionTime(times, "equipment", fallback);
 		if (equipmentUpdated == null && equipmentTime != null && previous.equipment != null)
 		{
 			equipment = new LinkedHashMap<>(previous.equipment);
 			equipmentUpdated = equipmentTime;
 		}
+	}
+
+	/**
+	 * Reads a treasure-trail completion line from chat. The game prints the new running total, so a parsed
+	 * value replaces the cached one.
+	 *
+	 * @param message the raw chat message
+	 * @return whether the cached clue counts changed
+	 */
+	public boolean onClueMessage(String message)
+	{
+		Map.Entry<String, Integer> parsed = ClueChat.parse(message);
+		if (parsed == null)
+			return false;
+
+		Integer previous = clueCounts.put(parsed.getKey(), parsed.getValue());
+		return !parsed.getValue().equals(previous);
 	}
 
 	/**
@@ -759,6 +788,9 @@ public class SnapshotCollector
 
 		data.sectionUpdated = buildSectionUpdated(data);
 
+		if (config.syncClueCounts() && !clueCounts.isEmpty())
+			data.clueCounts = orderedClueCounts();
+
 		if (config.syncQuests() && quests != null)
 		{
 			data.quests = new ArrayList<>(quests);
@@ -781,6 +813,23 @@ public class SnapshotCollector
 			data.grandExchange = new ArrayList<>(geOffers.values());
 
 		return data;
+	}
+
+	/**
+	 * Copies the known clue counts in tier order, beginner first.
+	 *
+	 * @return tier name to completed count, only for tiers seen
+	 */
+	private Map<String, Integer> orderedClueCounts()
+	{
+		Map<String, Integer> ordered = new LinkedHashMap<>();
+		for (String tier : ClueChat.TIERS)
+		{
+			if (clueCounts.containsKey(tier))
+				ordered.put(tier, clueCounts.get(tier));
+		}
+
+		return ordered;
 	}
 
 	/**

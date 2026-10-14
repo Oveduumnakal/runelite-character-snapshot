@@ -29,6 +29,7 @@ missing sections as "not exported", not "empty".
 | `slayer` | object | Current task, or absent when none is assigned. |
 | `location` | object | Region and world coordinates. |
 | `grandExchange` | array | Active GE offers, by slot. |
+| `clueCounts` | object | Completed treasure trails per tier. |
 
 ## player
 
@@ -142,6 +143,19 @@ Present only when a task is assigned:
 Array of `{ slot, itemId, name, state, quantitySold, totalQuantity, price, spent }`. `state` is one
 of `EMPTY`, `BUYING`, `BOUGHT`, `SELLING`, `SOLD`, `CANCELLED_BUY`, `CANCELLED_SELL` (empty slots
 are not exported).
+
+## clueCounts
+
+`{ beginner, easy, medium, hard, elite, master }` — integers, completed treasure trails per tier, in that
+order. Only tiers whose count is known are present; a tier absent from the object means "not seen yet", never
+zero. The section is omitted when no tier is known, and when the "Clue scroll counts" toggle is off.
+
+RuneLite's built-in plugins keep no clue completion count offline (Chat Commands queries the hiscores), so
+the plugin reads the game's own line "You have completed N <tier> Treasure Trails." when a clue is handed
+in. That line carries the new running total and replaces the cached value. Counts are carried over from the
+previous export of the same character on login (the larger value wins), so a tier first appears after its
+next completion on an account that has never been exported; clues completed before the plugin first ran stay
+unknown until then.
 
 ## Versioning
 
