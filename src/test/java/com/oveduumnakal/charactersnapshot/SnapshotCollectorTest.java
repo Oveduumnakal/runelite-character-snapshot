@@ -18,6 +18,7 @@ import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.InventoryItem;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.PlayerInfo;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SlayerData;
 import org.junit.Test;
 
 import net.runelite.api.Client;
@@ -27,10 +28,15 @@ import net.runelite.api.ItemComposition;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.Player;
 import net.runelite.api.WorldType;
+import net.runelite.api.gameval.DBTableID;
+import net.runelite.api.gameval.VarPlayerID;
+import net.runelite.api.gameval.VarbitID;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -295,6 +301,90 @@ public class SnapshotCollectorTest
 		when(client.getLocalPlayer()).thenReturn(player);
 		when(client.getWorldType()).thenReturn(EnumSet.noneOf(WorldType.class));
 		return client;
+	}
+
+	/**
+	 * A regular slayer task resolves its creature name from the slayer task table.
+	 */
+	@Test
+	public void slayerTaskNameIsResolved()
+	{
+		Client client = loggedInClient("Zezima");
+		stubSlayerTask(client, 40, 7, "Abyssal demons");
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		assertTrue(collector.pollSlayer());
+		SlayerData slayer = collector.buildSnapshot().slayer;
+
+		assertNotNull(slayer);
+		assertEquals(7, slayer.creatureId);
+		assertEquals("Abyssal demons", slayer.creatureName);
+		assertNull(slayer.bossName);
+		assertEquals(40, slayer.amount);
+	}
+
+	/**
+	 * A boss task resolves both the generic task name and the specific boss.
+	 */
+	@Test
+	public void slayerBossTaskResolvesBossName()
+	{
+		Client client = loggedInClient("Zezima");
+		stubSlayerTask(client, 3, 98, "Bosses");
+		when(client.getVarbitValue(VarbitID.SLAYER_TARGET_BOSSID)).thenReturn(12);
+		when(client.getDBRowsByValue(DBTableID.SlayerTaskSublist.ID, DBTableID.SlayerTaskSublist.COL_TASK_SUBTABLE_ID,
+			0, 12)).thenReturn(Collections.singletonList(500));
+		when(client.getDBTableField(500, DBTableID.SlayerTaskSublist.COL_TASK, 0)).thenReturn(new Object[] {901});
+		when(client.getDBTableField(901, DBTableID.SlayerTask.COL_NAME_UPPERCASE, 0))
+			.thenReturn(new Object[] {"Vorkath"});
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.pollSlayer();
+		SlayerData slayer = collector.buildSnapshot().slayer;
+
+		assertEquals(98, slayer.creatureId);
+		assertEquals("Bosses", slayer.creatureName);
+		assertEquals("Vorkath", slayer.bossName);
+	}
+
+	/**
+	 * An id missing from the slayer task table exports a null name, never a guess.
+	 */
+	@Test
+	public void slayerUnresolvableIdGivesNullName()
+	{
+		Client client = loggedInClient("Zezima");
+		when(client.getVarpValue(VarPlayerID.SLAYER_COUNT)).thenReturn(10);
+		when(client.getVarpValue(VarPlayerID.SLAYER_TARGET)).thenReturn(9999);
+		when(client.getDBRowsByValue(eq(DBTableID.SlayerTask.ID), eq(DBTableID.SlayerTask.COL_ID), eq(0), eq(9999)))
+			.thenReturn(Collections.emptyList());
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.pollSlayer();
+		SlayerData slayer = collector.buildSnapshot().slayer;
+
+		assertEquals(9999, slayer.creatureId);
+		assertNull(slayer.creatureName);
+		assertNull(slayer.bossName);
+	}
+
+	/**
+	 * Stubs a slayer task and its name row on a mock client.
+	 *
+	 * @param client the mock client
+	 * @param amount the remaining kill count
+	 * @param taskId the slayer task id
+	 * @param name   the task name stored in the table
+	 */
+	private static void stubSlayerTask(Client client, int amount, int taskId, String name)
+	{
+		int row = 800 + taskId;
+		when(client.getVarpValue(VarPlayerID.SLAYER_COUNT)).thenReturn(amount);
+		when(client.getVarpValue(VarPlayerID.SLAYER_TARGET)).thenReturn(taskId);
+		when(client.getDBRowsByValue(DBTableID.SlayerTask.ID, DBTableID.SlayerTask.COL_ID, 0, taskId))
+			.thenReturn(Collections.singletonList(row));
+		when(client.getDBTableField(row, DBTableID.SlayerTask.COL_NAME_UPPERCASE, 0))
+			.thenReturn(new Object[] {name});
 	}
 
 	/**
