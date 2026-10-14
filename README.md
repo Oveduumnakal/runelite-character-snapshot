@@ -57,6 +57,9 @@ assistant. The plugin makes **no network calls of any kind** — nothing leaves 
 - **Minigame points.** Nightmare Zone, Tithe Farm, Giants' Foundry, Mastering Mixology, Tempoross,
   Soul Wars, Vale Totems, PvP Arena and museum kudos balances.
 
+- **Transport unlocks.** Fairy ring access and the codes in your travel log, and which quetzal landing
+  sites you can fly to.
+
 ### Yours to tune
 
 - **Toggle every category** so you export only what you want.

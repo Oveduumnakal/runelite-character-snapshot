@@ -376,6 +376,9 @@ public class CharacterSnapshotPlugin extends Plugin
 		if (config.syncTimers())
 			changed |= collector.pollTimers();
 
+		if (config.syncTransport())
+			changed |= collector.pollTransport();
+
 		if (config.syncStorages())
 			changed |= collector.pollSkillingStorages();
 
@@ -458,6 +461,9 @@ public class CharacterSnapshotPlugin extends Plugin
 
 		if (config.syncTimers())
 			collector.pollTimers();
+
+		if (config.syncTransport())
+			collector.pollTransport();
 
 		if (config.syncStorages())
 			collector.pollSkillingStorages();
