@@ -81,6 +81,9 @@ public class CharacterSnapshot
 	/** Active Grand Exchange offers by slot. */
 	public List<GeOffer> grandExchange;
 
+	/** Collection log contents captured while the log was open, carried over between sessions. */
+	public CollectionLogData collectionLog;
+
 	/**
 	 * Identity and account context of the logged-in character.
 	 */
@@ -248,6 +251,103 @@ public class CharacterSnapshot
 		{
 			super(itemId, name, quantity);
 			this.slot = slot;
+		}
+	}
+
+	/**
+	 * Collection log: the account-wide obtained and total counts, the flat list of obtained items, and
+	 * the obtained items grouped by the log page they were seen on.
+	 */
+	public static class CollectionLogData
+	{
+		/** Obtained-item count shown by the game; 0 when it was not readable. */
+		public int obtained;
+
+		/** Total collectable-item count shown by the game; 0 when it was not readable. */
+		public int total;
+
+		/** Every obtained item seen so far, one entry per item id. */
+		public List<ItemEntry> items;
+
+		/** Per-page captures keyed by page title; only pages the player has opened are present. */
+		public Map<String, CollectionLogPage> pages;
+
+		/**
+		 * @param obtained obtained-item count
+		 * @param total    total item count
+		 * @param items    obtained items
+		 * @param pages    captured pages by title
+		 */
+		public CollectionLogData(int obtained, int total, List<ItemEntry> items,
+			Map<String, CollectionLogPage> pages)
+		{
+			this.obtained = obtained;
+			this.total = total;
+			this.items = items;
+			this.pages = pages;
+		}
+	}
+
+	/**
+	 * One collection log page as last seen: how many of its slots there are and which are obtained.
+	 */
+	public static class CollectionLogPage
+	{
+		/** Number of item slots on the page, obtained or not. */
+		public int total;
+
+		/** Number of obtained items on the page. */
+		public int obtained;
+
+		/** The obtained items on the page. */
+		public List<ItemEntry> items;
+
+		/**
+		 * @param total    slot count
+		 * @param obtained obtained count
+		 * @param items    obtained items
+		 */
+		public CollectionLogPage(int total, int obtained, List<ItemEntry> items)
+		{
+			this.total = total;
+			this.obtained = obtained;
+			this.items = items;
+		}
+
+		/**
+		 * Compares by counts and by item id, name and quantity in order.
+		 *
+		 * @param o the other object
+		 * @return whether the pages hold the same capture
+		 */
+		@Override
+		public boolean equals(Object o)
+		{
+			if (!(o instanceof CollectionLogPage))
+				return false;
+
+			CollectionLogPage other = (CollectionLogPage) o;
+			if (total != other.total || obtained != other.obtained || items.size() != other.items.size())
+				return false;
+
+			for (int i = 0; i < items.size(); i++)
+			{
+				ItemEntry a = items.get(i);
+				ItemEntry c = other.items.get(i);
+				if (a.itemId != c.itemId || a.quantity != c.quantity)
+					return false;
+			}
+
+			return true;
+		}
+
+		/**
+		 * @return a hash consistent with {@link #equals(Object)}
+		 */
+		@Override
+		public int hashCode()
+		{
+			return 31 * total + obtained;
 		}
 	}
 

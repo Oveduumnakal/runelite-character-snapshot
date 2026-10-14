@@ -16,6 +16,8 @@
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbankdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankTab](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbanktab)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BlockedTask](#comoveduumnakalcharactersnapshotmodelcharactersnapshotblockedtask)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CollectionLogData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogdata)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CollectionLogPage](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogpage)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementTask](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementtask)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiaryregion)
@@ -57,6 +59,7 @@ for each category of data written to the export file.
 | `default String` | `saveDirectory()` |  |
 | `default boolean` | `syncAccountInfo()` |  |
 | `default boolean` | `syncBank()` |  |
+| `default boolean` | `syncCollectionLog()` |  |
 | `default boolean` | `syncCombatAchievements()` |  |
 | `default boolean` | `syncDiaries()` |  |
 | `default boolean` | `syncEquipment()` |  |
@@ -111,6 +114,12 @@ Storage section: where and how often data is written.
 `default boolean syncBank()`
 
 - **Returns:** whether to include bank contents (captured when the bank is opened)
+
+#### syncCollectionLog
+
+`default boolean syncCollectionLog()`
+
+- **Returns:** whether to include the collection log
 
 #### syncCombatAchievements
 
@@ -231,6 +240,7 @@ makes no network calls of any kind.
 | `public void` | `onGameTick(GameTick event)` | Drives the initial collection, periodic polling, and interval-gated saves. |
 | `public void` | `onGrandExchangeOfferChanged(GrandExchangeOfferChanged event)` | Caches a changed Grand Exchange offer. |
 | `public void` | `onItemContainerChanged(ItemContainerChanged event)` | Caches bank, inventory, or equipment changes. |
+| `public void` | `onScriptPostFired(ScriptPostFired event)` | Captures the collection log page whenever the log redraws its item list. |
 | `public void` | `onStatChanged(StatChanged event)` | Caches a changed skill (real, experience, and boosted levels). |
 | `private void` | `pollPeriodic()` | Polls the data sources that are not event-driven, marking the snapshot dirty on any change. |
 | `CharacterSnapshotConfig` | `provideConfig(ConfigManager configManager)` | Provides the plugin configuration. |
@@ -349,6 +359,14 @@ Caches a changed Grand Exchange offer.
 Caches bank, inventory, or equipment changes.
 
 - **Parameter** `event` — the container-changed event
+
+#### onScriptPostFired
+
+`public void onScriptPostFired(ScriptPostFired event)`
+
+Captures the collection log page whenever the log redraws its item list.
+
+- **Parameter** `event` — the script-post-fired event
 
 #### onStatChanged
 
@@ -951,6 +969,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private static final int` | `CA_PARAM_NAME` | Task struct param: task name. |
 | `private static final int[]` | `CA_TIER_ENUMS` | Cache enums listing the task struct ids per tier, easy to grandmaster. |
 | `private static final String[]` | `CA_TIER_NAMES` |  |
+| `private static final int` | `CLOG_HEADER_TITLE_INDEX` | Index of the page title text among the children of the collection log header widget. |
 | `private static final EquipmentInventorySlot[]` | `EQUIPMENT_SLOTS` |  |
 | `private static final int` | `KARAMJA_TIER_DONE` | Value of the Karamja easy, medium and hard tier varbits once the tier is complete; 1 only means started. |
 | `private static final int[]` | `RUNE_POUCH_ITEMS` | Every rune pouch variant; the contents varbits are shared by all of them. |
@@ -967,6 +986,10 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private int` | `caMetaRetries` | How many times a partial metadata load has been retried. |
 | `private Map<Integer,CombatAchievementTask>` | `caTaskMeta` | Cached task metadata by task id (completed flag unset); empty until resolved from the cache. |
 | `private final Client` | `client` |  |
+| `private int` | `clogObtained` |  |
+| `private final Map<String,CollectionLogPage>` | `clogPages` |  |
+| `private int` | `clogTotal` |  |
+| `private Instant` | `clogUpdated` |  |
 | `private CombatAchievementData` | `combatAchievements` |  |
 | `private final CharacterSnapshotConfig` | `config` |  |
 | `private Map<String,DiaryRegion>` | `diaries` |  |
@@ -996,11 +1019,13 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 
 | Modifier and Type | Method | Description |
 |---|---|---|
+| `private CollectionLogData` | `buildCollectionLog()` | Builds the exported collection log from the stored pages. |
 | `private List<CombatAchievementTask>` | `buildCombatAchievementTasks()` | Combines the completion varps with the cached task metadata. |
 | `private LocationData` | `buildLocation(Player localPlayer)` | Reads the character's world location. |
 | `private Map<String,String>` | `buildSectionUpdated(CharacterSnapshot data)` | Collects the capture time of each item section present in the snapshot. |
 | `public CharacterSnapshot` | `buildSnapshot()` | Assembles the export snapshot from the caches and cheap client reads, honouring the config toggles. |
 | `private VitalsData` | `buildVitals()` | Reads current combat vitals from boosted and real skill levels and run energy. |
+| `public boolean` | `captureCollectionLog()` | Captures the collection log page currently drawn. |
 | `private List<BankTab>` | `copyBankTabs()` | Copies the cached bank tabs so a built snapshot does not share lists with the cache. |
 | `private DiaryRegion` | `diaryRegion(String region, int easy, int medium, int hard, int elite)` | Reads a diary region whose four tier varbits are 0/1 completion flags. |
 | `private DiaryRegion` | `diaryRegion(String region, int easy, int medium, int hard, int elite, int doneValue)` | Reads a diary region's four tiers and its mapped tasks. |
@@ -1090,6 +1115,12 @@ Cache enums listing the task struct ids per tier, easy to grandmaster. Not in th
 
 `private static final String[] CA_TIER_NAMES`
 
+#### CLOG_HEADER_TITLE_INDEX
+
+`private static final int CLOG_HEADER_TITLE_INDEX`
+
+Index of the page title text among the children of the collection log header widget.
+
 #### EQUIPMENT_SLOTS
 
 `private static final EquipmentInventorySlot[] EQUIPMENT_SLOTS`
@@ -1170,6 +1201,22 @@ Cached task metadata by task id (completed flag unset); empty until resolved fro
 #### client
 
 `private final Client client`
+
+#### clogObtained
+
+`private int clogObtained`
+
+#### clogPages
+
+`private final Map<String,CollectionLogPage> clogPages`
+
+#### clogTotal
+
+`private int clogTotal`
+
+#### clogUpdated
+
+`private Instant clogUpdated`
 
 #### combatAchievements
 
@@ -1254,6 +1301,15 @@ Cached task metadata by task id (completed flag unset); empty until resolved fro
 
 ### Method Detail
 
+#### buildCollectionLog
+
+`private CollectionLogData buildCollectionLog()`
+
+Builds the exported collection log from the stored pages. The flat item list holds each obtained
+item id once, taking the quantity from the first page it appears on.
+
+- **Returns:** the collection log, or `null` when no page has been captured
+
 #### buildCombatAchievementTasks
 
 `private List<CombatAchievementTask> buildCombatAchievementTasks()`
@@ -1297,6 +1353,18 @@ toggles. Owned collections are copied so the writer thread reads a stable graph.
 Reads current combat vitals from boosted and real skill levels and run energy.
 
 - **Returns:** the vitals snapshot
+
+#### captureCollectionLog
+
+`public boolean captureCollectionLog()`
+
+Captures the collection log page currently drawn. Called when the log's draw-list script has
+run, so it only does work as the player opens or switches pages. Each item widget under the
+items container is an obtained item when its opacity is 0, and a greyed-out missing item
+otherwise. The page is stored under its title, replacing any earlier capture of that page, and
+the account-wide counts are read from the collection log varps.
+
+- **Returns:** whether the captured data changed
 
 #### copyBankTabs
 
@@ -1750,6 +1818,8 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | _class_ [`BankData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbankdata) | Bank contents: total distinct item count and a flat list of the stacks it holds. |
 | _class_ [`BankTab`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbanktab) | A bank tab: an index (0 for the main tab, 1 to 9 for the numbered tabs) and the items it holds. |
 | _class_ [`BlockedTask`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotblockedtask) | One blocked slayer task slot. |
+| _class_ [`CollectionLogData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogdata) | Collection log: the account-wide obtained and total counts, the flat list of obtained items, and the obtained items grouped by the log page they were seen on. |
+| _class_ [`CollectionLogPage`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogpage) | One collection log page as last seen: how many of its slots there are and which are obtained. |
 | _class_ [`CombatAchievementData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementdata) | Combat-achievement tier progress. |
 | _class_ [`CombatAchievementTask`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementtask) | A single combat-achievement task and whether it is complete. |
 | _class_ [`DiaryRegion`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiaryregion) | Completion of the four achievement-diary tiers for one region, plus the individual tasks where known. |
@@ -1771,6 +1841,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 |---|---|---|
 | `public Map<String,DiaryRegion>` | `achievementDiaries` | Achievement diary completion keyed by region name. |
 | `public BankData` | `bank` | Bank contents as a flat item list, captured when the bank is opened and carried over from the previous session until then. |
+| `public CollectionLogData` | `collectionLog` | Collection log contents captured while the log was open, carried over between sessions. |
 | `public CombatAchievementData` | `combatAchievements` | Combat-achievement tier progress. |
 | `public Map<String,ItemEntry>` | `equipment` | Worn equipment keyed by slot name. |
 | `public List<GeOffer>` | `grandExchange` | Active Grand Exchange offers by slot. |
@@ -1802,6 +1873,12 @@ Achievement diary completion keyed by region name.
 
 Bank contents as a flat item list, captured when the bank is opened and carried over from the
 previous session until then.
+
+#### collectionLog
+
+`public CollectionLogData collectionLog`
+
+Collection log contents captured while the log was open, carried over between sessions.
 
 #### combatAchievements
 
@@ -2068,6 +2145,147 @@ Slayer task id (same id space as the slayer creature id).
 - **Parameter** `taskId` — slayer task id
 - **Parameter** `name` — task name, or null
 - **Parameter** `master` — master name, or null
+
+---
+
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CollectionLogData
+
+_class_
+
+`public static class CollectionLogData`
+
+Collection log: the account-wide obtained and total counts, the flat list of obtained items, and
+the obtained items grouped by the log page they were seen on.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public List<ItemEntry>` | `items` | Every obtained item seen so far, one entry per item id. |
+| `public int` | `obtained` | Obtained-item count shown by the game; 0 when it was not readable. |
+| `public Map<String,CollectionLogPage>` | `pages` | Per-page captures keyed by page title; only pages the player has opened are present. |
+| `public int` | `total` | Total collectable-item count shown by the game; 0 when it was not readable. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `CollectionLogData(int obtained, int total, List<ItemEntry> items, Map<String,CollectionLogPage> pages)` |  |
+
+### Field Detail
+
+#### items
+
+`public List<ItemEntry> items`
+
+Every obtained item seen so far, one entry per item id.
+
+#### obtained
+
+`public int obtained`
+
+Obtained-item count shown by the game; 0 when it was not readable.
+
+#### pages
+
+`public Map<String,CollectionLogPage> pages`
+
+Per-page captures keyed by page title; only pages the player has opened are present.
+
+#### total
+
+`public int total`
+
+Total collectable-item count shown by the game; 0 when it was not readable.
+
+### Constructor Detail
+
+#### CollectionLogData
+
+`public CollectionLogData(int obtained, int total, List<ItemEntry> items, Map<String,CollectionLogPage> pages)`
+
+- **Parameter** `obtained` — obtained-item count
+- **Parameter** `total` — total item count
+- **Parameter** `items` — obtained items
+- **Parameter** `pages` — captured pages by title
+
+---
+
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CollectionLogPage
+
+_class_
+
+`public static class CollectionLogPage`
+
+One collection log page as last seen: how many of its slots there are and which are obtained.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public List<ItemEntry>` | `items` | The obtained items on the page. |
+| `public int` | `obtained` | Number of obtained items on the page. |
+| `public int` | `total` | Number of item slots on the page, obtained or not. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `CollectionLogPage(int total, int obtained, List<ItemEntry> items)` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `public boolean` | `equals(Object o)` | Compares by counts and by item id, name and quantity in order. |
+| `public int` | `hashCode()` |  |
+
+### Field Detail
+
+#### items
+
+`public List<ItemEntry> items`
+
+The obtained items on the page.
+
+#### obtained
+
+`public int obtained`
+
+Number of obtained items on the page.
+
+#### total
+
+`public int total`
+
+Number of item slots on the page, obtained or not.
+
+### Constructor Detail
+
+#### CollectionLogPage
+
+`public CollectionLogPage(int total, int obtained, List<ItemEntry> items)`
+
+- **Parameter** `total` — slot count
+- **Parameter** `obtained` — obtained count
+- **Parameter** `items` — obtained items
+
+### Method Detail
+
+#### equals
+
+`public boolean equals(Object o)`
+
+Compares by counts and by item id, name and quantity in order.
+
+- **Parameter** `o` — the other object
+- **Returns:** whether the pages hold the same capture
+
+#### hashCode
+
+`public int hashCode()`
+
+- **Returns:** a hash consistent with `#equals(Object)`
 
 ---
 

@@ -20,6 +20,8 @@ import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankTab;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BlockedTask;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CollectionLogData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CollectionLogPage;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementTask;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion;
@@ -53,11 +55,13 @@ import net.runelite.api.Varbits;
 import net.runelite.api.WorldType;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.gameval.DBTableID;
+import net.runelite.api.gameval.InterfaceID;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.gameval.ItemID;
 import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.api.vars.AccountType;
+import net.runelite.api.widgets.Widget;
 
 /**
  * Reads player state from the RuneLite {@link Client} into in-memory caches and assembles the
@@ -219,6 +223,10 @@ public class SnapshotCollector
 		slayer = null;
 		runePouch = null;
 		spellbook = null;
+		clogPages.clear();
+		clogObtained = 0;
+		clogTotal = 0;
+		clogUpdated = null;
 	}
 
 	/**
@@ -472,6 +480,17 @@ public class SnapshotCollector
 					storageUpdated.put(key, time);
 				}
 			}
+		}
+
+		Instant clogTime = sectionTime(times, "collectionLog", fallback);
+		if (clogUpdated == null && clogTime != null && previous.collectionLog != null
+				&& previous.collectionLog.pages != null)
+		{
+			clogPages.clear();
+			clogPages.putAll(previous.collectionLog.pages);
+			clogObtained = previous.collectionLog.obtained;
+			clogTotal = previous.collectionLog.total;
+			clogUpdated = clogTime;
 		}
 	}
 
@@ -943,6 +962,9 @@ public class SnapshotCollector
 				data.storages.put(entry.getKey(), new ArrayList<>(entry.getValue()));
 		}
 
+		if (config.syncCollectionLog())
+			data.collectionLog = buildCollectionLog();
+
 		data.sectionUpdated = buildSectionUpdated(data);
 
 		if (config.syncRunePouch() && runePouch != null)
@@ -999,6 +1021,9 @@ public class SnapshotCollector
 					times.put("storages." + key, time.toString());
 			}
 		}
+
+		if (data.collectionLog != null && clogUpdated != null)
+			times.put("collectionLog", clogUpdated.toString());
 
 		return times.isEmpty() ? null : times;
 	}
@@ -1307,5 +1332,88 @@ public class SnapshotCollector
 		boolean changed = !Objects.equals(book, spellbook);
 		spellbook = book;
 		return changed;
+	}
+
+	/** Index of the page title text among the children of the collection log header widget. */
+	private static final int CLOG_HEADER_TITLE_INDEX = 0;
+
+	private final Map<String, CollectionLogPage> clogPages = new LinkedHashMap<>();
+
+	private int clogObtained = 0;
+
+	private int clogTotal = 0;
+
+	private Instant clogUpdated = null;
+
+	/**
+	 * Captures the collection log page currently drawn. Called when the log's draw-list script has
+	 * run, so it only does work as the player opens or switches pages. Each item widget under the
+	 * items container is an obtained item when its opacity is 0, and a greyed-out missing item
+	 * otherwise. The page is stored under its title, replacing any earlier capture of that page, and
+	 * the account-wide counts are read from the collection log varps.
+	 *
+	 * @return whether the captured data changed
+	 */
+	public boolean captureCollectionLog()
+	{
+		Widget header = client.getWidget(InterfaceID.Collection.HEADER_TEXT);
+		Widget content = client.getWidget(InterfaceID.Collection.ITEMS_CONTENTS);
+		if (header == null || content == null || header.getChildren() == null || content.getChildren() == null)
+			return false;
+
+		Widget title = header.getChild(CLOG_HEADER_TITLE_INDEX);
+		if (title == null || title.getText() == null || title.getText().isEmpty())
+			return false;
+
+		int total = 0;
+		List<ItemEntry> obtainedItems = new ArrayList<>();
+		for (Widget child : content.getChildren())
+		{
+			if (child == null || child.getItemId() <= 0)
+				continue;
+
+			total++;
+			if (child.getOpacity() == 0)
+				obtainedItems.add(new ItemEntry(child.getItemId(), getItemName(child.getItemId()),
+					Math.max(1, child.getItemQuantity())));
+		}
+
+		CollectionLogPage page = new CollectionLogPage(total, obtainedItems.size(), obtainedItems);
+		boolean changed = !page.equals(clogPages.get(title.getText()));
+		clogPages.put(title.getText(), page);
+
+		int obtained = client.getVarpValue(VarPlayerID.COLLECTION_COUNT);
+		int max = client.getVarpValue(VarPlayerID.COLLECTION_COUNT_MAX);
+		changed |= obtained != clogObtained || max != clogTotal;
+		clogObtained = obtained;
+		clogTotal = max;
+		if (changed || clogUpdated == null)
+			clogUpdated = Instant.now();
+
+		return changed;
+	}
+
+	/**
+	 * Builds the exported collection log from the stored pages. The flat item list holds each obtained
+	 * item id once, taking the quantity from the first page it appears on.
+	 *
+	 * @return the collection log, or {@code null} when no page has been captured
+	 */
+	private CollectionLogData buildCollectionLog()
+	{
+		if (clogPages.isEmpty())
+			return null;
+
+		Map<Integer, ItemEntry> flat = new LinkedHashMap<>();
+		Map<String, CollectionLogPage> pages = new LinkedHashMap<>();
+		for (Map.Entry<String, CollectionLogPage> e : clogPages.entrySet())
+		{
+			CollectionLogPage page = e.getValue();
+			pages.put(e.getKey(), new CollectionLogPage(page.total, page.obtained, new ArrayList<>(page.items)));
+			for (ItemEntry item : page.items)
+				flat.putIfAbsent(item.itemId, item);
+		}
+
+		return new CollectionLogData(clogObtained, clogTotal, new ArrayList<>(flat.values()), pages);
 	}
 }

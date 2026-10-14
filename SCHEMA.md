@@ -31,6 +31,7 @@ missing sections as "not exported", not "empty".
 | `slayer` | object | Slayer points, streak and current task (task fields are 0/null between tasks). |
 | `location` | object | Region and world coordinates. |
 | `grandExchange` | array | Active GE offers, by slot. |
+| `collectionLog` | object | Collection log captured while the log is open, carried over between sessions. |
 
 ## player
 
@@ -176,6 +177,19 @@ Present whenever slayer has been read. `points` and `streak` are always exported
 Array of `{ slot, itemId, name, state, quantitySold, totalQuantity, price, spent }`. `state` is one
 of `EMPTY`, `BUYING`, `BOUGHT`, `SELLING`, `SOLD`, `CANCELLED_BUY`, `CANCELLED_SELL` (empty slots
 are not exported).
+
+## collectionLog
+
+`{ obtained, total, items[], pages }`. The game only exposes the log while its interface is open, so the
+plugin captures each page the player views and keeps the last known data (also across sessions, with
+`sectionUpdated.collectionLog` giving the last capture time). The section is absent until a page has
+been viewed.
+
+- `obtained` / `total`: the game's overall counters (varps) as of the last capture; 0 if unreadable.
+- `items`: every obtained item seen so far, one item entry `{ itemId, name, quantity }` per item id.
+- `pages`: map of page title (e.g. `Abyssal Sire`) to `{ total, obtained, items[] }`, where `total` is
+  the number of item slots on the page and `items` its obtained items. Only pages the player has opened
+  are present, so `items` can hold fewer entries than `obtained` until every page has been viewed.
 
 ## Versioning
 
