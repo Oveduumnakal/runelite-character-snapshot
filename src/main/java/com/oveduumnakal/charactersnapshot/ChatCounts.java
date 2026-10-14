@@ -38,7 +38,7 @@ final class ChatCounts
 		"werewolf", "wilderness", "barbarian outpost", "werewolf skullball", "herbiboar", "lunar chest",
 		"hunter rumours", "colosseum glory", "bird's egg offerings", "crystal chest", "larran's small chest",
 		"larran's big chest", "brimstone chest", "first challenge", "second challenge", "third challenge",
-		"fourth challenge", "fifth challenge", "sixth challenge"));
+		"fourth challenge", "fifth challenge", "sixth challenge", "tempor tantrum", "jubbly jive", "gwenith glide"));
 
 	private ChatCounts()
 	{
@@ -91,13 +91,16 @@ final class ChatCounts
 	}
 
 	/**
-	 * Tells agility laps and other non-boss counts (chests, rumours, challenges) from boss kill counts.
+	 * Tells agility laps, Barracuda Trials and other non-boss counts (chests, rumours, challenges) from boss
+	 * kill counts. Any key naming an agility course counts, since Chat Commands stores most courses under their
+	 * full name (for example {@code colossal wyrm agility course (advanced)}).
 	 *
 	 * @param key a key from {@link #killCountKey(String)}
 	 * @return whether the count belongs under {@code activityCounts} rather than {@code killCounts}
 	 */
 	static boolean isActivityKey(String key)
 	{
-		return ACTIVITY_KEYS.contains(key) || key.contains("rooftop") || key.startsWith("hallowed sepulchre");
+		return ACTIVITY_KEYS.contains(key) || key.contains("agility") || key.contains("rooftop")
+			|| key.startsWith("hallowed sepulchre");
 	}
 }

@@ -544,7 +544,7 @@ same key that plugin stores it under.
 
 | Modifier and Type | Method | Description |
 |---|---|---|
-| `static boolean` | `isActivityKey(String key)` | Tells agility laps and other non-boss counts (chests, rumours, challenges) from boss kill counts. |
+| `static boolean` | `isActivityKey(String key)` | Tells agility laps, Barracuda Trials and other non-boss counts (chests, rumours, challenges) from boss kill counts. |
 | `static String` | `killCountKey(String boss)` | Normalises a boss name to the key the Chat Commands plugin stores it under: the Barrows rename applied, colons removed (the config service rejects them), then lower-cased. |
 | `static Map.Entry<String,Integer>` | `parseKillCount(String message)` | Parses a kill-count line such as `Your Zulrah kill count is: 12.` |
 
@@ -576,7 +576,9 @@ Config group in which the Chat Commands plugin stores kill counts (RuneScape-pro
 
 `static boolean isActivityKey(String key)`
 
-Tells agility laps and other non-boss counts (chests, rumours, challenges) from boss kill counts.
+Tells agility laps, Barracuda Trials and other non-boss counts (chests, rumours, challenges) from boss
+kill counts. Any key naming an agility course counts, since Chat Commands stores most courses under their
+full name (for example `colossal wyrm agility course (advanced)`).
 
 - **Parameter** `key` — a key from `#killCountKey(String)`
 - **Returns:** whether the count belongs under `activityCounts` rather than `killCounts`
