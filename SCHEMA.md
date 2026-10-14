@@ -22,6 +22,7 @@ missing sections as "not exported", not "empty".
 | `bank` | object | Flat bank contents; captured when the bank is opened, carried over from the previous session until then. |
 | `inventory` | array | One entry per slot; empty slots have `itemId` -1. |
 | `equipment` | object | Map of slot name → item entry. |
+| `runePouch` | array | Runes in the rune pouch; present only while one is in the inventory. See below. |
 | `quests` | array | One entry per quest. |
 | `questPoints` | int | Total quest points. |
 | `achievementDiaries` | object | Map of region name → tier completion. |
@@ -70,6 +71,12 @@ An **item entry** is `{ itemId, name, quantity }`; `name` is null for an unresol
   `itemId` -1 so slot indices stay meaningful.
 - `equipment`: map of slot name (`HEAD`, `CAPE`, `AMULET`, `WEAPON`, `BODY`, `SHIELD`, `LEGS`,
   `GLOVES`, `BOOTS`, `RING`, `AMMO`) → item entry; empty slots are omitted. A character wearing nothing exports `{}`; the field is absent only when equipment is toggled off or not yet captured.
+
+- `runePouch` (additive, optional): array of item entries, one per filled pouch slot (up to 6; the divine pouch has
+  more slots than the standard one). Present only while the inventory holds a rune
+  pouch of any variant (including divine and trouver-protected); an empty pouch gives `[]`, no pouch
+  omits the field. Read live from varbits, so it is as current as the last inventory change or 30-tick poll.
+  It is not carried over from a previous session.
 
 ### Carried-over sections and `sectionUpdated`
 
