@@ -62,9 +62,10 @@ missing sections as "not exported", not "empty".
 
 An **item entry** is `{ itemId, name, quantity }`; `name` is null for an unresolved or empty item.
 
-- `bank`: `{ totalItems, items[], tabs[] }` — `items` is the canonical flat list. `tabs` is a
-  compatibility view: the same items wrapped in a single tab (`[{ tabIndex: 0, items: [...] }]`) for
-  consumers that expect the tabbed shape. Individual bank tabs are not modelled.
+- `bank`: `{ totalItems, items[], tabs[] }` — `items` is the canonical flat list. `tabs` holds the
+  real bank tabs, `[{ tabIndex, items: [...] }]`: `tabIndex` 0 is the main tab (always present), 1 to 9
+  are the numbered tabs (present only if the tab exists). The flat `items` keeps game container order
+  (tabs 1 to 9, then the main tab). A bank restored from an older file has a single tab 0 until the bank is opened again.
 - `inventory`: array of item entries with an extra `slot` (0–27); empty slots are included with
   `itemId` -1 so slot indices stay meaningful.
 - `equipment`: map of slot name (`HEAD`, `CAPE`, `AMULET`, `WEAPON`, `BODY`, `SHIELD`, `LEGS`,

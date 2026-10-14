@@ -17,6 +17,7 @@ import java.util.TreeMap;
 
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankTab;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.GeOffer;
@@ -44,6 +45,7 @@ import net.runelite.api.VarPlayer;
 import net.runelite.api.Varbits;
 import net.runelite.api.WorldType;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.gameval.VarbitID;
 import net.runelite.api.vars.AccountType;
 
 /**
@@ -62,6 +64,12 @@ public class SnapshotCollector
 		EquipmentInventorySlot.RING, EquipmentInventorySlot.AMMO
 	};
 
+	private static final int[] BANK_TAB_VARBITS = {
+		VarbitID.BANK_TAB_1, VarbitID.BANK_TAB_2, VarbitID.BANK_TAB_3, VarbitID.BANK_TAB_4,
+		VarbitID.BANK_TAB_5, VarbitID.BANK_TAB_6, VarbitID.BANK_TAB_7, VarbitID.BANK_TAB_8,
+		VarbitID.BANK_TAB_9
+	};
+
 	private final Client client;
 
 	private final CharacterSnapshotConfig config;
@@ -71,6 +79,8 @@ public class SnapshotCollector
 	private final Map<Integer, GeOffer> geOffers = new TreeMap<>();
 
 	private List<ItemEntry> bankItems = null;
+
+	private List<BankTab> bankTabs = null;
 
 	private int bankTotal = 0;
 
@@ -114,6 +124,7 @@ public class SnapshotCollector
 		geOffers.clear();
 		equipment.clear();
 		bankItems = null;
+		bankTabs = null;
 		bankTotal = 0;
 		inventory = new ArrayList<>();
 		bankUpdated = null;
@@ -163,7 +174,11 @@ public class SnapshotCollector
 	}
 
 	/**
-	 * Replaces the cached bank contents with a flat item list.
+	 * Replaces the cached bank contents with a flat item list and the same items split by bank tab.
+	 * The container holds tabs 1 to 9 in order, then the main tab; each numbered tab's slot count is
+	 * read from its varbit, and the remaining slots are the main tab. Slicing uses the raw container,
+	 * placeholders and empty slots included, so the counts line up; each slice is then filtered like
+	 * the flat list.
 	 *
 	 * @param container the bank item container
 	 */
@@ -172,17 +187,67 @@ public class SnapshotCollector
 		if (container == null)
 			return;
 
+		Item[] raw = container.getItems();
 		List<ItemEntry> items = new ArrayList<>();
-		for (Item item : container.getItems())
+		List<BankTab> tabs = new ArrayList<>();
+		int start = 0;
+		for (int tab = 1; tab <= BANK_TAB_VARBITS.length; tab++)
 		{
-			int id = item.getId();
-			if (id > 0 && item.getQuantity() > 0)
-				items.add(new ItemEntry(id, getItemName(id), item.getQuantity()));
+			int count = Math.max(0, client.getVarbitValue(BANK_TAB_VARBITS[tab - 1]));
+			int end = Math.min(raw.length, start + count);
+			if (count > 0)
+			{
+				BankTab bankTab = new BankTab(tab, filterBankSlice(raw, start, end));
+				tabs.add(bankTab);
+				items.addAll(bankTab.items);
+			}
+
+			start = end;
 		}
 
+		BankTab main = new BankTab(0, filterBankSlice(raw, start, raw.length));
+		tabs.add(0, main);
+		items.addAll(main.items);
+
 		bankItems = items;
+		bankTabs = tabs;
 		bankTotal = items.size();
 		bankUpdated = Instant.now();
+	}
+
+	/**
+	 * Converts a slice of raw bank slots to item entries, dropping empty slots and placeholders.
+	 *
+	 * @param raw   the raw bank container items
+	 * @param start first slot of the slice, inclusive
+	 * @param end   last slot of the slice, exclusive
+	 * @return the item entries in the slice
+	 */
+	private List<ItemEntry> filterBankSlice(Item[] raw, int start, int end)
+	{
+		List<ItemEntry> slice = new ArrayList<>();
+		for (int i = start; i < end; i++)
+		{
+			int id = raw[i].getId();
+			if (id > 0 && raw[i].getQuantity() > 0)
+				slice.add(new ItemEntry(id, getItemName(id), raw[i].getQuantity()));
+		}
+
+		return slice;
+	}
+
+	/**
+	 * Copies the cached bank tabs so a built snapshot does not share lists with the cache.
+	 *
+	 * @return a deep copy of the cached tabs
+	 */
+	private List<BankTab> copyBankTabs()
+	{
+		List<BankTab> copy = new ArrayList<>();
+		for (BankTab tab : bankTabs)
+			copy.add(new BankTab(tab.tabIndex, new ArrayList<>(tab.items)));
+
+		return copy;
 	}
 
 	/**
@@ -262,6 +327,9 @@ public class SnapshotCollector
 		if (bankUpdated == null && bankTime != null && previous.bank != null && previous.bank.items != null)
 		{
 			bankItems = new ArrayList<>(previous.bank.items);
+			bankTabs = previous.bank.tabs != null && !previous.bank.tabs.isEmpty()
+					? new ArrayList<>(previous.bank.tabs)
+					: new ArrayList<>(Collections.singletonList(new BankTab(0, bankItems)));
 			bankTotal = bankItems.size();
 			bankUpdated = bankTime;
 		}
@@ -479,7 +547,7 @@ public class SnapshotCollector
 			data.vitals = buildVitals();
 
 		if (config.syncBank() && bankItems != null)
-			data.bank = new BankData(bankTotal, new ArrayList<>(bankItems));
+			data.bank = new BankData(bankTotal, new ArrayList<>(bankItems), copyBankTabs());
 
 		if (config.syncInventory())
 			data.inventory = new ArrayList<>(inventory);

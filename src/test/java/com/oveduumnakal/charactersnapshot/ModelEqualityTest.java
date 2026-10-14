@@ -67,10 +67,10 @@ public class ModelEqualityTest
 	}
 
 	/**
-	 * Bank data exposes a single-tab compatibility view over the flat item list.
+	 * Bank data built without explicit tabs wraps the flat item list in a single main tab.
 	 */
 	@Test
-	public void bankExposesSingleTabCompatView()
+	public void bankDefaultsToSingleMainTab()
 	{
 		BankData bank = new BankData(1, java.util.Collections.singletonList(new ItemEntry(1, "Yew logs", 5)));
 		assertEquals(1, bank.tabs.size());

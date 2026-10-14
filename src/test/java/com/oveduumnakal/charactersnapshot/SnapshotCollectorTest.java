@@ -15,6 +15,7 @@ import java.util.Map;
 
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankTab;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.InventoryItem;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.PlayerInfo;
@@ -27,6 +28,7 @@ import net.runelite.api.ItemComposition;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.Player;
 import net.runelite.api.WorldType;
+import net.runelite.api.gameval.VarbitID;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
@@ -35,7 +37,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests the collector's client-facing behaviour with a mocked {@link Client}: the flat bank list,
+ * Tests the collector's client-facing behaviour with a mocked {@link Client}: the flat bank list and tabs,
  * equipment slot mapping, cross-account {@link SnapshotCollector#reset()}, restoring last known
  * items from a previous export, and that a built snapshot is isolated from later cache mutation.
  */
@@ -63,6 +65,144 @@ public class SnapshotCollectorTest
 		assertEquals(1, data.bank.items.size());
 		assertEquals("Dragon claws", data.bank.items.get(0).name);
 		assertEquals(5, data.bank.items.get(0).quantity);
+	}
+
+	/**
+	 * The raw container is sliced by the tab-count varbits: tabs 1 to 9 first, the remainder is the main tab.
+	 * Placeholders and empty slots count toward the slice sizes but are not exported.
+	 */
+	@Test
+	public void bankSplitsIntoRealTabs()
+	{
+		Client client = loggedInClient("Zezima");
+		when(client.getVarbitValue(VarbitID.BANK_TAB_1)).thenReturn(2);
+		when(client.getVarbitValue(VarbitID.BANK_TAB_3)).thenReturn(3);
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.updateBank(container(
+			item(10, 1), item(11, 0),
+			item(30, 4), item(-1, 0), item(31, 2),
+			item(1, 5), item(2, 6)));
+		CharacterSnapshot data = collector.buildSnapshot();
+
+		assertEquals(3, data.bank.tabs.size());
+		assertEquals(0, data.bank.tabs.get(0).tabIndex);
+		assertEquals(Arrays.asList(1, 2), ids(data.bank.tabs.get(0).items));
+		assertEquals(1, data.bank.tabs.get(1).tabIndex);
+		assertEquals(Arrays.asList(10), ids(data.bank.tabs.get(1).items));
+		assertEquals(3, data.bank.tabs.get(2).tabIndex);
+		assertEquals(Arrays.asList(30, 31), ids(data.bank.tabs.get(2).items));
+		assertEquals(Arrays.asList(10, 30, 31, 1, 2), ids(data.bank.items));
+		assertEquals(5, data.bank.totalItems);
+	}
+
+	/**
+	 * A numbered tab holding only placeholders still exists, and an empty bank still has its main tab.
+	 */
+	@Test
+	public void emptyTabsAreHandled()
+	{
+		Client client = loggedInClient("Zezima");
+		when(client.getVarbitValue(VarbitID.BANK_TAB_2)).thenReturn(1);
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.updateBank(container(item(5, 0)));
+		CharacterSnapshot data = collector.buildSnapshot();
+
+		assertEquals(2, data.bank.tabs.size());
+		assertEquals(0, data.bank.tabs.get(0).tabIndex);
+		assertTrue(data.bank.tabs.get(0).items.isEmpty());
+		assertEquals(2, data.bank.tabs.get(1).tabIndex);
+		assertTrue(data.bank.tabs.get(1).items.isEmpty());
+		assertEquals(0, data.bank.totalItems);
+	}
+
+	/**
+	 * A tab count larger than the container cannot read past its end.
+	 */
+	@Test
+	public void oversizedTabCountIsClamped()
+	{
+		Client client = loggedInClient("Zezima");
+		when(client.getVarbitValue(VarbitID.BANK_TAB_1)).thenReturn(50);
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.updateBank(container(item(1, 1)));
+		CharacterSnapshot data = collector.buildSnapshot();
+
+		assertEquals(Arrays.asList(1), ids(data.bank.tabs.get(1).items));
+		assertTrue(data.bank.tabs.get(0).items.isEmpty());
+	}
+
+	/**
+	 * A bank restored from an older export keeps its tabs when present.
+	 */
+	@Test
+	public void restoreKeepsPreviousTabs()
+	{
+		Client client = loggedInClient("Zezima");
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+		CharacterSnapshot previous = previous("Zezima", "Dragon claws");
+		List<ItemEntry> tabItems = Collections.singletonList(new ItemEntry(1, "Dragon claws", 5));
+		previous.bank = new BankData(1, tabItems, Collections.singletonList(new BankTab(4, tabItems)));
+
+		collector.restore(previous);
+		CharacterSnapshot data = collector.buildSnapshot();
+
+		assertEquals(1, data.bank.tabs.size());
+		assertEquals(4, data.bank.tabs.get(0).tabIndex);
+	}
+
+	/**
+	 * A bank restored from an older export with no tabs field gets a single tab 0 derived from the items.
+	 */
+	@Test
+	public void restoreWithoutTabsDerivesMainTab()
+	{
+		Client client = loggedInClient("Zezima");
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+		CharacterSnapshot previous = previous("Zezima", "Dragon claws");
+		previous.bank.tabs = null;
+
+		collector.restore(previous);
+		CharacterSnapshot data = collector.buildSnapshot();
+
+		assertEquals(1, data.bank.tabs.size());
+		assertEquals(0, data.bank.tabs.get(0).tabIndex);
+		ItemEntry main = data.bank.tabs.get(0).items.get(0);
+		assertEquals("Dragon claws", main.name);
+	}
+
+	/**
+	 * A bank restored from an older single-tab export loads as that single tab 0.
+	 */
+	@Test
+	public void restoreFromSingleTabFile()
+	{
+		Client client = loggedInClient("Zezima");
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.restore(previous("Zezima", "Dragon claws"));
+		CharacterSnapshot data = collector.buildSnapshot();
+
+		assertEquals(1, data.bank.tabs.size());
+		assertEquals(0, data.bank.tabs.get(0).tabIndex);
+		assertEquals(1, data.bank.tabs.get(0).items.size());
+	}
+
+	/**
+	 * Lists the item ids of the given entries.
+	 *
+	 * @param entries the entries
+	 * @return their ids, in order
+	 */
+	private static List<Integer> ids(List<ItemEntry> entries)
+	{
+		List<Integer> ids = new ArrayList<>();
+		for (ItemEntry entry : entries)
+			ids.add(entry.itemId);
+
+		return ids;
 	}
 
 	/**
