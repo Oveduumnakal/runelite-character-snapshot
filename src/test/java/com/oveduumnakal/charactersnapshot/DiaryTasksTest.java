@@ -93,6 +93,28 @@ public class DiaryTasksTest
 	}
 
 	/**
+	 * Karamja easy, medium and hard tier varbits read 1 while a tier is started and 2 once it is done;
+	 * only 2 counts as complete. The elite varbit is a plain 0/1 flag.
+	 */
+	@Test
+	@SuppressWarnings("deprecation")
+	public void karamjaTierStartedIsNotComplete()
+	{
+		Client client = client();
+		when(client.getVarbitValue(Varbits.DIARY_KARAMJA_EASY)).thenReturn(2);
+		when(client.getVarbitValue(Varbits.DIARY_KARAMJA_MEDIUM)).thenReturn(2);
+		when(client.getVarbitValue(Varbits.DIARY_KARAMJA_HARD)).thenReturn(1);
+		when(client.getVarbitValue(Varbits.DIARY_KARAMJA_ELITE)).thenReturn(1);
+
+		DiaryRegion karamja = poll(client).get("KARAMJA");
+
+		assertTrue(karamja.easy);
+		assertTrue(karamja.medium);
+		assertFalse(karamja.hard);
+		assertTrue(karamja.elite);
+	}
+
+	/**
 	 * The tier booleans keep coming from the tier varbits and do not depend on task state.
 	 */
 	@Test
