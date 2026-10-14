@@ -222,6 +222,24 @@ public class KillCountTest
 	}
 
 	/**
+	 * Agility courses stored under their full names and Barracuda Trials are activity counts too.
+	 */
+	@Test
+	public void fullCourseNamesAreActivityCounts()
+	{
+		ConfigManager cm = stored("colossal wyrm agility course (advanced)", 264, "gnome stronghold agility", 8);
+		SnapshotCollector collector = collector(cm, true);
+		collector.pollKillCounts();
+		collector.onChatMessage("Your Tempor Tantrum completion count is: <col=ff0000>16</col>.");
+
+		CharacterSnapshot snapshot = collector.buildSnapshot();
+		assertTrue(snapshot.killCounts == null || snapshot.killCounts.isEmpty());
+		assertEquals(Integer.valueOf(264), snapshot.activityCounts.get("colossal wyrm agility course (advanced)"));
+		assertEquals(Integer.valueOf(8), snapshot.activityCounts.get("gnome stronghold agility"));
+		assertEquals(Integer.valueOf(16), snapshot.activityCounts.get("tempor tantrum"));
+	}
+
+	/**
 	 * Laps in an old export's killCounts are moved to activityCounts on restore.
 	 */
 	@Test
