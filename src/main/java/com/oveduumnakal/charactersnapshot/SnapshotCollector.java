@@ -280,6 +280,7 @@ public class SnapshotCollector
 		timers = null;
 		dailies = null;
 		miscellania = null;
+		minigamePoints = null;
 	}
 
 	/**
@@ -1230,6 +1231,9 @@ public class SnapshotCollector
 			data.miscellania = miscellania;
 		}
 
+		if (config.syncMinigamePoints() && minigamePoints != null)
+			data.minigamePoints = new LinkedHashMap<>(minigamePoints);
+
 		return data;
 	}
 
@@ -1901,6 +1905,21 @@ public class SnapshotCollector
 		boolean changed = !Objects.equals(fresh, dailies) || !Objects.equals(kingdom, miscellania);
 		dailies = fresh;
 		miscellania = kingdom;
+		return changed;
+	}
+
+	private Map<String, Integer> minigamePoints = null;
+
+	/**
+	 * Polls the minigame reward-shop currencies.
+	 *
+	 * @return whether any balance changed since the last poll
+	 */
+	public boolean pollMinigamePoints()
+	{
+		Map<String, Integer> fresh = MinigamePoints.read(client);
+		boolean changed = !fresh.equals(minigamePoints);
+		minigamePoints = fresh;
 		return changed;
 	}
 }

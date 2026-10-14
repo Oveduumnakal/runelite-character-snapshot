@@ -19,6 +19,7 @@
 - [com.oveduumnakal.charactersnapshot.FarmingTimers.PatchDef](#comoveduumnakalcharactersnapshotfarmingtimerspatchdef)
 - [com.oveduumnakal.charactersnapshot.FarmingTimers.Range](#comoveduumnakalcharactersnapshotfarmingtimersrange)
 - [com.oveduumnakal.charactersnapshot.KillCountVarps](#comoveduumnakalcharactersnapshotkillcountvarps)
+- [com.oveduumnakal.charactersnapshot.MinigamePoints](#comoveduumnakalcharactersnapshotminigamepoints)
 - [com.oveduumnakal.charactersnapshot.PrayerMagic](#comoveduumnakalcharactersnapshotprayermagic)
 - [com.oveduumnakal.charactersnapshot.SlayerInfo](#comoveduumnakalcharactersnapshotslayerinfo)
 - [com.oveduumnakal.charactersnapshot.SnapshotCollector](#comoveduumnakalcharactersnapshotsnapshotcollector)
@@ -86,6 +87,7 @@ for each category of data written to the export file.
 | `default boolean` | `syncInventory()` |  |
 | `default boolean` | `syncKillCounts()` |  |
 | `default boolean` | `syncLocation()` |  |
+| `default boolean` | `syncMinigamePoints()` |  |
 | `default boolean` | `syncQuests()` |  |
 | `default boolean` | `syncRunePouch()` |  |
 | `default boolean` | `syncSkills()` |  |
@@ -200,6 +202,12 @@ Storage section: where and how often data is written.
 `default boolean syncLocation()`
 
 - **Returns:** whether to include the character's world location
+
+#### syncMinigamePoints
+
+`default boolean syncMinigamePoints()`
+
+- **Returns:** whether to include minigame reward-shop points
 
 #### syncQuests
 
@@ -1869,6 +1877,68 @@ Varp id to export key, in varp order.
 
 ---
 
+## com.oveduumnakal.charactersnapshot.MinigamePoints
+
+_class_
+
+`final class MinigamePoints`
+
+Reads minigame reward-shop currencies. Each currency is one named game variable; minigames whose currency
+has no clearly named variable (Pest Control, Mahogany Homes, Last Man Standing, Guardians of the Rift,
+Barbarian Assault) are left out rather than guessed.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `static final Map<String,Integer>` | `VARBITS` | Currency key to its varbit id. |
+| `static final Map<String,Integer>` | `VARPS` | Currency key to its varp id. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `MinigamePoints()` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `static Map<String,Integer>` | `read(Client client)` | Reads every known currency. |
+
+### Field Detail
+
+#### VARBITS
+
+`static final Map<String,Integer> VARBITS`
+
+Currency key to its varbit id.
+
+#### VARPS
+
+`static final Map<String,Integer> VARPS`
+
+Currency key to its varp id.
+
+### Constructor Detail
+
+#### MinigamePoints
+
+`private MinigamePoints()`
+
+### Method Detail
+
+#### read
+
+`static Map<String,Integer> read(Client client)`
+
+Reads every known currency.
+
+- **Parameter** `client` — the client
+- **Returns:** currency key to balance, varps first then varbits, each in table order
+
+---
+
 ## com.oveduumnakal.charactersnapshot.PrayerMagic
 
 _class_
@@ -2124,6 +2194,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private final Map<String,Integer>` | `killCounts` |  |
 | `private LocationData` | `lastLocation` | Location captured by the last snapshot built with a live local player; cleared by `#reset()`. |
 | `private PlayerInfo` | `lastPlayer` | Identity captured by the last snapshot built with a live local player; cleared by `#reset()`. |
+| `private Map<String,Integer>` | `minigamePoints` |  |
 | `private MiscellaniaData` | `miscellania` |  |
 | `private Integer` | `polledEnergy` |  |
 | `private WorldPoint` | `polledLocation` |  |
@@ -2183,6 +2254,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollDailies()` | Polls the daily rewards and the Kingdom of Miscellania state. |
 | `public boolean` | `pollDiaries()` | Polls achievement-diary completion for every region via named RuneLite varbits, and each mapped task via `DiaryTasks`. |
 | `public boolean` | `pollKillCounts()` | Reads every boss kill-count varp (authoritative, exact and current), then merges the counts the Chat Commands plugin stored in the RuneScape-profile config (group `killcount`, key = lower-cased name) as a fallback for bosses without a varp. |
+| `public boolean` | `pollMinigamePoints()` | Polls the minigame reward-shop currencies. |
 | `public boolean` | `pollMovement()` | Compares the character's real-world location and run energy against the previous call. |
 | `public boolean` | `pollPrayerMagic()` | Polls the unlocked reward prayers, the selected quick prayers and the autocast spell. |
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
@@ -2473,6 +2545,10 @@ Location captured by the last snapshot built with a live local player; cleared b
 `private PlayerInfo lastPlayer`
 
 Identity captured by the last snapshot built with a live local player; cleared by `#reset()`.
+
+#### minigamePoints
+
+`private Map<String,Integer> minigamePoints`
 
 #### miscellania
 
@@ -2829,6 +2905,14 @@ name) as a fallback for bosses without a varp. Non-boss counts such as agility l
 `activityCounts`. A stored count never lowers a cached one and never overrides a varp value.
 
 - **Returns:** whether any cached count changed
+
+#### pollMinigamePoints
+
+`public boolean pollMinigamePoints()`
+
+Polls the minigame reward-shop currencies.
+
+- **Returns:** whether any balance changed since the last poll
 
 #### pollMovement
 
@@ -3276,6 +3360,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | `public Map<String,Integer>` | `killCounts` | Boss kill counts keyed by lower-case boss name, sorted by name. |
 | `public String` | `lastUpdated` | ISO-8601 instant at which this snapshot was built. |
 | `public LocationData` | `location` | Current world location of the character. |
+| `public Map<String,Integer>` | `minigamePoints` | Minigame reward-shop balances keyed by currency (`nightmareZone`, `titheFarm`, ...), in a fixed order. |
 | `public MiscellaniaData` | `miscellania` | Kingdom of Miscellania approval and coffer; absent before Throne of Miscellania or when the toggle is off. |
 | `public PlayerInfo` | `player` | Identity and account context of the logged-in character. |
 | `public Integer` | `questPoints` | Total quest points. |
@@ -3374,6 +3459,13 @@ ISO-8601 instant at which this snapshot was built.
 `public LocationData location`
 
 Current world location of the character.
+
+#### minigamePoints
+
+`public Map<String,Integer> minigamePoints`
+
+Minigame reward-shop balances keyed by currency (`nightmareZone`, `titheFarm`, ...), in a fixed
+order. Absent when the toggle is off.
 
 #### miscellania
 
