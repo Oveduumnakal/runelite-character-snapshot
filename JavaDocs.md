@@ -218,7 +218,7 @@ makes no network calls of any kind.
 | `private static final int` | `INITIAL_DELAY_TICKS` |  |
 | `private static final int` | `POLL_INTERVAL_TICKS` |  |
 | `Client` | `client` |  |
-| `private SnapshotCollector` | `collector` |  |
+| `SnapshotCollector` | `collector` |  |
 | `CharacterSnapshotConfig` | `config` |  |
 | `File` | `defaultDir` | Default export folder; replaced in tests so they never touch the real RuneLite directory. |
 | `private volatile boolean` | `dirty` |  |
@@ -226,10 +226,11 @@ makes no network calls of any kind.
 | `Gson` | `gson` |  |
 | `private boolean` | `initialCollectionDone` |  |
 | `private String` | `lastPlayerName` |  |
+| `private volatile boolean` | `questsStale` |  |
 | `private int` | `syncTickThreshold` |  |
 | `private int` | `tickCounter` |  |
 | `private String` | `warnedInvalidDir` | The last invalid custom folder a warning was logged for, so the warning is not repeated. |
-| `private SnapshotWriter` | `writer` |  |
+| `SnapshotWriter` | `writer` |  |
 
 ### Method Summary
 
@@ -245,6 +246,7 @@ makes no network calls of any kind.
 | `public void` | `onItemContainerChanged(ItemContainerChanged event)` | Caches bank, inventory, or equipment changes. |
 | `public void` | `onScriptPostFired(ScriptPostFired event)` | Captures the collection log page whenever the log redraws its item list. |
 | `public void` | `onStatChanged(StatChanged event)` | Caches a changed skill (real, experience, and boosted levels). |
+| `public void` | `onVarbitChanged(VarbitChanged event)` | Marks the quests stale on any varp or varbit change, since quest progress lives in those. |
 | `private void` | `pollPeriodic()` | Polls the data sources that are not event-driven, marking the snapshot dirty on any change. |
 | `CharacterSnapshotConfig` | `provideConfig(ConfigManager configManager)` | Provides the plugin configuration. |
 | `private void` | `recalcSyncThreshold()` | Recomputes the save threshold in game ticks (one tick is about 0.6 seconds). |
@@ -268,7 +270,7 @@ makes no network calls of any kind.
 
 #### collector
 
-`private SnapshotCollector collector`
+`SnapshotCollector collector`
 
 #### config
 
@@ -300,6 +302,10 @@ Default export folder; replaced in tests so they never touch the real RuneLite d
 
 `private String lastPlayerName`
 
+#### questsStale
+
+`private volatile boolean questsStale`
+
 #### syncTickThreshold
 
 `private int syncTickThreshold`
@@ -316,7 +322,7 @@ The last invalid custom folder a warning was logged for, so the warning is not r
 
 #### writer
 
-`private SnapshotWriter writer`
+`SnapshotWriter writer`
 
 ### Method Detail
 
@@ -399,6 +405,15 @@ Captures the collection log page whenever the log redraws its item list.
 Caches a changed skill (real, experience, and boosted levels).
 
 - **Parameter** `event` — the stat-changed event
+
+#### onVarbitChanged
+
+`public void onVarbitChanged(VarbitChanged event)`
+
+Marks the quests stale on any varp or varbit change, since quest progress lives in those. The next
+periodic poll then re-reads the quests; without a change they are not polled again.
+
+- **Parameter** `event` — the varbit-changed event
 
 #### pollPeriodic
 

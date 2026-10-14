@@ -28,6 +28,7 @@ import net.runelite.api.events.GrandExchangeOfferChanged;
 import net.runelite.api.events.ItemContainerChanged;
 import net.runelite.api.events.ScriptPostFired;
 import net.runelite.api.events.StatChanged;
+import net.runelite.api.events.VarbitChanged;
 import net.runelite.api.gameval.InventoryID;
 import net.runelite.client.RuneLite;
 import net.runelite.client.config.ConfigManager;
@@ -70,10 +71,6 @@ public class CharacterSnapshotPlugin extends Plugin
 
 	/** The last invalid custom folder a warning was logged for, so the warning is not repeated. */
 	private String warnedInvalidDir = null;
-
-	private SnapshotCollector collector;
-
-	private SnapshotWriter writer;
 
 	private volatile boolean dirty = false;
 
@@ -297,8 +294,12 @@ public class CharacterSnapshotPlugin extends Plugin
 	private void pollPeriodic()
 	{
 		boolean changed = false;
-		if (config.syncQuests())
-			changed |= collector.pollQuests();
+		if (questsStale)
+		{
+			questsStale = false;
+			if (config.syncQuests())
+				changed |= collector.pollQuests();
+		}
 
 		if (config.syncDiaries())
 			changed |= collector.pollDiaries();
@@ -358,6 +359,7 @@ public class CharacterSnapshotPlugin extends Plugin
 			}
 		}
 
+		questsStale = false;
 		if (config.syncQuests())
 			collector.pollQuests();
 
@@ -457,5 +459,23 @@ public class CharacterSnapshotPlugin extends Plugin
 	{
 		int seconds = Math.max(30, config.syncIntervalSeconds());
 		syncTickThreshold = (int) (seconds / 0.6);
+	}
+
+	SnapshotCollector collector;
+
+	SnapshotWriter writer;
+
+	private volatile boolean questsStale = false;
+
+	/**
+	 * Marks the quests stale on any varp or varbit change, since quest progress lives in those. The next
+	 * periodic poll then re-reads the quests; without a change they are not polled again.
+	 *
+	 * @param event the varbit-changed event
+	 */
+	@Subscribe
+	public void onVarbitChanged(VarbitChanged event)
+	{
+		questsStale = true;
 	}
 }
