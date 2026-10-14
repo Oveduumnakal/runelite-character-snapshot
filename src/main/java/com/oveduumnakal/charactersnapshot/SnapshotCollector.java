@@ -646,30 +646,33 @@ public class SnapshotCollector
 	}
 
 	/**
-	 * Polls the current slayer task, clearing it when no task is assigned.
+	 * Polls the slayer state. Points and streak are always exported; the task fields are null/0 when no task is
+	 * assigned.
 	 *
-	 * @return whether the slayer task changed since the last poll
+	 * @return whether the slayer state changed since the last poll
 	 */
 	@SuppressWarnings("deprecation")
 	public boolean pollSlayer()
 	{
-		int amount = client.getVarpValue(VarPlayerID.SLAYER_COUNT);
-		SlayerData task = null;
+		int amount = Math.max(0, client.getVarpValue(VarPlayerID.SLAYER_COUNT));
+		int creatureId = 0;
+		String creatureName = null;
+		String bossName = null;
 		if (amount > 0)
 		{
-			int creatureId = client.getVarpValue(VarPlayerID.SLAYER_TARGET);
-			String bossName = null;
+			creatureId = client.getVarpValue(VarPlayerID.SLAYER_TARGET);
+			creatureName = resolveTaskName(creatureId);
 			if (creatureId == SLAYER_BOSS_TASK_ID)
 				bossName = resolveBossName(client.getVarbitValue(VarbitID.SLAYER_TARGET_BOSSID));
-
-			task = new SlayerData(
-				creatureId,
-				resolveTaskName(creatureId),
-				bossName,
-				amount,
-				client.getVarbitValue(Varbits.SLAYER_POINTS),
-				client.getVarbitValue(Varbits.SLAYER_TASK_STREAK));
 		}
+
+		SlayerData task = new SlayerData(
+			creatureId,
+			creatureName,
+			bossName,
+			amount,
+			client.getVarbitValue(Varbits.SLAYER_POINTS),
+			client.getVarbitValue(Varbits.SLAYER_TASK_STREAK));
 
 		boolean changed = !Objects.equals(task, slayer);
 		slayer = task;

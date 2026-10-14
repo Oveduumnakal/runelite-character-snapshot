@@ -26,7 +26,7 @@ missing sections as "not exported", not "empty".
 | `questPoints` | int | Total quest points. |
 | `achievementDiaries` | object | Map of region name → tier completion. |
 | `combatAchievements` | object | Combat-achievement tier progress. |
-| `slayer` | object | Current task, or absent when none is assigned. |
+| `slayer` | object | Slayer points, streak and current task (task fields are 0/null between tasks). |
 | `location` | object | Region and world coordinates. |
 | `grandExchange` | array | Active GE offers, by slot. |
 
@@ -132,7 +132,9 @@ tier enums 3981 to 3986 (easy to grandmaster; values are task struct ids), monst
 
 ## slayer
 
-Present only when a task is assigned:
+Present whenever slayer has been read. `points` and `streak` are always exported. When no task is assigned,
+`creatureId` is 0, `amount` is 0, and `creatureName` and `bossName` are null.
+
 
 | Field | Type | Notes |
 |---|---|---|

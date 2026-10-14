@@ -900,7 +900,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollCombatAchievements()` | Polls the six combat-achievement tier varbits and the per-task completion bits. |
 | `public boolean` | `pollDiaries()` | Polls achievement-diary completion for every region via named RuneLite varbits, and each mapped task via `DiaryTasks`. |
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
-| `public boolean` | `pollSlayer()` | Polls the current slayer task, clearing it when no task is assigned. |
+| `public boolean` | `pollSlayer()` | Polls the slayer state. |
 | `private String` | `readTaskRowName(int row)` | Reads the display name column of one slayer task table row. |
 | `private void` | `refreshOverall()` | Recomputes the `OVERALL` entry from the cached skills. |
 | `private void` | `reloadCombatAchievementMetaIfNeeded()` | Loads the task metadata when none is cached, and retries (at most `#CA_META_MAX_RETRIES` times) while the last load was partial, i.e. |
@@ -1247,9 +1247,10 @@ Polls quest completion state and total quest points.
 
 `public boolean pollSlayer()`
 
-Polls the current slayer task, clearing it when no task is assigned.
+Polls the slayer state. Points and streak are always exported; the task fields are null/0 when no task is
+assigned.
 
-- **Returns:** whether the slayer task changed since the last poll
+- **Returns:** whether the slayer state changed since the last poll
 
 #### readTaskRowName
 
@@ -1509,7 +1510,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | _class_ [`PlayerInfo`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotplayerinfo) | Identity and account context of the logged-in character. |
 | _class_ [`QuestEntry`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotquestentry) | Completion state of one quest. |
 | _class_ [`SkillEntry`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotskillentry) | Real level and experience for one skill, plus the current boosted level. |
-| _class_ [`SlayerData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotslayerdata) | The current slayer task. |
+| _class_ [`SlayerData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotslayerdata) | The slayer state. |
 | _class_ [`TierCount`](#comoveduumnakalcharactersnapshotmodelcharactersnapshottiercount) | Completed and total task counts for one combat-achievement tier. |
 | _class_ [`VitalsData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotvitalsdata) | Current combat vitals: hitpoints, prayer, and run energy. |
 
@@ -1531,7 +1532,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | `public int` | `schemaVersion` | Schema version of this file; bumped when the shape of the export changes. |
 | `public Map<String,String>` | `sectionUpdated` | ISO-8601 instant each item section (`bank`, `inventory`, `equipment`) was last captured from the client, keyed by section name. |
 | `public Map<String,SkillEntry>` | `skills` | Real level and experience per skill, keyed by upper-case skill name, plus `OVERALL`. |
-| `public SlayerData` | `slayer` | Current slayer task, or `null` when no task is assigned. |
+| `public SlayerData` | `slayer` | Slayer state; points and streak always set once polled, task fields null/0 when no task. |
 | `public VitalsData` | `vitals` | Current combat vitals (hitpoints, prayer, run energy). |
 
 ### Field Detail
@@ -1627,7 +1628,7 @@ Real level and experience per skill, keyed by upper-case skill name, plus `OVERA
 
 `public SlayerData slayer`
 
-Current slayer task, or `null` when no task is assigned.
+Slayer state; points and streak always set once polled, task fields null/0 when no task.
 
 #### vitals
 
@@ -2588,7 +2589,8 @@ _class_
 
 `public static class SlayerData`
 
-The current slayer task. The creature is exported as its game id plus, when resolvable, its name.
+The slayer state. With no task assigned, the creature id and amount are 0 and the names are null, while
+points and streak stay. The creature is exported as its game id plus, when resolvable, its name.
 
 ### Field Summary
 
