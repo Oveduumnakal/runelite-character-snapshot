@@ -20,6 +20,7 @@ import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BlockedTask;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.InventoryItem;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.PlayerInfo;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SkillEntry;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SlayerData;
 import org.junit.Test;
 
@@ -29,6 +30,8 @@ import net.runelite.api.Item;
 import net.runelite.api.ItemComposition;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.Player;
+import net.runelite.api.Skill;
+import net.runelite.api.Varbits;
 import net.runelite.api.WorldType;
 import net.runelite.api.gameval.DBTableID;
 import net.runelite.api.gameval.VarPlayerID;
@@ -404,6 +407,54 @@ public class SnapshotCollectorTest
 	}
 
 	/**
+	 * A level-up after the login poll is reflected in the OVERALL total level and experience.
+	 */
+	@Test
+	public void overallFollowsSkillUpdates()
+	{
+		Client client = loggedInClient("Zezima");
+		for (Skill skill : Skill.values())
+		{
+			when(client.getRealSkillLevel(skill)).thenReturn(10);
+			when(client.getSkillExperience(skill)).thenReturn(1000);
+			when(client.getBoostedSkillLevel(skill)).thenReturn(10);
+		}
+
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+		collector.pollAllSkills();
+		int skillCount = 0;
+		for (Skill skill : Skill.values())
+		{
+			if (!"OVERALL".equals(skill.name()))
+				skillCount++;
+		}
+
+		SkillEntry before = collector.buildSnapshot().skills.get("OVERALL");
+		assertEquals(10 * skillCount, before.level);
+
+		collector.updateSkill(Skill.ATTACK, 11, 1200, 11);
+		Map<String, SkillEntry> after = collector.buildSnapshot().skills;
+		SkillEntry overall = after.get("OVERALL");
+
+		assertEquals(10 * skillCount + 1, overall.level);
+		assertEquals(1000L * skillCount + 200, overall.xp);
+	}
+
+	/**
+	 * Skill updates arriving before the full login poll do not export a partial OVERALL total.
+	 */
+	@Test
+	public void overallAbsentUntilAllSkillsKnown()
+	{
+		Client client = loggedInClient("Zezima");
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.updateSkill(Skill.ATTACK, 11, 1200, 11);
+
+		assertNull(collector.buildSnapshot().skills.get("OVERALL"));
+	}
+
+	/**
 	 * Builds a previous export with a bank (own capture time), an equipped helm and one inventory item
 	 * (both falling back to the build time).
 	 *
@@ -654,5 +705,89 @@ public class SnapshotCollectorTest
 		ItemComposition comp = mock(ItemComposition.class);
 		when(comp.getName()).thenReturn(name);
 		return comp;
+	}
+
+	/**
+	 * Wearing nothing exports an empty equipment object once equipment was captured, with its capture time.
+	 */
+	@Test
+	public void emptyEquipmentIsExportedAsEmptyObject()
+	{
+		Client client = loggedInClient("Zezima");
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.updateEquipment(container(item(-1, 0)));
+		CharacterSnapshot data = collector.buildSnapshot();
+
+		assertNotNull(data.equipment);
+		assertTrue(data.equipment.isEmpty());
+		assertNotNull(data.sectionUpdated.get("equipment"));
+	}
+
+	/**
+	 * Equipment is omitted until it has been captured, so unknown data is not reported as empty.
+	 */
+	@Test
+	public void equipmentOmittedBeforeCapture()
+	{
+		Client client = loggedInClient("Zezima");
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		assertNull(collector.buildSnapshot().equipment);
+	}
+
+	/**
+	 * With account info off, accountType and members are both null rather than members being false.
+	 */
+	@Test
+	public void accountInfoOffExportsNullMembers()
+	{
+		Client client = loggedInClient("Zezima");
+		CharacterSnapshotConfig config = allEnabled();
+		when(config.syncAccountInfo()).thenReturn(false);
+		SnapshotCollector collector = new SnapshotCollector(client, config);
+
+		PlayerInfo player = collector.buildSnapshot().player;
+
+		assertNull(player.accountType);
+		assertNull(player.members);
+	}
+
+	/**
+	 * With account info on, members reflects the world type.
+	 */
+	@Test
+	public void accountInfoOnExportsMembers()
+	{
+		Client client = loggedInClient("Zezima");
+		when(client.getWorldType()).thenReturn(EnumSet.of(WorldType.MEMBERS));
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		assertEquals(Boolean.TRUE, collector.buildSnapshot().player.members);
+	}
+
+	/**
+	 * With no task assigned, points and streak are still exported and the task fields are empty.
+	 */
+	@Test
+	@SuppressWarnings("deprecation")
+	public void slayerPointsAndStreakSurviveWithoutTask()
+	{
+		Client client = loggedInClient("Zezima");
+		when(client.getVarpValue(VarPlayerID.SLAYER_COUNT)).thenReturn(0);
+		when(client.getVarbitValue(Varbits.SLAYER_POINTS)).thenReturn(264);
+		when(client.getVarbitValue(Varbits.SLAYER_TASK_STREAK)).thenReturn(49);
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		assertTrue(collector.pollSlayer());
+		SlayerData slayer = collector.buildSnapshot().slayer;
+
+		assertNotNull(slayer);
+		assertEquals(264, slayer.points);
+		assertEquals(49, slayer.streak);
+		assertEquals(0, slayer.amount);
+		assertEquals(0, slayer.creatureId);
+		assertNull(slayer.creatureName);
+		assertNull(slayer.bossName);
 	}
 }
