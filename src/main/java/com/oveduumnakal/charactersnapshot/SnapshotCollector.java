@@ -218,6 +218,7 @@ public class SnapshotCollector
 		combatAchievements = null;
 		slayer = null;
 		runePouch = null;
+		spellbook = null;
 	}
 
 	/**
@@ -903,8 +904,10 @@ public class SnapshotCollector
 
 		String accountType = null;
 		Boolean members = null;
+		String book = null;
 		if (config.syncAccountInfo())
 		{
+			book = spellbook;
 			AccountType type = client.getAccountType();
 			accountType = type != null ? type.name() : null;
 			members = client.getWorldType().contains(WorldType.MEMBERS);
@@ -915,7 +918,8 @@ public class SnapshotCollector
 			localPlayer.getCombatLevel(),
 			client.getWorld(),
 			accountType,
-			members);
+			members,
+			book);
 
 		if (config.syncSkills() && !skills.isEmpty())
 			data.skills = new LinkedHashMap<>(skills);
@@ -1284,5 +1288,24 @@ public class SnapshotCollector
 
 		storages.put(key, items);
 		storageUpdated.put(key, Instant.now());
+	}
+
+	/** Spellbook varbit values 0 to 3, in order; any other value is reported as unknown. */
+	private static final String[] SPELLBOOK_NAMES = {"STANDARD", "ANCIENT", "LUNAR", "ARCEUUS"};
+
+	private String spellbook = null;
+
+	/**
+	 * Polls the active spellbook from the spellbook varbit (0 standard, 1 ancient, 2 lunar, 3 arceuus).
+	 *
+	 * @return whether the spellbook changed since the last poll
+	 */
+	public boolean pollSpellbook()
+	{
+		int value = client.getVarbitValue(VarbitID.SPELLBOOK);
+		String book = value >= 0 && value < SPELLBOOK_NAMES.length ? SPELLBOOK_NAMES[value] : null;
+		boolean changed = !Objects.equals(book, spellbook);
+		spellbook = book;
+		return changed;
 	}
 }

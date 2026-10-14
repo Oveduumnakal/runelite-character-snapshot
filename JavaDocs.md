@@ -957,6 +957,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private static final int[]` | `RUNE_POUCH_QUANTITY_VARBITS` |  |
 | `private static final int[]` | `RUNE_POUCH_TYPE_VARBITS` |  |
 | `private static final int` | `SLAYER_BOSS_TASK_ID` |  |
+| `private static final String[]` | `SPELLBOOK_NAMES` | Spellbook varbit values 0 to 3, in order; any other value is reported as unknown. |
 | `private static final Map<Integer,String>` | `STORAGE_KEYS` | Storage containers captured when opened, keyed by container id to export key. |
 | `private List<ItemEntry>` | `bankItems` |  |
 | `private List<BankTab>` | `bankTabs` |  |
@@ -981,6 +982,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private SlayerData` | `slayer` |  |
 | `private final Map<Integer,String>` | `slayerBossNames` |  |
 | `private final Map<Integer,String>` | `slayerTaskNames` |  |
+| `private String` | `spellbook` |  |
 | `private final Map<String,Instant>` | `storageUpdated` |  |
 | `private final Map<String,List<ItemEntry>>` | `storages` |  |
 
@@ -1014,6 +1016,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
 | `public boolean` | `pollRunePouch()` | Polls the rune pouch contents. |
 | `public boolean` | `pollSlayer()` | Polls the slayer state. |
+| `public boolean` | `pollSpellbook()` | Polls the active spellbook from the spellbook varbit (0 standard, 1 ancient, 2 lunar, 3 arceuus). |
 | `private List<BlockedTask>` | `readBlockedTasks()` | Reads every master's blocked task slots, falling back to the legacy shared block list when no per-master slot is filled. |
 | `private List<String>` | `readFlags(Map<String,Integer> varbits)` | Lists the keys whose varbit is non-zero. |
 | `private List<ItemEntry>` | `readRunePouch()` | Reads the rune pouch slots from the client varbits. |
@@ -1115,6 +1118,12 @@ Every rune pouch variant; the contents varbits are shared by all of them.
 #### SLAYER_BOSS_TASK_ID
 
 `private static final int SLAYER_BOSS_TASK_ID`
+
+#### SPELLBOOK_NAMES
+
+`private static final String[] SPELLBOOK_NAMES`
+
+Spellbook varbit values 0 to 3, in order; any other value is reported as unknown.
 
 #### STORAGE_KEYS
 
@@ -1221,6 +1230,10 @@ Cached task metadata by task id (completed flag unset); empty until resolved fro
 #### slayerTaskNames
 
 `private final Map<Integer,String> slayerTaskNames`
+
+#### spellbook
+
+`private String spellbook`
 
 #### storageUpdated
 
@@ -1422,6 +1435,14 @@ Polls the slayer state. Points and streak are always exported; the task fields a
 assigned.
 
 - **Returns:** whether the slayer state changed since the last poll
+
+#### pollSpellbook
+
+`public boolean pollSpellbook()`
+
+Polls the active spellbook from the spellbook varbit (0 standard, 1 ancient, 2 lunar, 3 arceuus).
+
+- **Returns:** whether the spellbook changed since the last poll
 
 #### readBlockedTasks
 
@@ -2720,6 +2741,7 @@ Identity and account context of the logged-in character.
 | `public String` | `accountType` | Account type, e.g. |
 | `public int` | `combatLevel` | Combat level. |
 | `public Boolean` | `members` | Whether the current world is a members' world; `null` when account info is not exported. |
+| `public String` | `spellbook` | Active spellbook: `STANDARD`, `ANCIENT`, `LUNAR` or `ARCEUUS`; null if unknown. |
 | `public String` | `username` | In-game display name. |
 | `public int` | `world` | World the character is logged into. |
 
@@ -2728,6 +2750,7 @@ Identity and account context of the logged-in character.
 | Constructor | Description |
 |---|---|
 | `PlayerInfo(String username, int combatLevel, int world, String accountType, Boolean members)` |  |
+| `PlayerInfo(String username, int combatLevel, int world, String accountType, Boolean members, String spellbook)` |  |
 
 ### Field Detail
 
@@ -2748,6 +2771,12 @@ Combat level.
 `public Boolean members`
 
 Whether the current world is a members' world; `null` when account info is not exported.
+
+#### spellbook
+
+`public String spellbook`
+
+Active spellbook: `STANDARD`, `ANCIENT`, `LUNAR` or `ARCEUUS`; null if unknown.
 
 #### username
 
@@ -2772,6 +2801,17 @@ World the character is logged into.
 - **Parameter** `world` — current world
 - **Parameter** `accountType` — account-type name
 - **Parameter** `members` — whether on a members' world, or `null` when not exported
+
+#### PlayerInfo
+
+`public PlayerInfo(String username, int combatLevel, int world, String accountType, Boolean members, String spellbook)`
+
+- **Parameter** `username` — display name
+- **Parameter** `combatLevel` — combat level
+- **Parameter** `world` — current world
+- **Parameter** `accountType` — account-type name
+- **Parameter** `members` — whether on a members' world
+- **Parameter** `spellbook` — active spellbook name, may be `null`
 
 ---
 

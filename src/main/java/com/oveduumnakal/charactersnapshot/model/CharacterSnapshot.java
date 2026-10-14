@@ -101,6 +101,9 @@ public class CharacterSnapshot
 		/** Whether the current world is a members' world; {@code null} when account info is not exported. */
 		public Boolean members;
 
+		/** Active spellbook: {@code STANDARD}, {@code ANCIENT}, {@code LUNAR} or {@code ARCEUUS}; null if unknown. */
+		public String spellbook;
+
 		/**
 		 * @param username    display name
 		 * @param combatLevel combat level
@@ -115,6 +118,21 @@ public class CharacterSnapshot
 			this.world = world;
 			this.accountType = accountType;
 			this.members = members;
+		}
+
+		/**
+		 * @param username    display name
+		 * @param combatLevel combat level
+		 * @param world       current world
+		 * @param accountType account-type name
+		 * @param members     whether on a members' world
+		 * @param spellbook   active spellbook name, may be {@code null}
+		 */
+		public PlayerInfo(String username, int combatLevel, int world, String accountType, Boolean members,
+			String spellbook)
+		{
+			this(username, combatLevel, world, accountType, members);
+			this.spellbook = spellbook;
 		}
 	}
 
