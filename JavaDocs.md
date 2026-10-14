@@ -62,6 +62,7 @@ for each category of data written to the export file.
 | `default boolean` | `syncInventory()` |  |
 | `default boolean` | `syncLocation()` |  |
 | `default boolean` | `syncQuests()` |  |
+| `default boolean` | `syncRunePouch()` |  |
 | `default boolean` | `syncSkills()` |  |
 | `default boolean` | `syncSlayer()` |  |
 | `default boolean` | `syncVitals()` |  |
@@ -154,6 +155,12 @@ Storage section: where and how often data is written.
 `default boolean syncQuests()`
 
 - **Returns:** whether to include quest completion state and total quest points
+
+#### syncRunePouch
+
+`default boolean syncRunePouch()`
+
+- **Returns:** whether to include the rune pouch contents
 
 #### syncSkills
 
@@ -847,6 +854,9 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private static final String[]` | `CA_TIER_NAMES` |  |
 | `private static final EquipmentInventorySlot[]` | `EQUIPMENT_SLOTS` |  |
 | `private static final int` | `KARAMJA_TIER_DONE` | Value of the Karamja easy, medium and hard tier varbits once the tier is complete; 1 only means started. |
+| `private static final int[]` | `RUNE_POUCH_ITEMS` | Every rune pouch variant; the contents varbits are shared by all of them. |
+| `private static final int[]` | `RUNE_POUCH_QUANTITY_VARBITS` |  |
+| `private static final int[]` | `RUNE_POUCH_TYPE_VARBITS` |  |
 | `private static final int` | `SLAYER_BOSS_TASK_ID` |  |
 | `private List<ItemEntry>` | `bankItems` |  |
 | `private List<BankTab>` | `bankTabs` |  |
@@ -864,6 +874,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private Instant` | `inventoryUpdated` |  |
 | `private Integer` | `questPoints` |  |
 | `private List<QuestEntry>` | `quests` |  |
+| `private List<ItemEntry>` | `runePouch` |  |
 | `private final Map<String,SkillEntry>` | `skills` |  |
 | `private SlayerData` | `slayer` |  |
 | `private final Map<Integer,String>` | `slayerBossNames` |  |
@@ -889,6 +900,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private DiaryRegion` | `diaryRegion(String region, int easy, int medium, int hard, int elite, int doneValue)` | Reads a diary region's four tiers and its mapped tasks. |
 | `private List<ItemEntry>` | `filterBankSlice(Item[] raw, int start, int end)` | Converts a slice of raw bank slots to item entries, dropping empty slots and placeholders. |
 | `private String` | `getItemName(int itemId)` | Resolves an item id to its display name. |
+| `private boolean` | `hasRunePouch()` |  |
 | `private Map<Integer,CombatAchievementTask>` | `loadCombatAchievementMeta()` | Reads task names, tiers, and monsters from the game cache: each tier enum lists task structs, and each struct carries the task id, name, and monster category as params. |
 | `private static Instant` | `parseInstant(String value)` | Parses an ISO-8601 instant, tolerating a missing or malformed value. |
 | `public void` | `pollAllGeOffers()` | Rebuilds the Grand Exchange cache from the client's current offer array. |
@@ -896,7 +908,9 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollCombatAchievements()` | Polls the six combat-achievement tier varbits and the per-task completion bits. |
 | `public boolean` | `pollDiaries()` | Polls achievement-diary completion for every region via named RuneLite varbits, and each mapped task via `DiaryTasks`. |
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
+| `public boolean` | `pollRunePouch()` | Polls the rune pouch contents. |
 | `public boolean` | `pollSlayer()` | Polls the current slayer task, clearing it when no task is assigned. |
+| `private List<ItemEntry>` | `readRunePouch()` | Reads the rune pouch slots from the client varbits. |
 | `private String` | `readTaskRowName(int row)` | Reads the display name column of one slayer task table row. |
 | `public void` | `reset()` | Clears every cache. |
 | `private String` | `resolveBossName(int bossId)` | Resolves a boss-task boss id to the boss name via the slayer task sublist table. |
@@ -965,6 +979,20 @@ Cache enums listing the task struct ids per tier, easy to grandmaster. Not in th
 
 Value of the Karamja easy, medium and hard tier varbits once the tier is complete; 1 only means started.
 The Karamja elite varbit and every other region's tier varbits are plain 0/1 flags.
+
+#### RUNE_POUCH_ITEMS
+
+`private static final int[] RUNE_POUCH_ITEMS`
+
+Every rune pouch variant; the contents varbits are shared by all of them.
+
+#### RUNE_POUCH_QUANTITY_VARBITS
+
+`private static final int[] RUNE_POUCH_QUANTITY_VARBITS`
+
+#### RUNE_POUCH_TYPE_VARBITS
+
+`private static final int[] RUNE_POUCH_TYPE_VARBITS`
 
 #### SLAYER_BOSS_TASK_ID
 
@@ -1035,6 +1063,10 @@ Cached task metadata by task id (completed flag unset); empty until resolved fro
 #### quests
 
 `private List<QuestEntry> quests`
+
+#### runePouch
+
+`private List<ItemEntry> runePouch`
 
 #### skills
 
@@ -1163,6 +1195,12 @@ Resolves an item id to its display name.
 - **Parameter** `itemId` — the item id
 - **Returns:** the item name, or `null` when it cannot be resolved
 
+#### hasRunePouch
+
+`private boolean hasRunePouch()`
+
+- **Returns:** whether the live inventory holds any rune pouch variant
+
 #### loadCombatAchievementMeta
 
 `private Map<Integer,CombatAchievementTask> loadCombatAchievementMeta()`
@@ -1218,6 +1256,17 @@ Polls quest completion state and total quest points.
 
 - **Returns:** whether either the quest states or the quest-point total changed since the last poll
 
+#### pollRunePouch
+
+`public boolean pollRunePouch()`
+
+Polls the rune pouch contents. The pouch is present only while the inventory holds one of its variants
+(the same check RuneLite's rune pouch plugin makes); otherwise the cached contents are cleared. Each
+of the six slots pairs a rune-type varbit with a quantity varbit, and the rune type maps to an item id
+through the `EnumID#RUNEPOUCH_RUNE` cache enum. Empty slots and unresolvable runes are skipped.
+
+- **Returns:** whether the pouch contents (or its presence) changed since the last poll
+
 #### pollSlayer
 
 `public boolean pollSlayer()`
@@ -1225,6 +1274,14 @@ Polls quest completion state and total quest points.
 Polls the current slayer task, clearing it when no task is assigned.
 
 - **Returns:** whether the slayer task changed since the last poll
+
+#### readRunePouch
+
+`private List<ItemEntry> readRunePouch()`
+
+Reads the rune pouch slots from the client varbits.
+
+- **Returns:** the runes held, possibly empty
 
 #### readTaskRowName
 
@@ -1487,6 +1544,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | `public PlayerInfo` | `player` | Identity and account context of the logged-in character. |
 | `public Integer` | `questPoints` | Total quest points. |
 | `public List<QuestEntry>` | `quests` | Quest completion state, one entry per quest. |
+| `public List<ItemEntry>` | `runePouch` | Runes held in the rune pouch, present only while the inventory holds a rune pouch (any variant). |
 | `public int` | `schemaVersion` | Schema version of this file; bumped when the shape of the export changes. |
 | `public Map<String,String>` | `sectionUpdated` | ISO-8601 instant each item section (`bank`, `inventory`, `equipment`) was last captured from the client, keyed by section name. |
 | `public Map<String,SkillEntry>` | `skills` | Real level and experience per skill, keyed by upper-case skill name, plus `OVERALL`. |
@@ -1561,6 +1619,13 @@ Total quest points.
 `public List<QuestEntry> quests`
 
 Quest completion state, one entry per quest.
+
+#### runePouch
+
+`public List<ItemEntry> runePouch`
+
+Runes held in the rune pouch, present only while the inventory holds a rune pouch (any variant).
+Empty when the pouch holds nothing.
 
 #### schemaVersion
 

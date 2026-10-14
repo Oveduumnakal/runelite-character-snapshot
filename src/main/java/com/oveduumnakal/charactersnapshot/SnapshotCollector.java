@@ -35,6 +35,7 @@ import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.VitalsData;
 
 import net.runelite.api.Client;
 import net.runelite.api.EnumComposition;
+import net.runelite.api.EnumID;
 import net.runelite.api.EquipmentInventorySlot;
 import net.runelite.api.GrandExchangeOffer;
 import net.runelite.api.GrandExchangeOfferState;
@@ -51,6 +52,8 @@ import net.runelite.api.Varbits;
 import net.runelite.api.WorldType;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.gameval.DBTableID;
+import net.runelite.api.gameval.InventoryID;
+import net.runelite.api.gameval.ItemID;
 import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.api.vars.AccountType;
@@ -112,6 +115,22 @@ public class SnapshotCollector
 		VarbitID.BANK_TAB_9
 	};
 
+	private static final int[] RUNE_POUCH_TYPE_VARBITS = {
+		VarbitID.RUNE_POUCH_TYPE_1, VarbitID.RUNE_POUCH_TYPE_2, VarbitID.RUNE_POUCH_TYPE_3,
+		VarbitID.RUNE_POUCH_TYPE_4, VarbitID.RUNE_POUCH_TYPE_5, VarbitID.RUNE_POUCH_TYPE_6
+	};
+
+	private static final int[] RUNE_POUCH_QUANTITY_VARBITS = {
+		VarbitID.RUNE_POUCH_QUANTITY_1, VarbitID.RUNE_POUCH_QUANTITY_2, VarbitID.RUNE_POUCH_QUANTITY_3,
+		VarbitID.RUNE_POUCH_QUANTITY_4, VarbitID.RUNE_POUCH_QUANTITY_5, VarbitID.RUNE_POUCH_QUANTITY_6
+	};
+
+	/** Every rune pouch variant; the contents varbits are shared by all of them. */
+	private static final int[] RUNE_POUCH_ITEMS = {
+		ItemID.BH_RUNE_POUCH, ItemID.BH_RUNE_POUCH_TROUVER,
+		ItemID.DIVINE_RUNE_POUCH, ItemID.DIVINE_RUNE_POUCH_TROUVER
+	};
+
 	private final Client client;
 
 	private final CharacterSnapshotConfig config;
@@ -153,6 +172,8 @@ public class SnapshotCollector
 
 	private SlayerData slayer = null;
 
+	private List<ItemEntry> runePouch = null;
+
 	/**
 	 * @param client the RuneLite client
 	 * @param config the plugin configuration
@@ -184,6 +205,7 @@ public class SnapshotCollector
 		diaries = null;
 		combatAchievements = null;
 		slayer = null;
+		runePouch = null;
 	}
 
 	/**
@@ -396,6 +418,70 @@ public class SnapshotCollector
 			equipment = new LinkedHashMap<>(previous.equipment);
 			equipmentUpdated = equipmentTime;
 		}
+	}
+
+	/**
+	 * Polls the rune pouch contents. The pouch is present only while the inventory holds one of its variants
+	 * (the same check RuneLite's rune pouch plugin makes); otherwise the cached contents are cleared. Each
+	 * of the six slots pairs a rune-type varbit with a quantity varbit, and the rune type maps to an item id
+	 * through the {@link EnumID#RUNEPOUCH_RUNE} cache enum. Empty slots and unresolvable runes are skipped.
+	 *
+	 * @return whether the pouch contents (or its presence) changed since the last poll
+	 */
+	public boolean pollRunePouch()
+	{
+		List<ItemEntry> contents = hasRunePouch() ? readRunePouch() : null;
+		boolean changed = !Objects.equals(contents, runePouch);
+		runePouch = contents;
+		return changed;
+	}
+
+	/**
+	 * @return whether the live inventory holds any rune pouch variant
+	 */
+	private boolean hasRunePouch()
+	{
+		ItemContainer inv = client.getItemContainer(InventoryID.INV);
+		if (inv == null)
+			return false;
+
+		for (Item item : inv.getItems())
+		{
+			for (int pouch : RUNE_POUCH_ITEMS)
+			{
+				if (item.getId() == pouch)
+					return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Reads the rune pouch slots from the client varbits.
+	 *
+	 * @return the runes held, possibly empty
+	 */
+	private List<ItemEntry> readRunePouch()
+	{
+		List<ItemEntry> runes = new ArrayList<>();
+		EnumComposition runeEnum = client.getEnum(EnumID.RUNEPOUCH_RUNE);
+		if (runeEnum == null)
+			return runes;
+
+		for (int slot = 0; slot < RUNE_POUCH_TYPE_VARBITS.length; slot++)
+		{
+			int type = client.getVarbitValue(RUNE_POUCH_TYPE_VARBITS[slot]);
+			int amount = client.getVarbitValue(RUNE_POUCH_QUANTITY_VARBITS[slot]);
+			if (type <= 0 || amount <= 0)
+				continue;
+
+			int itemId = runeEnum.getIntValue(type);
+			if (itemId > 0)
+				runes.add(new ItemEntry(itemId, getItemName(itemId), amount));
+		}
+
+		return runes;
 	}
 
 	/**
@@ -758,6 +844,9 @@ public class SnapshotCollector
 			data.equipment = new LinkedHashMap<>(equipment);
 
 		data.sectionUpdated = buildSectionUpdated(data);
+
+		if (config.syncRunePouch() && runePouch != null)
+			data.runePouch = new ArrayList<>(runePouch);
 
 		if (config.syncQuests() && quests != null)
 		{

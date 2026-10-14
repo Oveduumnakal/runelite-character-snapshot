@@ -23,6 +23,8 @@ import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SlayerData;
 import org.junit.Test;
 
 import net.runelite.api.Client;
+import net.runelite.api.EnumComposition;
+import net.runelite.api.EnumID;
 import net.runelite.api.EquipmentInventorySlot;
 import net.runelite.api.Item;
 import net.runelite.api.ItemComposition;
@@ -30,6 +32,8 @@ import net.runelite.api.ItemContainer;
 import net.runelite.api.Player;
 import net.runelite.api.WorldType;
 import net.runelite.api.gameval.DBTableID;
+import net.runelite.api.gameval.InventoryID;
+import net.runelite.api.gameval.ItemID;
 import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
 
@@ -527,6 +531,95 @@ public class SnapshotCollectorTest
 	}
 
 	/**
+	 * Rune pouch slots are read from the type and quantity varbits and mapped to item ids through the cache enum;
+	 * empty slots are skipped.
+	 */
+	@Test
+	public void runePouchContentsAreExported()
+	{
+		Client client = pouchClient(ItemID.DIVINE_RUNE_POUCH);
+		when(client.getVarbitValue(VarbitID.RUNE_POUCH_TYPE_1)).thenReturn(1);
+		when(client.getVarbitValue(VarbitID.RUNE_POUCH_QUANTITY_1)).thenReturn(1000);
+		when(client.getVarbitValue(VarbitID.RUNE_POUCH_TYPE_4)).thenReturn(2);
+		when(client.getVarbitValue(VarbitID.RUNE_POUCH_QUANTITY_4)).thenReturn(50);
+		when(client.getVarbitValue(VarbitID.RUNE_POUCH_TYPE_2)).thenReturn(3);
+		EnumComposition runes = mock(EnumComposition.class);
+		when(runes.getIntValue(1)).thenReturn(556);
+		when(runes.getIntValue(2)).thenReturn(555);
+		when(client.getEnum(EnumID.RUNEPOUCH_RUNE)).thenReturn(runes);
+		ItemComposition air = named("Air rune");
+		ItemComposition water = named("Water rune");
+		when(client.getItemDefinition(556)).thenReturn(air);
+		when(client.getItemDefinition(555)).thenReturn(water);
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		assertTrue(collector.pollRunePouch());
+		CharacterSnapshot data = collector.buildSnapshot();
+
+		assertEquals(Arrays.asList(556, 555), ids(data.runePouch));
+		assertEquals("Air rune", data.runePouch.get(0).name);
+		assertEquals(1000, data.runePouch.get(0).quantity);
+		assertEquals(50, data.runePouch.get(1).quantity);
+		assertTrue(!collector.pollRunePouch());
+	}
+
+	/**
+	 * With no pouch in the inventory the field is omitted, and an empty pouch exports an empty list.
+	 */
+	@Test
+	public void runePouchOmittedWithoutPouch()
+	{
+		Client client = pouchClient(ItemID.COINS);
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.pollRunePouch();
+		assertNull(collector.buildSnapshot().runePouch);
+
+		Client held = pouchClient(ItemID.BH_RUNE_POUCH);
+		when(held.getEnum(EnumID.RUNEPOUCH_RUNE)).thenReturn(mock(EnumComposition.class));
+		SnapshotCollector heldCollector = new SnapshotCollector(held, allEnabled());
+		heldCollector.pollRunePouch();
+		assertTrue(heldCollector.buildSnapshot().runePouch.isEmpty());
+	}
+
+	/**
+	 * The pouch is left out when its toggle is off, and cleared once the pouch leaves the inventory.
+	 */
+	@Test
+	public void runePouchRespectsToggleAndRemoval()
+	{
+		Client client = pouchClient(ItemID.BH_RUNE_POUCH);
+		when(client.getEnum(EnumID.RUNEPOUCH_RUNE)).thenReturn(mock(EnumComposition.class));
+		CharacterSnapshotConfig off = allEnabled();
+		when(off.syncRunePouch()).thenReturn(false);
+		SnapshotCollector disabled = new SnapshotCollector(client, off);
+		disabled.pollRunePouch();
+		assertNull(disabled.buildSnapshot().runePouch);
+
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+		collector.pollRunePouch();
+		assertNotNull(collector.buildSnapshot().runePouch);
+		ItemContainer coins = container(item(ItemID.COINS, 1));
+		when(client.getItemContainer(InventoryID.INV)).thenReturn(coins);
+		assertTrue(collector.pollRunePouch());
+		assertNull(collector.buildSnapshot().runePouch);
+	}
+
+	/**
+	 * Builds a logged-in client whose inventory holds the given item.
+	 *
+	 * @param itemId the inventory item id
+	 * @return the mock client
+	 */
+	private static Client pouchClient(int itemId)
+	{
+		Client client = loggedInClient("Zezima");
+		ItemContainer inv = container(item(itemId, 1));
+		when(client.getItemContainer(InventoryID.INV)).thenReturn(inv);
+		return client;
+	}
+
+	/**
 	 * Builds a config with every data category enabled.
 	 *
 	 * @return the mock config
@@ -546,6 +639,7 @@ public class SnapshotCollectorTest
 		when(config.syncLocation()).thenReturn(true);
 		when(config.syncAccountInfo()).thenReturn(true);
 		when(config.syncGrandExchange()).thenReturn(true);
+		when(config.syncRunePouch()).thenReturn(true);
 		return config;
 	}
 

@@ -251,4 +251,19 @@ public interface CharacterSnapshotConfig extends Config
 	{
 		return true;
 	}
+
+	/**
+	 * @return whether to include the rune pouch contents
+	 */
+	@ConfigItem(
+		keyName = "syncRunePouch",
+		name = "Rune pouch",
+		description = "Include the runes held in your rune pouch (only while you carry one)",
+		section = dataSection,
+		position = 12
+	)
+	default boolean syncRunePouch()
+	{
+		return true;
+	}
 }

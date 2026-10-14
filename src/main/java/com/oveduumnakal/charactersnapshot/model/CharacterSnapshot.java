@@ -53,6 +53,12 @@ public class CharacterSnapshot
 	/** Worn equipment keyed by slot name. */
 	public Map<String, ItemEntry> equipment;
 
+	/**
+	 * Runes held in the rune pouch, present only while the inventory holds a rune pouch (any variant).
+	 * Empty when the pouch holds nothing.
+	 */
+	public List<ItemEntry> runePouch;
+
 	/** Quest completion state, one entry per quest. */
 	public List<QuestEntry> quests;
 
@@ -179,6 +185,7 @@ public class CharacterSnapshot
 	/**
 	 * One stack of items: id, resolved name, and quantity.
 	 */
+	@EqualsAndHashCode
 	public static class ItemEntry
 	{
 		/** Item id. */
@@ -206,6 +213,7 @@ public class CharacterSnapshot
 	/**
 	 * An inventory item, carrying its slot index in addition to the item stack.
 	 */
+	@EqualsAndHashCode(callSuper = true)
 	public static class InventoryItem extends ItemEntry
 	{
 		/** Zero-based inventory slot. */
