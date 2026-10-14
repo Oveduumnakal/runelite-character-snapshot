@@ -397,9 +397,11 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 
 | Modifier and Type | Field | Description |
 |---|---|---|
+| `private static final int[]` | `BANK_TAB_VARBITS` |  |
 | `private static final EquipmentInventorySlot[]` | `EQUIPMENT_SLOTS` |  |
 | `private static final int` | `SLAYER_BOSS_TASK_ID` |  |
 | `private List<ItemEntry>` | `bankItems` |  |
+| `private List<BankTab>` | `bankTabs` |  |
 | `private int` | `bankTotal` |  |
 | `private Instant` | `bankUpdated` |  |
 | `private final Client` | `client` |  |
@@ -432,7 +434,9 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private Map<String,String>` | `buildSectionUpdated(CharacterSnapshot data)` | Collects the capture time of each item section present in the snapshot. |
 | `public CharacterSnapshot` | `buildSnapshot()` | Assembles the export snapshot from the caches and cheap client reads, honouring the config toggles. |
 | `private VitalsData` | `buildVitals()` | Reads current combat vitals from boosted and real skill levels and run energy. |
+| `private List<BankTab>` | `copyBankTabs()` | Copies the cached bank tabs so a built snapshot does not share lists with the cache. |
 | `private DiaryRegion` | `diaryRegion(int easy, int medium, int hard, int elite)` | Reads a diary region's four tiers, each complete when its varbit equals 1. |
+| `private List<ItemEntry>` | `filterBankSlice(Item[] raw, int start, int end)` | Converts a slice of raw bank slots to item entries, dropping empty slots and placeholders. |
 | `private String` | `getItemName(int itemId)` | Resolves an item id to its display name. |
 | `private static Instant` | `parseInstant(String value)` | Parses an ISO-8601 instant, tolerating a missing or malformed value. |
 | `public void` | `pollAllGeOffers()` | Rebuilds the Grand Exchange cache from the client's current offer array. |
@@ -449,13 +453,17 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private static Instant` | `sectionTime(Map<String,String> times, String section, Instant fallback)` | Resolves a restored section's capture time from the previous export. |
 | `private static String` | `stateName(QuestState state)` | Maps a quest state to its exported string form. |
 | `private GeOffer` | `toGeOffer(int slot, GrandExchangeOffer offer)` | Converts a client GE offer into the exported model. |
-| `public void` | `updateBank(ItemContainer container)` | Replaces the cached bank contents with a flat item list. |
+| `public void` | `updateBank(ItemContainer container)` | Replaces the cached bank contents with a flat item list and the same items split by bank tab. |
 | `public void` | `updateEquipment(ItemContainer container)` | Rebuilds the cached equipment from scratch so an unequipped slot is dropped. |
 | `public void` | `updateGeOffer(int slot, GrandExchangeOffer offer)` | Adds, replaces, or removes a cached Grand Exchange offer for one slot. |
 | `public void` | `updateInventory(ItemContainer container)` | Replaces the cached inventory, keeping empty slots so slot indices stay meaningful. |
 | `public void` | `updateSkill(Skill skill, int level, int xp, int boostedLevel)` | Updates a single skill from a stat-changed event. |
 
 ### Field Detail
+
+#### BANK_TAB_VARBITS
+
+`private static final int[] BANK_TAB_VARBITS`
 
 #### EQUIPMENT_SLOTS
 
@@ -468,6 +476,10 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 #### bankItems
 
 `private List<ItemEntry> bankItems`
+
+#### bankTabs
+
+`private List<BankTab> bankTabs`
 
 #### bankTotal
 
@@ -583,6 +595,14 @@ Reads current combat vitals from boosted and real skill levels and run energy.
 
 - **Returns:** the vitals snapshot
 
+#### copyBankTabs
+
+`private List<BankTab> copyBankTabs()`
+
+Copies the cached bank tabs so a built snapshot does not share lists with the cache.
+
+- **Returns:** a deep copy of the cached tabs
+
 #### diaryRegion
 
 `private DiaryRegion diaryRegion(int easy, int medium, int hard, int elite)`
@@ -594,6 +614,17 @@ Reads a diary region's four tiers, each complete when its varbit equals 1.
 - **Parameter** `hard` — the hard-tier varbit id
 - **Parameter** `elite` — the elite-tier varbit id
 - **Returns:** the region's completion state
+
+#### filterBankSlice
+
+`private List<ItemEntry> filterBankSlice(Item[] raw, int start, int end)`
+
+Converts a slice of raw bank slots to item entries, dropping empty slots and placeholders.
+
+- **Parameter** `raw` — the raw bank container items
+- **Parameter** `start` — first slot of the slice, inclusive
+- **Parameter** `end` — last slot of the slice, exclusive
+- **Returns:** the item entries in the slice
 
 #### getItemName
 
@@ -737,7 +768,11 @@ Converts a client GE offer into the exported model.
 
 `public void updateBank(ItemContainer container)`
 
-Replaces the cached bank contents with a flat item list.
+Replaces the cached bank contents with a flat item list and the same items split by bank tab.
+The container holds tabs 1 to 9 in order, then the main tab; each numbered tab's slot count is
+read from its varbit, and the remaining slots are the main tab. Slicing uses the raw container,
+placeholders and empty slots included, so the counts line up; each slice is then filtered like
+the flat list.
 
 - **Parameter** `container` — the bank item container
 
@@ -884,7 +919,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | Type | Description |
 |---|---|
 | _class_ [`BankData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbankdata) | Bank contents: total distinct item count and a flat list of the stacks it holds. |
-| _class_ [`BankTab`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbanktab) | A bank tab: an index and the items it holds. |
+| _class_ [`BankTab`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbanktab) | A bank tab: an index (0 for the main tab, 1 to 9 for the numbered tabs) and the items it holds. |
 | _class_ [`CombatAchievementData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementdata) | Combat-achievement tier progress. |
 | _class_ [`DiaryRegion`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiaryregion) | Completion of the four achievement-diary tiers for one region. |
 | _class_ [`GeOffer`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotgeoffer) | One active Grand Exchange offer. |
@@ -1034,14 +1069,15 @@ Bank contents: total distinct item count and a flat list of the stacks it holds.
 | Modifier and Type | Field | Description |
 |---|---|---|
 | `public List<ItemEntry>` | `items` | Bank contents as a flat item list. |
-| `public List<BankTab>` | `tabs` | Compatibility view: the flat list wrapped in a single tab, for consumers that expect the tabbed shape (e.g. |
+| `public List<BankTab>` | `tabs` | The bank split into its real tabs: the main tab is `tabIndex` 0 and the numbered tabs are 1 to 9. |
 | `public int` | `totalItems` | Number of distinct item stacks in the bank. |
 
 ### Constructor Summary
 
 | Constructor | Description |
 |---|---|
-| `BankData(int totalItems, List<ItemEntry> items)` |  |
+| `BankData(int totalItems, List<ItemEntry> items)` | Creates bank data whose only tab is the main tab holding every item. |
+| `BankData(int totalItems, List<ItemEntry> items, List<BankTab> tabs)` |  |
 
 ### Field Detail
 
@@ -1055,8 +1091,9 @@ Bank contents as a flat item list.
 
 `public List<BankTab> tabs`
 
-Compatibility view: the flat list wrapped in a single tab, for consumers that expect the
-tabbed shape (e.g. the osrs-companion MCP server). Individual tabs are not modelled.
+The bank split into its real tabs: the main tab is `tabIndex` 0 and the numbered tabs
+are 1 to 9. Never null when the bank is present; an export from before tabs were modelled
+holds a single tab 0 wrapping the flat list.
 
 #### totalItems
 
@@ -1070,8 +1107,18 @@ Number of distinct item stacks in the bank.
 
 `public BankData(int totalItems, List<ItemEntry> items)`
 
+Creates bank data whose only tab is the main tab holding every item.
+
 - **Parameter** `totalItems` — distinct stack count
 - **Parameter** `items` — flat item list
+
+#### BankData
+
+`public BankData(int totalItems, List<ItemEntry> items, List<BankTab> tabs)`
+
+- **Parameter** `totalItems` — distinct stack count
+- **Parameter** `items` — flat item list
+- **Parameter** `tabs` — the real bank tabs
 
 ---
 
@@ -1081,15 +1128,14 @@ _class_
 
 `public static class BankTab`
 
-A bank tab: an index and the items it holds. The exporter emits a single tab wrapping the flat
-item list; it is a compatibility view, not a faithful per-tab breakdown.
+A bank tab: an index (0 for the main tab, 1 to 9 for the numbered tabs) and the items it holds.
 
 ### Field Summary
 
 | Modifier and Type | Field | Description |
 |---|---|---|
 | `public List<ItemEntry>` | `items` | Items in this tab. |
-| `public int` | `tabIndex` | Zero-based tab index. |
+| `public int` | `tabIndex` | Tab index: 0 is the main tab, 1 to 9 are the numbered tabs. |
 
 ### Constructor Summary
 
@@ -1109,7 +1155,7 @@ Items in this tab.
 
 `public int tabIndex`
 
-Zero-based tab index.
+Tab index: 0 is the main tab, 1 to 9 are the numbered tabs.
 
 ### Constructor Detail
 
