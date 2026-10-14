@@ -17,6 +17,7 @@ import org.junit.Test;
 import net.runelite.api.Client;
 import net.runelite.api.Player;
 import net.runelite.api.WorldType;
+import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.client.config.ConfigManager;
 
 import static org.junit.Assert.assertEquals;
@@ -164,6 +165,82 @@ public class KillCountTest
 		collector.onChatMessage("Your Vorkath kill count is: <col=ff0000>10</col>.");
 
 		assertNull(collector.buildSnapshot().killCounts);
+	}
+
+	/**
+	 * Varp values export under readable boss keys, and zero varps are left out.
+	 */
+	@Test
+	public void varpsProduceKillCounts()
+	{
+		Client client = client();
+		when(client.getVarpValue(VarPlayerID.TOTAL_COWBOSS_KILLS)).thenReturn(646);
+		when(client.getVarpValue(VarPlayerID.TOTAL_TEMPOROSS_KILLS)).thenReturn(179);
+		SnapshotCollector collector = new SnapshotCollector(client, config(true), mock(ConfigManager.class));
+
+		assertTrue(collector.pollKillCounts());
+		assertFalse(collector.pollKillCounts());
+
+		Map<String, Integer> counts = collector.buildSnapshot().killCounts;
+		assertEquals(2, counts.size());
+		assertEquals(Integer.valueOf(646), counts.get("brutus"));
+		assertEquals(Integer.valueOf(179), counts.get("tempoross"));
+	}
+
+	/**
+	 * A stale stored or chat count never overrides the varp value for the same boss.
+	 */
+	@Test
+	public void varpWinsOverStaleStoredCount()
+	{
+		Client client = client();
+		when(client.getVarpValue(VarPlayerID.TOTAL_COWBOSS_KILLS)).thenReturn(646);
+		SnapshotCollector collector = new SnapshotCollector(client, config(true), stored("brutus", 700));
+
+		collector.pollKillCounts();
+		collector.onChatMessage("Your Brutus kill count is: <col=ff0000>613</col>.");
+
+		assertEquals(Integer.valueOf(646), collector.buildSnapshot().killCounts.get("brutus"));
+	}
+
+	/**
+	 * Agility laps and other non-boss counts go to activityCounts, never killCounts.
+	 */
+	@Test
+	public void lapsAreActivityCounts()
+	{
+		ConfigManager cm = stored("canifis rooftop", 253, "zulrah", 5);
+		SnapshotCollector collector = collector(cm, true);
+		collector.pollKillCounts();
+		collector.onChatMessage("Your Seers' Village Rooftop lap count is: <col=ff0000>9</col>.");
+
+		CharacterSnapshot snapshot = collector.buildSnapshot();
+		assertEquals(1, snapshot.killCounts.size());
+		assertEquals(Integer.valueOf(5), snapshot.killCounts.get("zulrah"));
+		assertEquals(Integer.valueOf(253), snapshot.activityCounts.get("canifis rooftop"));
+		assertEquals(Integer.valueOf(9), snapshot.activityCounts.get("seers' village rooftop"));
+	}
+
+	/**
+	 * Laps in an old export's killCounts are moved to activityCounts on restore.
+	 */
+	@Test
+	public void restoreSplitsOldLaps()
+	{
+		SnapshotCollector collector = collector(mock(ConfigManager.class), true);
+		CharacterSnapshot previous = new CharacterSnapshot();
+		previous.lastUpdated = "2026-09-21T12:00:00Z";
+		previous.player = new PlayerInfo("Zezima", 126, 302, "NORMAL", true);
+		previous.killCounts = new TreeMap<>();
+		previous.killCounts.put("zulrah", 55);
+		previous.killCounts.put("canifis rooftop", 253);
+
+		collector.restore(previous);
+
+		CharacterSnapshot snapshot = collector.buildSnapshot();
+		assertEquals(Integer.valueOf(55), snapshot.killCounts.get("zulrah"));
+		assertNull(snapshot.killCounts.get("canifis rooftop"));
+		assertEquals(Integer.valueOf(253), snapshot.activityCounts.get("canifis rooftop"));
 	}
 
 	/**

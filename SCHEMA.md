@@ -33,6 +33,7 @@ missing sections as "not exported", not "empty".
 | `grandExchange` | array | Active GE offers, by slot. |
 | `collectionLog` | object | Collection log captured while the log is open, carried over between sessions. |
 | `killCounts` | object | Boss kill counts keyed by lower-case boss name. |
+| `activityCounts` | object | Optional. Agility laps and other non-boss running totals keyed by lower-case name. |
 | `clueCounts` | object | Completed treasure trails per tier. |
 | `timers` | object | Farming patch and birdhouse timers. |
 
@@ -204,17 +205,26 @@ Chat Commands plugin stores it: lower-cased, colons removed, `Barrows chest` ren
 (e.g. `zulrah`, `vorkath`, `chambers of xeric`, `theatre of blood`). Raid keys hold completion counts.
 The section is omitted until at least one count is known, and when the "Boss kill counts" toggle is off.
 
-Sources, merged per boss:
+Sources, in priority order:
 
-1. The counts the built-in Chat Commands plugin keeps in the RuneScape-profile config (group `killcount`),
-   read through `ConfigManager`. If that plugin is disabled its stored counts stop updating and go stale.
-2. Kill-count lines in the game chat ("Your Zulrah kill count is: N"), parsed with the same pattern. A chat
-   line always replaces the cached value, so counts stay current even when Chat Commands is disabled.
-3. The previous export of the same character, loaded on login.
+1. The game's own boss kill-count varps (`VarPlayerID.TOTAL_*_KILLS`, e.g. Brutus, Tempoross, Zulrah,
+   Vorkath, the god wars bosses, Nex, the Moons-era bosses). These are exact and current, need no chat or
+   other plugin, and are exported only when above 0. A varp value always wins for its boss. Keys are the
+   hiscores boss names, lower-cased (e.g. `brutus`, `brutus (hard mode)`, `tempoross`,
+   `leviathan (awakened)`, `guardians of the rift`).
+2. Fallback for bosses and raids with no varp (e.g. `chambers of xeric`, `theatre of blood`,
+   `tombs of amascut`): the counts the built-in Chat Commands plugin keeps in the RuneScape-profile config
+   (group `killcount`), and kill-count lines in the game chat ("Your Zulrah kill count is: N"). A chat line
+   replaces the cached fallback value; neither ever overrides a varp value.
 
-When merging a stored or previous value with the cache the larger wins (kill counts only grow). Only
-bosses whose count the game has printed in chat since the account first ran either plugin appear; a boss
-never killed (or never checked) is simply absent.
+## activityCounts
+
+`{ "<activity>": count }` — optional object of integers, sorted by key, from the same Chat Commands and
+chat sources as the fallback above, holding what is not a boss kill count: agility course laps
+(`canifis rooftop`, `agility pyramid`, ...), Hallowed Sepulchre floors, chests, hunter rumours, TzHaar
+challenges. Older exports kept these inside `killCounts`; on load they are moved here. Omitted when empty
+and when the "Boss kill counts" toggle is off.
+
 ## clueCounts
 
 `{ beginner, easy, medium, hard, elite, master }` — integers, completed treasure trails per tier, in that

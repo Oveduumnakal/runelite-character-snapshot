@@ -151,6 +151,10 @@ public class SnapshotCollector
 
 	private final Map<String, Integer> killCounts = new TreeMap<>();
 
+	private final Map<String, Integer> varpKillCounts = new TreeMap<>();
+
+	private final Map<String, Integer> activityCounts = new TreeMap<>();
+
 	private final Map<String, Integer> clueCounts = new HashMap<>();
 
 	private final Map<String, SkillEntry> skills = new LinkedHashMap<>();
@@ -258,6 +262,8 @@ public class SnapshotCollector
 		polledLocation = null;
 		polledEnergy = null;
 		killCounts.clear();
+		varpKillCounts.clear();
+		activityCounts.clear();
 		clueCounts.clear();
 		timers = null;
 	}
@@ -499,7 +505,16 @@ public class SnapshotCollector
 			for (Map.Entry<String, Integer> entry : previous.killCounts.entrySet())
 			{
 				if (entry.getKey() != null && entry.getValue() != null)
-					killCounts.merge(entry.getKey(), entry.getValue(), Math::max);
+					countsFor(entry.getKey()).merge(entry.getKey(), entry.getValue(), Math::max);
+			}
+		}
+
+		if (previous.activityCounts != null)
+		{
+			for (Map.Entry<String, Integer> entry : previous.activityCounts.entrySet())
+			{
+				if (entry.getKey() != null && entry.getValue() != null)
+					activityCounts.merge(entry.getKey(), entry.getValue(), Math::max);
 			}
 		}
 
@@ -610,19 +625,26 @@ public class SnapshotCollector
 	}
 
 	/**
-	 * Merges the kill counts RuneLite's Chat Commands plugin stored in the RuneScape-profile config
-	 * (group {@code killcount}, key = lower-cased boss name) into the cache, keeping the larger of the
-	 * stored and cached value since kill counts only grow. If that plugin is disabled its stored counts
-	 * go stale, but counts parsed from chat by {@link #onChatMessage} stay current.
+	 * Reads every boss kill-count varp (authoritative, exact and current), then merges the counts the
+	 * Chat Commands plugin stored in the RuneScape-profile config (group {@code killcount}, key = lower-cased
+	 * name) as a fallback for bosses without a varp. Non-boss counts such as agility laps go to
+	 * {@code activityCounts}. A stored count never lowers a cached one and never overrides a varp value.
 	 *
 	 * @return whether any cached count changed
 	 */
 	public boolean pollKillCounts()
 	{
-		if (configManager == null)
-			return false;
-
 		boolean changed = false;
+		for (Map.Entry<Integer, String> boss : KillCountVarps.BOSSES.entrySet())
+		{
+			int value = client.getVarpValue(boss.getKey());
+			if (value > 0 && !Integer.valueOf(value).equals(varpKillCounts.put(boss.getValue(), value)))
+				changed = true;
+		}
+
+		if (configManager == null)
+			return changed;
+
 		String profile = configManager.getRSProfileKey();
 		for (String key : configManager.getRSProfileConfigurationKeys(ChatCounts.KILLCOUNT_GROUP, profile, ""))
 		{
@@ -630,11 +652,12 @@ public class SnapshotCollector
 			if (stored == null || stored <= 0)
 				continue;
 
-			Integer cached = killCounts.get(key);
+			Map<String, Integer> target = countsFor(key);
+			Integer cached = target.get(key);
 			if (cached == null || stored > cached)
 			{
-				killCounts.put(key, stored);
-				changed = true;
+				target.put(key, stored);
+				changed |= !isVarpBoss(key);
 			}
 		}
 
@@ -643,10 +666,10 @@ public class SnapshotCollector
 
 	/**
 	 * Reads a kill-count line from chat. A chat count is current by definition, so it replaces the cached
-	 * value even when lower.
+	 * value even when lower, but it never overrides a varp-backed boss count.
 	 *
 	 * @param message the raw chat message
-	 * @return whether the cached counts changed
+	 * @return whether the exported counts changed
 	 */
 	public boolean onChatMessage(String message)
 	{
@@ -654,8 +677,25 @@ public class SnapshotCollector
 		if (parsed == null)
 			return false;
 
-		Integer previous = killCounts.put(parsed.getKey(), parsed.getValue());
-		return !parsed.getValue().equals(previous);
+		Integer previous = countsFor(parsed.getKey()).put(parsed.getKey(), parsed.getValue());
+		return !parsed.getValue().equals(previous) && !isVarpBoss(parsed.getKey());
+	}
+
+	private Map<String, Integer> countsFor(String key)
+	{
+		return ChatCounts.isActivityKey(key) ? activityCounts : killCounts;
+	}
+
+	private boolean isVarpBoss(String key)
+	{
+		return varpKillCounts.containsKey(key);
+	}
+
+	private Map<String, Integer> mergedKillCounts()
+	{
+		Map<String, Integer> merged = new TreeMap<>(killCounts);
+		merged.putAll(varpKillCounts);
+		return merged;
 	}
 
 	/**
@@ -1117,8 +1157,15 @@ public class SnapshotCollector
 		if (config.syncRunePouch() && runePouch != null)
 			data.runePouch = new ArrayList<>(runePouch);
 
-		if (config.syncKillCounts() && !killCounts.isEmpty())
-			data.killCounts = new TreeMap<>(killCounts);
+		if (config.syncKillCounts())
+		{
+			Map<String, Integer> bosses = mergedKillCounts();
+			if (!bosses.isEmpty())
+				data.killCounts = bosses;
+
+			if (!activityCounts.isEmpty())
+				data.activityCounts = new TreeMap<>(activityCounts);
+		}
 
 		if (config.syncClueCounts() && !clueCounts.isEmpty())
 			data.clueCounts = orderedClueCounts();

@@ -9,8 +9,11 @@
 package com.oveduumnakal.charactersnapshot;
 
 import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,6 +31,14 @@ final class ChatCounts
 		"Your (?<pre>completion count for |subdued |completed )?(?:<col=[0-9a-f]{6}>)?(?<boss>.+?)(?:</col>)? "
 			+ "(?<post>(?:(?:kill|harvest|lap|completion|success|Total Ticket) )?(?:count )?)is: ?"
 			+ "(?:<col=[0-9a-f]{6}>|@.+?@)(?<kc>[0-9,]+)</col>");
+
+	private static final Set<String> ACTIVITY_KEYS = new HashSet<>(Arrays.asList(
+		"colossal wyrm basic", "colossal wyrm advanced", "prifddinas", "shayzien basic", "shayzien advanced",
+		"ape atoll", "agility pyramid", "agility arena", "dorgesh-kaan", "gnome stronghold", "penguin",
+		"werewolf", "wilderness", "barbarian outpost", "werewolf skullball", "herbiboar", "lunar chest",
+		"hunter rumours", "colosseum glory", "bird's egg offerings", "crystal chest", "larran's small chest",
+		"larran's big chest", "brimstone chest", "first challenge", "second challenge", "third challenge",
+		"fourth challenge", "fifth challenge", "sixth challenge"));
 
 	private ChatCounts()
 	{
@@ -77,5 +88,16 @@ final class ChatCounts
 	{
 		String renamed = "Barrows chest".equals(boss) ? "Barrows Chests" : boss;
 		return renamed.replace(":", "").toLowerCase(Locale.ROOT);
+	}
+
+	/**
+	 * Tells agility laps and other non-boss counts (chests, rumours, challenges) from boss kill counts.
+	 *
+	 * @param key a key from {@link #killCountKey(String)}
+	 * @return whether the count belongs under {@code activityCounts} rather than {@code killCounts}
+	 */
+	static boolean isActivityKey(String key)
+	{
+		return ACTIVITY_KEYS.contains(key) || key.contains("rooftop") || key.startsWith("hallowed sepulchre");
 	}
 }

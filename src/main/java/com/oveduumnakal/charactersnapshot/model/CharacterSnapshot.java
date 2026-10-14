@@ -91,6 +91,12 @@ public class CharacterSnapshot
 	public Map<String, Integer> killCounts;
 
 	/**
+	 * Agility laps and other non-boss running totals (chests, rumours, challenges) keyed by lower-case
+	 * activity name, sorted by name. Absent when the toggle is off or none is known yet.
+	 */
+	public Map<String, Integer> activityCounts;
+
+	/**
 	 * Completed treasure trails per tier ({@code beginner} to {@code master}), in tier order. Only tiers whose
 	 * count has been seen are present. Absent when the toggle is off or no tier is known yet.
 	 */
