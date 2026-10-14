@@ -399,6 +399,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 |---|---|---|
 | `private static final int[]` | `BANK_TAB_VARBITS` |  |
 | `private static final EquipmentInventorySlot[]` | `EQUIPMENT_SLOTS` |  |
+| `private static final int` | `SLAYER_BOSS_TASK_ID` |  |
 | `private List<ItemEntry>` | `bankItems` |  |
 | `private List<BankTab>` | `bankTabs` |  |
 | `private int` | `bankTotal` |  |
@@ -416,6 +417,8 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private List<QuestEntry>` | `quests` |  |
 | `private final Map<String,SkillEntry>` | `skills` |  |
 | `private SlayerData` | `slayer` |  |
+| `private final Map<Integer,String>` | `slayerBossNames` |  |
+| `private final Map<Integer,String>` | `slayerTaskNames` |  |
 
 ### Constructor Summary
 
@@ -442,7 +445,10 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollDiaries()` | Polls achievement-diary completion for every region via named RuneLite varbits. |
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
 | `public boolean` | `pollSlayer()` | Polls the current slayer task, clearing it when no task is assigned. |
+| `private String` | `readTaskRowName(int row)` | Reads the display name column of one slayer task table row. |
 | `public void` | `reset()` | Clears every cache. |
+| `private String` | `resolveBossName(int bossId)` | Resolves a boss-task boss id to the boss name via the slayer task sublist table. |
+| `private String` | `resolveTaskName(int taskId)` | Resolves a slayer task id to its display name from the cache's slayer task table. |
 | `public void` | `restore(CharacterSnapshot previous)` | Seeds the bank, inventory, and equipment caches from this character's previous export, so a section not yet re-captured this session keeps its last known contents instead of vanishing. |
 | `private static Instant` | `sectionTime(Map<String,String> times, String section, Instant fallback)` | Resolves a restored section's capture time from the previous export. |
 | `private static String` | `stateName(QuestState state)` | Maps a quest state to its exported string form. |
@@ -462,6 +468,10 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 #### EQUIPMENT_SLOTS
 
 `private static final EquipmentInventorySlot[] EQUIPMENT_SLOTS`
+
+#### SLAYER_BOSS_TASK_ID
+
+`private static final int SLAYER_BOSS_TASK_ID`
 
 #### bankItems
 
@@ -530,6 +540,14 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 #### slayer
 
 `private SlayerData slayer`
+
+#### slayerBossNames
+
+`private final Map<Integer,String> slayerBossNames`
+
+#### slayerTaskNames
+
+`private final Map<Integer,String> slayerTaskNames`
 
 ### Constructor Detail
 
@@ -670,12 +688,39 @@ Polls the current slayer task, clearing it when no task is assigned.
 
 - **Returns:** whether the slayer task changed since the last poll
 
+#### readTaskRowName
+
+`private String readTaskRowName(int row)`
+
+Reads the display name column of one slayer task table row.
+
+- **Parameter** `row` — the slayer task table row id
+- **Returns:** the name, or null when absent
+
 #### reset
 
 `public void reset()`
 
 Clears every cache. Called on logout and account change so one character's data can never leak
 into another character's export file.
+
+#### resolveBossName
+
+`private String resolveBossName(int bossId)`
+
+Resolves a boss-task boss id to the boss name via the slayer task sublist table.
+
+- **Parameter** `bossId` — the value of the slayer target boss varbit
+- **Returns:** the boss name, or null when it cannot be resolved
+
+#### resolveTaskName
+
+`private String resolveTaskName(int taskId)`
+
+Resolves a slayer task id to its display name from the cache's slayer task table.
+
+- **Parameter** `taskId` — the slayer task id
+- **Returns:** the task name, or null when it cannot be resolved
 
 #### restore
 
@@ -1734,14 +1779,16 @@ _class_
 
 `public static class SlayerData`
 
-The current slayer task. The creature is exported as its game id; consumers map it to a name.
+The current slayer task. The creature is exported as its game id plus, when resolvable, its name.
 
 ### Field Summary
 
 | Modifier and Type | Field | Description |
 |---|---|---|
 | `public int` | `amount` | Remaining kill count. |
+| `public String` | `bossName` | Specific boss name for boss tasks, or null for any other task. |
 | `public int` | `creatureId` | Game id of the assigned creature. |
+| `public String` | `creatureName` | Display name of the assigned creature, or null when it could not be resolved. |
 | `public int` | `points` | Slayer reward points. |
 | `public int` | `streak` | Current task-completion streak. |
 
@@ -1749,7 +1796,7 @@ The current slayer task. The creature is exported as its game id; consumers map 
 
 | Constructor | Description |
 |---|---|
-| `SlayerData(int creatureId, int amount, int points, int streak)` |  |
+| `SlayerData(int creatureId, String creatureName, String bossName, int amount, int points, int streak)` |  |
 
 ### Field Detail
 
@@ -1759,11 +1806,23 @@ The current slayer task. The creature is exported as its game id; consumers map 
 
 Remaining kill count.
 
+#### bossName
+
+`public String bossName`
+
+Specific boss name for boss tasks, or null for any other task.
+
 #### creatureId
 
 `public int creatureId`
 
 Game id of the assigned creature.
+
+#### creatureName
+
+`public String creatureName`
+
+Display name of the assigned creature, or null when it could not be resolved.
 
 #### points
 
@@ -1781,9 +1840,11 @@ Current task-completion streak.
 
 #### SlayerData
 
-`public SlayerData(int creatureId, int amount, int points, int streak)`
+`public SlayerData(int creatureId, String creatureName, String bossName, int amount, int points, int streak)`
 
 - **Parameter** `creatureId` — assigned-creature id
+- **Parameter** `creatureName` — assigned-creature name, or null
+- **Parameter** `bossName` — boss name for boss tasks, or null
 - **Parameter** `amount` — remaining kills
 - **Parameter** `points` — reward points
 - **Parameter** `streak` — completion streak

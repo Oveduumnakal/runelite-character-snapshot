@@ -50,8 +50,9 @@ public class ModelEqualityTest
 	@Test
 	public void slayerEquality()
 	{
-		assertEquals(new SlayerData(5, 40, 10, 3), new SlayerData(5, 40, 10, 3));
-		assertNotEquals(new SlayerData(5, 40, 10, 3), new SlayerData(5, 39, 10, 3));
+		assertEquals(new SlayerData(5, "Cows", null, 40, 10, 3), new SlayerData(5, "Cows", null, 40, 10, 3));
+		assertNotEquals(new SlayerData(5, "Cows", null, 40, 10, 3), new SlayerData(5, "Cows", null, 39, 10, 3));
+		assertNotEquals(new SlayerData(5, "Cows", null, 40, 10, 3), new SlayerData(5, "Cows", "Vorkath", 40, 10, 3));
 	}
 
 	/**

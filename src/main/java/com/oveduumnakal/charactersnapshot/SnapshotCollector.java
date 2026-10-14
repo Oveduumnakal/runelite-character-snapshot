@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,8 @@ import net.runelite.api.VarPlayer;
 import net.runelite.api.Varbits;
 import net.runelite.api.WorldType;
 import net.runelite.api.coords.WorldPoint;
+import net.runelite.api.gameval.DBTableID;
+import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
 import net.runelite.api.vars.AccountType;
 
@@ -57,6 +60,8 @@ import net.runelite.api.vars.AccountType;
  */
 public class SnapshotCollector
 {
+	private static final int SLAYER_BOSS_TASK_ID = 98;
+
 	private static final EquipmentInventorySlot[] EQUIPMENT_SLOTS = {
 		EquipmentInventorySlot.HEAD, EquipmentInventorySlot.CAPE, EquipmentInventorySlot.AMULET,
 		EquipmentInventorySlot.WEAPON, EquipmentInventorySlot.BODY, EquipmentInventorySlot.SHIELD,
@@ -77,6 +82,10 @@ public class SnapshotCollector
 	private final Map<String, SkillEntry> skills = new LinkedHashMap<>();
 
 	private final Map<Integer, GeOffer> geOffers = new TreeMap<>();
+
+	private final Map<Integer, String> slayerTaskNames = new HashMap<>();
+
+	private final Map<Integer, String> slayerBossNames = new HashMap<>();
 
 	private List<ItemEntry> bankItems = null;
 
@@ -457,12 +466,19 @@ public class SnapshotCollector
 	@SuppressWarnings("deprecation")
 	public boolean pollSlayer()
 	{
-		int amount = client.getVarpValue(VarPlayer.SLAYER_TASK_SIZE);
+		int amount = client.getVarpValue(VarPlayerID.SLAYER_COUNT);
 		SlayerData task = null;
 		if (amount > 0)
 		{
+			int creatureId = client.getVarpValue(VarPlayerID.SLAYER_TARGET);
+			String bossName = null;
+			if (creatureId == SLAYER_BOSS_TASK_ID)
+				bossName = resolveBossName(client.getVarbitValue(VarbitID.SLAYER_TARGET_BOSSID));
+
 			task = new SlayerData(
-				client.getVarpValue(VarPlayer.SLAYER_TASK_CREATURE),
+				creatureId,
+				resolveTaskName(creatureId),
+				bossName,
 				amount,
 				client.getVarbitValue(Varbits.SLAYER_POINTS),
 				client.getVarbitValue(Varbits.SLAYER_TASK_STREAK));
@@ -471,6 +487,73 @@ public class SnapshotCollector
 		boolean changed = !Objects.equals(task, slayer);
 		slayer = task;
 		return changed;
+	}
+
+	/**
+	 * Resolves a slayer task id to its display name from the cache's slayer task table.
+	 *
+	 * @param taskId the slayer task id
+	 * @return the task name, or null when it cannot be resolved
+	 */
+	private String resolveTaskName(int taskId)
+	{
+		String cached = slayerTaskNames.get(taskId);
+		if (cached != null)
+			return cached;
+
+		List<Integer> rows = client.getDBRowsByValue(
+			DBTableID.SlayerTask.ID, DBTableID.SlayerTask.COL_ID, 0, taskId);
+		if (rows == null || rows.isEmpty())
+			return null;
+
+		String name = readTaskRowName(rows.get(0));
+		if (name != null)
+			slayerTaskNames.put(taskId, name);
+
+		return name;
+	}
+
+	/**
+	 * Resolves a boss-task boss id to the boss name via the slayer task sublist table.
+	 *
+	 * @param bossId the value of the slayer target boss varbit
+	 * @return the boss name, or null when it cannot be resolved
+	 */
+	private String resolveBossName(int bossId)
+	{
+		String cached = slayerBossNames.get(bossId);
+		if (cached != null)
+			return cached;
+
+		List<Integer> rows = client.getDBRowsByValue(
+			DBTableID.SlayerTaskSublist.ID, DBTableID.SlayerTaskSublist.COL_TASK_SUBTABLE_ID, 0, bossId);
+		if (rows == null || rows.isEmpty())
+			return null;
+
+		Object[] taskRow = client.getDBTableField(rows.get(0), DBTableID.SlayerTaskSublist.COL_TASK, 0);
+		if (taskRow == null || taskRow.length == 0 || !(taskRow[0] instanceof Integer))
+			return null;
+
+		String name = readTaskRowName((Integer) taskRow[0]);
+		if (name != null)
+			slayerBossNames.put(bossId, name);
+
+		return name;
+	}
+
+	/**
+	 * Reads the display name column of one slayer task table row.
+	 *
+	 * @param row the slayer task table row id
+	 * @return the name, or null when absent
+	 */
+	private String readTaskRowName(int row)
+	{
+		Object[] values = client.getDBTableField(row, DBTableID.SlayerTask.COL_NAME_UPPERCASE, 0);
+		if (values == null || values.length == 0 || !(values[0] instanceof String))
+			return null;
+
+		return (String) values[0];
 	}
 
 	/**

@@ -414,13 +414,19 @@ public class CharacterSnapshot
 	}
 
 	/**
-	 * The current slayer task. The creature is exported as its game id; consumers map it to a name.
+	 * The current slayer task. The creature is exported as its game id plus, when resolvable, its name.
 	 */
 	@EqualsAndHashCode
 	public static class SlayerData
 	{
 		/** Game id of the assigned creature. */
 		public int creatureId;
+
+		/** Display name of the assigned creature, or null when it could not be resolved. */
+		public String creatureName;
+
+		/** Specific boss name for boss tasks, or null for any other task. */
+		public String bossName;
 
 		/** Remaining kill count. */
 		public int amount;
@@ -432,14 +438,18 @@ public class CharacterSnapshot
 		public int streak;
 
 		/**
-		 * @param creatureId assigned-creature id
-		 * @param amount     remaining kills
-		 * @param points     reward points
-		 * @param streak     completion streak
+		 * @param creatureId   assigned-creature id
+		 * @param creatureName assigned-creature name, or null
+		 * @param bossName     boss name for boss tasks, or null
+		 * @param amount       remaining kills
+		 * @param points       reward points
+		 * @param streak       completion streak
 		 */
-		public SlayerData(int creatureId, int amount, int points, int streak)
+		public SlayerData(int creatureId, String creatureName, String bossName, int amount, int points, int streak)
 		{
 			this.creatureId = creatureId;
+			this.creatureName = creatureName;
+			this.bossName = bossName;
 			this.amount = amount;
 			this.points = points;
 			this.streak = streak;
