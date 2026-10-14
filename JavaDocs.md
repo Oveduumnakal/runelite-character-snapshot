@@ -848,6 +848,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private static final EquipmentInventorySlot[]` | `EQUIPMENT_SLOTS` |  |
 | `private static final int` | `KARAMJA_TIER_DONE` | Value of the Karamja easy, medium and hard tier varbits once the tier is complete; 1 only means started. |
 | `private static final int` | `SLAYER_BOSS_TASK_ID` |  |
+| `private static final String[]` | `SPELLBOOK_NAMES` | Spellbook varbit values 0 to 3, in order; any other value is reported as unknown. |
 | `private List<ItemEntry>` | `bankItems` |  |
 | `private List<BankTab>` | `bankTabs` |  |
 | `private int` | `bankTotal` |  |
@@ -868,6 +869,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private SlayerData` | `slayer` |  |
 | `private final Map<Integer,String>` | `slayerBossNames` |  |
 | `private final Map<Integer,String>` | `slayerTaskNames` |  |
+| `private String` | `spellbook` |  |
 
 ### Constructor Summary
 
@@ -897,6 +899,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollDiaries()` | Polls achievement-diary completion for every region via named RuneLite varbits, and each mapped task via `DiaryTasks`. |
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
 | `public boolean` | `pollSlayer()` | Polls the current slayer task, clearing it when no task is assigned. |
+| `public boolean` | `pollSpellbook()` | Polls the active spellbook from the spellbook varbit (0 standard, 1 ancient, 2 lunar, 3 arceuus). |
 | `private String` | `readTaskRowName(int row)` | Reads the display name column of one slayer task table row. |
 | `public void` | `reset()` | Clears every cache. |
 | `private String` | `resolveBossName(int bossId)` | Resolves a boss-task boss id to the boss name via the slayer task sublist table. |
@@ -969,6 +972,12 @@ The Karamja elite varbit and every other region's tier varbits are plain 0/1 fla
 #### SLAYER_BOSS_TASK_ID
 
 `private static final int SLAYER_BOSS_TASK_ID`
+
+#### SPELLBOOK_NAMES
+
+`private static final String[] SPELLBOOK_NAMES`
+
+Spellbook varbit values 0 to 3, in order; any other value is reported as unknown.
 
 #### bankItems
 
@@ -1051,6 +1060,10 @@ Cached task metadata by task id (completed flag unset); empty until resolved fro
 #### slayerTaskNames
 
 `private final Map<Integer,String> slayerTaskNames`
+
+#### spellbook
+
+`private String spellbook`
 
 ### Constructor Detail
 
@@ -1225,6 +1238,14 @@ Polls quest completion state and total quest points.
 Polls the current slayer task, clearing it when no task is assigned.
 
 - **Returns:** whether the slayer task changed since the last poll
+
+#### pollSpellbook
+
+`public boolean pollSpellbook()`
+
+Polls the active spellbook from the spellbook varbit (0 standard, 1 ancient, 2 lunar, 3 arceuus).
+
+- **Returns:** whether the spellbook changed since the last poll
 
 #### readTaskRowName
 
@@ -2308,6 +2329,7 @@ Identity and account context of the logged-in character.
 | `public String` | `accountType` | Account type, e.g. |
 | `public int` | `combatLevel` | Combat level. |
 | `public boolean` | `members` | Whether the current world is a members' world. |
+| `public String` | `spellbook` | Active spellbook: `STANDARD`, `ANCIENT`, `LUNAR` or `ARCEUUS`; null if unknown. |
 | `public String` | `username` | In-game display name. |
 | `public int` | `world` | World the character is logged into. |
 
@@ -2316,6 +2338,7 @@ Identity and account context of the logged-in character.
 | Constructor | Description |
 |---|---|
 | `PlayerInfo(String username, int combatLevel, int world, String accountType, boolean members)` |  |
+| `PlayerInfo(String username, int combatLevel, int world, String accountType, boolean members, String spellbook)` |  |
 
 ### Field Detail
 
@@ -2336,6 +2359,12 @@ Combat level.
 `public boolean members`
 
 Whether the current world is a members' world.
+
+#### spellbook
+
+`public String spellbook`
+
+Active spellbook: `STANDARD`, `ANCIENT`, `LUNAR` or `ARCEUUS`; null if unknown.
 
 #### username
 
@@ -2360,6 +2389,17 @@ World the character is logged into.
 - **Parameter** `world` — current world
 - **Parameter** `accountType` — account-type name
 - **Parameter** `members` — whether on a members' world
+
+#### PlayerInfo
+
+`public PlayerInfo(String username, int combatLevel, int world, String accountType, boolean members, String spellbook)`
+
+- **Parameter** `username` — display name
+- **Parameter** `combatLevel` — combat level
+- **Parameter** `world` — current world
+- **Parameter** `accountType` — account-type name
+- **Parameter** `members` — whether on a members' world
+- **Parameter** `spellbook` — active spellbook name, may be `null`
 
 ---
 

@@ -271,6 +271,9 @@ public class CharacterSnapshotPlugin extends Plugin
 		if (config.syncSlayer())
 			changed |= collector.pollSlayer();
 
+		if (config.syncAccountInfo())
+			changed |= collector.pollSpellbook();
+
 		if (changed)
 			dirty = true;
 	}
@@ -315,6 +318,9 @@ public class CharacterSnapshotPlugin extends Plugin
 
 		if (config.syncSlayer())
 			collector.pollSlayer();
+
+		if (config.syncAccountInfo())
+			collector.pollSpellbook();
 
 		if (config.syncGrandExchange())
 			collector.pollAllGeOffers();

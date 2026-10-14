@@ -443,6 +443,40 @@ public class SnapshotCollectorTest
 	}
 
 	/**
+	 * The spellbook varbit maps 0 to 3 onto the four book names and reports changes once.
+	 */
+	@Test
+	public void spellbookMapsVarbitValues()
+	{
+		Client client = loggedInClient("Zezima");
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+		String[] names = {"STANDARD", "ANCIENT", "LUNAR", "ARCEUUS"};
+		for (int value = 0; value < names.length; value++)
+		{
+			when(client.getVarbitValue(VarbitID.SPELLBOOK)).thenReturn(value);
+			collector.pollSpellbook();
+			assertEquals(names[value], collector.buildSnapshot().player.spellbook);
+		}
+
+		assertTrue(!collector.pollSpellbook());
+	}
+
+	/**
+	 * An unrecognised spellbook value exports as null.
+	 */
+	@Test
+	public void unknownSpellbookIsNull()
+	{
+		Client client = loggedInClient("Zezima");
+		when(client.getVarbitValue(VarbitID.SPELLBOOK)).thenReturn(9);
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.pollSpellbook();
+
+		assertNull(collector.buildSnapshot().player.spellbook);
+	}
+
+	/**
 	 * A regular slayer task resolves its creature name from the slayer task table.
 	 */
 	@Test

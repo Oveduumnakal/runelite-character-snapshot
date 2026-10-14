@@ -112,6 +112,9 @@ public class SnapshotCollector
 		VarbitID.BANK_TAB_9
 	};
 
+	/** Spellbook varbit values 0 to 3, in order; any other value is reported as unknown. */
+	private static final String[] SPELLBOOK_NAMES = {"STANDARD", "ANCIENT", "LUNAR", "ARCEUUS"};
+
 	private final Client client;
 
 	private final CharacterSnapshotConfig config;
@@ -153,6 +156,8 @@ public class SnapshotCollector
 
 	private SlayerData slayer = null;
 
+	private String spellbook = null;
+
 	/**
 	 * @param client the RuneLite client
 	 * @param config the plugin configuration
@@ -184,6 +189,7 @@ public class SnapshotCollector
 		diaries = null;
 		combatAchievements = null;
 		slayer = null;
+		spellbook = null;
 	}
 
 	/**
@@ -609,6 +615,20 @@ public class SnapshotCollector
 	}
 
 	/**
+	 * Polls the active spellbook from the spellbook varbit (0 standard, 1 ancient, 2 lunar, 3 arceuus).
+	 *
+	 * @return whether the spellbook changed since the last poll
+	 */
+	public boolean pollSpellbook()
+	{
+		int value = client.getVarbitValue(VarbitID.SPELLBOOK);
+		String book = value >= 0 && value < SPELLBOOK_NAMES.length ? SPELLBOOK_NAMES[value] : null;
+		boolean changed = !Objects.equals(book, spellbook);
+		spellbook = book;
+		return changed;
+	}
+
+	/**
 	 * Resolves a slayer task id to its display name from the cache's slayer task table.
 	 *
 	 * @param taskId the slayer task id
@@ -728,8 +748,10 @@ public class SnapshotCollector
 
 		String accountType = null;
 		boolean members = false;
+		String book = null;
 		if (config.syncAccountInfo())
 		{
+			book = spellbook;
 			AccountType type = client.getAccountType();
 			accountType = type != null ? type.name() : null;
 			members = client.getWorldType().contains(WorldType.MEMBERS);
@@ -740,7 +762,8 @@ public class SnapshotCollector
 			localPlayer.getCombatLevel(),
 			client.getWorld(),
 			accountType,
-			members);
+			members,
+			book);
 
 		if (config.syncSkills() && !skills.isEmpty())
 			data.skills = new LinkedHashMap<>(skills);

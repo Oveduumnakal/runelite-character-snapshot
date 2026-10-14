@@ -39,6 +39,7 @@ missing sections as "not exported", not "empty".
 | `world` | int | |
 | `accountType` | string | `NORMAL`, `IRONMAN`, `ULTIMATE_IRONMAN`, `HARDCORE_IRONMAN`, `GROUP_IRONMAN`, `HARDCORE_GROUP_IRONMAN`; null when Account info is off. |
 | `members` | boolean | Whether the current world is members'. |
+| `spellbook` | string | Active spellbook: `STANDARD`, `ANCIENT`, `LUNAR`, `ARCEUUS`; null when unknown or Account info is off. |
 
 ## skills (map value) and vitals
 
