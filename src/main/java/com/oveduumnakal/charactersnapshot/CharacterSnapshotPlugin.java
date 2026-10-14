@@ -347,6 +347,9 @@ public class CharacterSnapshotPlugin extends Plugin
 		if (config.syncKillCounts())
 			changed |= collector.pollKillCounts();
 
+		if (config.syncTimers())
+			changed |= collector.pollTimers();
+
 		if (changed)
 			dirty = true;
 	}
@@ -414,6 +417,9 @@ public class CharacterSnapshotPlugin extends Plugin
 
 		if (config.syncKillCounts())
 			collector.pollKillCounts();
+
+		if (config.syncTimers())
+			collector.pollTimers();
 	}
 
 	/**

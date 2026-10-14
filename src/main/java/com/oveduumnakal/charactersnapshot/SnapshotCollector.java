@@ -9,6 +9,7 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,6 +35,7 @@ import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.PlayerInfo;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.QuestEntry;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SkillEntry;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SlayerData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.TimersData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.VitalsData;
 
 import net.runelite.api.Client;
@@ -196,6 +198,8 @@ public class SnapshotCollector
 
 	private List<ItemEntry> runePouch = null;
 
+	private TimersData timers = null;
+
 	/**
 	 * Creates a collector that cannot read other plugins' stored data.
 	 *
@@ -255,6 +259,7 @@ public class SnapshotCollector
 		polledEnergy = null;
 		killCounts.clear();
 		clueCounts.clear();
+		timers = null;
 	}
 
 	/**
@@ -671,6 +676,41 @@ public class SnapshotCollector
 	}
 
 	/**
+	 * Re-reads the farming and birdhouse timers from the Time Tracking plugin's stored data.
+	 *
+	 * @return whether the timers changed since the last poll
+	 */
+	public boolean pollTimers()
+	{
+		return pollTimers(Instant.now().getEpochSecond());
+	}
+
+	/**
+	 * Re-reads the farming and birdhouse timers as of a given time.
+	 *
+	 * @param nowSeconds the current time, Unix seconds
+	 * @return whether the timers changed since the last poll
+	 */
+	boolean pollTimers(long nowSeconds)
+	{
+		if (configManager == null)
+			return false;
+
+		EnumSet<WorldType> worldTypes = client.getWorldType();
+		boolean leagues = worldTypes != null && worldTypes.contains(WorldType.SEASONAL)
+			&& !worldTypes.contains(WorldType.DEADMAN);
+		TimersData fresh = new TimersData(
+			FarmingTimers.readFarming(configManager, nowSeconds, leagues),
+			FarmingTimers.readBirdhouses(configManager, nowSeconds));
+		if (fresh.farming.isEmpty() && fresh.birdhouses.isEmpty())
+			fresh = null;
+
+		boolean changed = !Objects.equals(timers, fresh);
+		timers = fresh;
+		return changed;
+	}
+
+	/**
 	 * Polls quest completion state and total quest points.
 	 *
 	 * @return whether either the quest states or the quest-point total changed since the last poll
@@ -1082,6 +1122,9 @@ public class SnapshotCollector
 
 		if (config.syncClueCounts() && !clueCounts.isEmpty())
 			data.clueCounts = orderedClueCounts();
+
+		if (config.syncTimers() && timers != null)
+			data.timers = new TimersData(new ArrayList<>(timers.farming), new ArrayList<>(timers.birdhouses));
 
 		if (config.syncQuests() && quests != null)
 		{

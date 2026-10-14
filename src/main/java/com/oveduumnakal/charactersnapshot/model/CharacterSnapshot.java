@@ -97,6 +97,12 @@ public class CharacterSnapshot
 	public Map<String, Integer> clueCounts;
 
 	/**
+	 * Farming patch and birdhouse timers decoded from RuneLite's Time Tracking data. Only as fresh as the
+	 * player's last visit to each patch. Absent when the toggle is off or Time Tracking has no data.
+	 */
+	public TimersData timers;
+
+	/**
 	 * Identity and account context of the logged-in character.
 	 */
 	public static class PlayerInfo
@@ -995,4 +1001,124 @@ public class CharacterSnapshot
 	 * ({@code lootingBag}, {@code seedVault}, {@code groupStorage}); a storage never opened is absent.
 	 */
 	public Map<String, List<ItemEntry>> storages;
+
+	/**
+	 * Farming and birdhouse timers.
+	 */
+	@EqualsAndHashCode
+	public static class TimersData
+	{
+		/** Farming patches with stored data; patches never visited are not listed. */
+		public List<FarmingTimer> farming;
+
+		/** Birdhouse spaces with stored data. */
+		public List<BirdhouseTimer> birdhouses;
+
+		/**
+		 * @param farming    farming patch timers
+		 * @param birdhouses birdhouse timers
+		 */
+		public TimersData(List<FarmingTimer> farming, List<BirdhouseTimer> birdhouses)
+		{
+			this.farming = farming;
+			this.birdhouses = birdhouses;
+		}
+	}
+
+	/**
+	 * The projected state of one farming patch or compost bin.
+	 */
+	@EqualsAndHashCode
+	public static class FarmingTimer
+	{
+		/** Human-readable patch, e.g. {@code Catherby herb}. */
+		public String patch;
+
+		/** Region the patch is in, e.g. {@code Catherby}. */
+		public String region;
+
+		/** Patch type, e.g. {@code herb}, {@code fruit tree}, {@code compost}. */
+		public String type;
+
+		/** Crop name, e.g. {@code Ranarr}; {@code Weeds} for an empty patch. */
+		public String crop;
+
+		/** One of GROWING, HARVESTABLE, DISEASED, DEAD, EMPTY, FILLING. */
+		public String state;
+
+		/** Projected growth stage. */
+		public int stage;
+
+		/** Number of stages in the current phase. */
+		public int stages;
+
+		/** ISO-8601 instant the crop finishes (or finished) growing; null when it is not growing. */
+		public String readyAt;
+
+		/** ISO-8601 instant of the last time the patch state was stored, i.e. the last visit. */
+		public String lastChecked;
+
+		/**
+		 * @param patch       patch label
+		 * @param region      region name
+		 * @param type        patch type
+		 * @param crop        crop name
+		 * @param state       projected state
+		 * @param stage       projected stage
+		 * @param stages      stage count
+		 * @param readyAt     completion instant, or null
+		 * @param lastChecked last-visit instant
+		 */
+		public FarmingTimer(String patch, String region, String type, String crop, String state, int stage,
+			int stages, String readyAt, String lastChecked)
+		{
+			this.patch = patch;
+			this.region = region;
+			this.type = type;
+			this.crop = crop;
+			this.state = state;
+			this.stage = stage;
+			this.stages = stages;
+			this.readyAt = readyAt;
+			this.lastChecked = lastChecked;
+		}
+	}
+
+	/**
+	 * The projected state of one birdhouse space.
+	 */
+	@EqualsAndHashCode
+	public static class BirdhouseTimer
+	{
+		/** Space name, e.g. {@code Mushroom Meadow (North)}. */
+		public String space;
+
+		/** Birdhouse type, e.g. {@code Oak Bird House}; null when the space is empty. */
+		public String house;
+
+		/** One of EMPTY, BUILT, SEEDED, READY, UNKNOWN. */
+		public String state;
+
+		/** ISO-8601 instant the birdhouse finishes (or finished); null unless seeded. */
+		public String readyAt;
+
+		/** ISO-8601 instant of the last time the state was stored, i.e. the last visit. */
+		public String lastChecked;
+
+		/**
+		 * @param space       space name
+		 * @param house       birdhouse type, or null
+		 * @param state       projected state
+		 * @param readyAt     completion instant, or null
+		 * @param lastChecked last-visit instant
+		 */
+		public BirdhouseTimer(String space, String house, String state, String readyAt, String lastChecked)
+		{
+			this.space = space;
+			this.house = house;
+			this.state = state;
+			this.readyAt = readyAt;
+			this.lastChecked = lastChecked;
+		}
+	}
 }

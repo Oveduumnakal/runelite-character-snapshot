@@ -11,12 +11,19 @@
 - [com.oveduumnakal.charactersnapshot.ClueChat](#comoveduumnakalcharactersnapshotcluechat)
 - [com.oveduumnakal.charactersnapshot.DiaryTasks](#comoveduumnakalcharactersnapshotdiarytasks)
 - [com.oveduumnakal.charactersnapshot.DiaryTasks.Task](#comoveduumnakalcharactersnapshotdiarytaskstask)
+- [com.oveduumnakal.charactersnapshot.FarmingData](#comoveduumnakalcharactersnapshotfarmingdata)
+- [com.oveduumnakal.charactersnapshot.FarmingTimers](#comoveduumnakalcharactersnapshotfarmingtimers)
+- [com.oveduumnakal.charactersnapshot.FarmingTimers.Crop](#comoveduumnakalcharactersnapshotfarmingtimerscrop)
+- [com.oveduumnakal.charactersnapshot.FarmingTimers.Decoded](#comoveduumnakalcharactersnapshotfarmingtimersdecoded)
+- [com.oveduumnakal.charactersnapshot.FarmingTimers.PatchDef](#comoveduumnakalcharactersnapshotfarmingtimerspatchdef)
+- [com.oveduumnakal.charactersnapshot.FarmingTimers.Range](#comoveduumnakalcharactersnapshotfarmingtimersrange)
 - [com.oveduumnakal.charactersnapshot.SlayerInfo](#comoveduumnakalcharactersnapshotslayerinfo)
 - [com.oveduumnakal.charactersnapshot.SnapshotCollector](#comoveduumnakalcharactersnapshotsnapshotcollector)
 - [com.oveduumnakal.charactersnapshot.SnapshotWriter](#comoveduumnakalcharactersnapshotsnapshotwriter)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot](#comoveduumnakalcharactersnapshotmodelcharactersnapshot)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbankdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankTab](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbanktab)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BirdhouseTimer](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbirdhousetimer)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BlockedTask](#comoveduumnakalcharactersnapshotmodelcharactersnapshotblockedtask)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CollectionLogData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CollectionLogPage](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogpage)
@@ -24,6 +31,7 @@
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementTask](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementtask)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryRegion](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiaryregion)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.DiaryTask](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiarytask)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.FarmingTimer](#comoveduumnakalcharactersnapshotmodelcharactersnapshotfarmingtimer)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.GeOffer](#comoveduumnakalcharactersnapshotmodelcharactersnapshotgeoffer)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.InventoryItem](#comoveduumnakalcharactersnapshotmodelcharactersnapshotinventoryitem)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry](#comoveduumnakalcharactersnapshotmodelcharactersnapshotitementry)
@@ -33,6 +41,7 @@
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SkillEntry](#comoveduumnakalcharactersnapshotmodelcharactersnapshotskillentry)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SlayerData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotslayerdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.TierCount](#comoveduumnakalcharactersnapshotmodelcharactersnapshottiercount)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.TimersData](#comoveduumnakalcharactersnapshotmodelcharactersnapshottimersdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.VitalsData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotvitalsdata)
 
 ---
@@ -76,6 +85,7 @@ for each category of data written to the export file.
 | `default boolean` | `syncSkills()` |  |
 | `default boolean` | `syncSlayer()` |  |
 | `default boolean` | `syncStorages()` |  |
+| `default boolean` | `syncTimers()` |  |
 | `default boolean` | `syncVitals()` |  |
 
 ### Field Detail
@@ -208,6 +218,12 @@ Storage section: where and how often data is written.
 `default boolean syncStorages()`
 
 - **Returns:** whether to include looting bag, seed vault and group storage contents
+
+#### syncTimers
+
+`default boolean syncTimers()`
+
+- **Returns:** whether to include farming patch and birdhouse timers
 
 #### syncVitals
 
@@ -1063,6 +1079,576 @@ Reads this task's completion from the client.
 
 ---
 
+## com.oveduumnakal.charactersnapshot.FarmingData
+
+_class_
+
+`final class FarmingData`
+
+Raw tables describing RuneLite's farming patches, copied from the built-in time tracking plugin because
+that plugin's classes are package-private. Each row is one delimited string; `FarmingTimers` parses
+them once. Regenerate rather than edit by hand; a test compares every row against the client's own classes.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `static final String[]` | `CROPS` | Crop rows: `ENUM\|name\|tickRateMinutes\|stages\|regrowTickRateMinutes\|harvestStages`. |
+| `static final String[]` | `DECODE` | Varbit-value ranges per patch implementation: `implementation\|low high crop state mult base`. |
+| `static final String[]` | `PATCHES` | Patch rows: `region\|regionId\|patchName\|varbit\|implementation`. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `FarmingData()` |  |
+
+### Field Detail
+
+#### CROPS
+
+`static final String[] CROPS`
+
+Crop rows: `ENUM|name|tickRateMinutes|stages|regrowTickRateMinutes|harvestStages`.
+
+#### DECODE
+
+`static final String[] DECODE`
+
+Varbit-value ranges per patch implementation: `implementation|low high crop state mult base`.
+A value in `[low, high]` decodes to the crop and crop state with stage `base + mult * value`.
+
+#### PATCHES
+
+`static final String[] PATCHES`
+
+Patch rows: `region|regionId|patchName|varbit|implementation`.
+
+### Constructor Detail
+
+#### FarmingData
+
+`private FarmingData()`
+
+---
+
+## com.oveduumnakal.charactersnapshot.FarmingTimers
+
+_class_
+
+`final class FarmingTimers`
+
+Reads the farming patch and birdhouse state that RuneLite's built-in Time Tracking plugin keeps in the
+RuneScape-profile config (group `timetracking`) and turns it into timers. Read-only: this class never
+writes to that config and never touches the client.
+
+<p>Time Tracking stores, per patch, `<regionId>.<varbit> = "<varbitValue>:<unixSeconds>"` the last time
+the player was near the patch, and per birdhouse `birdhouse.<varp> = "<varpValue>:<unixSeconds>"`. The
+stored value is decoded with tables copied from that plugin (`FarmingData`) and the growth is projected
+to the present with the same tick maths. Everything here is therefore only as fresh as the player's last visit
+to each patch, and is absent entirely when Time Tracking has never run (or is disabled).
+
+### Nested Type Summary
+
+| Type | Description |
+|---|---|
+| _class_ [`Crop`](#comoveduumnakalcharactersnapshotfarmingtimerscrop) | Growth timings and display name of one crop. |
+| _class_ [`Decoded`](#comoveduumnakalcharactersnapshotfarmingtimersdecoded) | A decoded patch state. |
+| _class_ [`PatchDef`](#comoveduumnakalcharactersnapshotfarmingtimerspatchdef) | A farming patch as Time Tracking lists it. |
+| _class_ [`Range`](#comoveduumnakalcharactersnapshotfarmingtimersrange) | One decode range: a varbit value in `[low, high]` means a crop in a crop state. |
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `private static final String[]` | `BIRDHOUSE_NAMES` |  |
+| `private static final String` | `BIRDHOUSE_PREFIX` |  |
+| `static final long` | `BIRDHOUSE_SECONDS` | Seconds a birdhouse takes to finish once seeded (Time Tracking's average for ten birds, 50 minutes). |
+| `static final String` | `CONFIG_GROUP` | Config group of the Time Tracking plugin. |
+| `private static final Map<String,Crop>` | `CROPS` |  |
+| `private static final List<PatchDef>` | `PATCHES` |  |
+| `private static final Map<String,List<Range>>` | `RANGES` |  |
+| `private static final String[]` | `SPACE_NAMES` |  |
+| `private static final int[]` | `SPACE_VARPS` |  |
+| `private static final String` | `TICK_OFFSET_KEY` |  |
+| `private static final String` | `TICK_OFFSET_PRECISION_KEY` |  |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `FarmingTimers()` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `static Decoded` | `decode(String implementation, int value)` | Decodes a patch varbit value. |
+| `static long[]` | `parseStored(String stored)` | Parses a stored `value:unixSeconds` pair like Time Tracking. |
+| `private static FarmingTimer` | `project(PatchDef patch, Decoded decoded, long stored, long now, boolean leagues, Integer offset, Integer precision)` | Projects one stored patch state to the present. |
+| `static List<BirdhouseTimer>` | `readBirdhouses(ConfigManager configManager, long now)` | Reads every birdhouse space with stored data. |
+| `static List<FarmingTimer>` | `readFarming(ConfigManager configManager, long now, boolean leagues)` | Reads and projects every farming patch with stored data. |
+| `static long` | `tickTime(int tickRate, int ticks, long requested, Integer offset, Integer precision)` | Computes the time of a farming tick, with the player's calibrated tick offset applied like Time Tracking does. |
+| `private static String` | `typeName(String implementation)` |  |
+
+### Field Detail
+
+#### BIRDHOUSE_NAMES
+
+`private static final String[] BIRDHOUSE_NAMES`
+
+#### BIRDHOUSE_PREFIX
+
+`private static final String BIRDHOUSE_PREFIX`
+
+#### BIRDHOUSE_SECONDS
+
+`static final long BIRDHOUSE_SECONDS`
+
+Seconds a birdhouse takes to finish once seeded (Time Tracking's average for ten birds, 50 minutes).
+
+#### CONFIG_GROUP
+
+`static final String CONFIG_GROUP`
+
+Config group of the Time Tracking plugin.
+
+#### CROPS
+
+`private static final Map<String,Crop> CROPS`
+
+#### PATCHES
+
+`private static final List<PatchDef> PATCHES`
+
+#### RANGES
+
+`private static final Map<String,List<Range>> RANGES`
+
+#### SPACE_NAMES
+
+`private static final String[] SPACE_NAMES`
+
+#### SPACE_VARPS
+
+`private static final int[] SPACE_VARPS`
+
+#### TICK_OFFSET_KEY
+
+`private static final String TICK_OFFSET_KEY`
+
+#### TICK_OFFSET_PRECISION_KEY
+
+`private static final String TICK_OFFSET_PRECISION_KEY`
+
+### Constructor Detail
+
+#### FarmingTimers
+
+`private FarmingTimers()`
+
+### Method Detail
+
+#### decode
+
+`static Decoded decode(String implementation, int value)`
+
+Decodes a patch varbit value.
+
+- **Parameter** `implementation` — patch implementation enum name
+- **Parameter** `value` — the varbit value
+- **Returns:** the decoded state, or `null` when the value is not a known state
+
+#### parseStored
+
+`static long[] parseStored(String stored)`
+
+Parses a stored `value:unixSeconds` pair like Time Tracking.
+
+- **Parameter** `stored` — the stored text, may be `null`
+- **Returns:** `{value, seconds`}, or `null` when absent, malformed, or the time is not positive
+
+#### project
+
+`private static FarmingTimer project(PatchDef patch, Decoded decoded, long stored, long now, boolean leagues, Integer offset, Integer precision)`
+
+Projects one stored patch state to the present.
+
+- **Parameter** `patch` — the patch
+- **Parameter** `decoded` — the stored state
+- **Parameter** `stored` — when the state was stored, Unix seconds
+- **Parameter** `now` — the current time, Unix seconds
+- **Parameter** `leagues` — whether farming ticks are five times faster
+- **Parameter** `offset` — stored tick offset in minutes, may be `null`
+- **Parameter** `precision` — stored tick offset precision in minutes, may be `null`
+- **Returns:** the timer
+
+#### readBirdhouses
+
+`static List<BirdhouseTimer> readBirdhouses(ConfigManager configManager, long now)`
+
+Reads every birdhouse space with stored data.
+
+- **Parameter** `configManager` — source of the Time Tracking config
+- **Parameter** `now` — the current time, Unix seconds
+- **Returns:** one timer per birdhouse space with stored data, in space order
+
+#### readFarming
+
+`static List<FarmingTimer> readFarming(ConfigManager configManager, long now, boolean leagues)`
+
+Reads and projects every farming patch with stored data.
+
+- **Parameter** `configManager` — source of the Time Tracking config
+- **Parameter** `now` — the current time, Unix seconds
+- **Parameter** `leagues` — whether the world is a seasonal world, where farming ticks are five times faster
+- **Returns:** one timer per patch with stored data, in table order; empty when none has been seen
+
+#### tickTime
+
+`static long tickTime(int tickRate, int ticks, long requested, Integer offset, Integer precision)`
+
+Computes the time of a farming tick, with the player's calibrated tick offset applied like Time Tracking
+does.
+
+- **Parameter** `tickRate` — minutes per tick
+- **Parameter** `ticks` — ticks after the tick containing `requested`
+- **Parameter** `requested` — the reference time, Unix seconds
+- **Parameter** `offset` — stored tick offset in minutes, may be `null`
+- **Parameter** `precision` — stored tick offset precision in minutes, may be `null`
+- **Returns:** the tick time, Unix seconds
+
+#### typeName
+
+`private static String typeName(String implementation)`
+
+- **Parameter** `implementation` — implementation enum name
+- **Returns:** a lower-case display type, e.g. `fruit tree`
+
+---
+
+## com.oveduumnakal.charactersnapshot.FarmingTimers.Crop
+
+_class_
+
+`static final class Crop`
+
+Growth timings and display name of one crop.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `final int` | `harvestStages` | Number of harvest stages. |
+| `final String` | `name` | Display name, e.g. |
+| `final int` | `regrowTickRate` | Minutes per regrowth tick, 0 when the crop does not regrow. |
+| `final int` | `stages` | Number of growth stages. |
+| `final int` | `tickRate` | Minutes per growth tick. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `Crop(String name, int tickRate, int stages, int regrowTickRate, int harvestStages)` |  |
+
+### Field Detail
+
+#### harvestStages
+
+`final int harvestStages`
+
+Number of harvest stages.
+
+#### name
+
+`final String name`
+
+Display name, e.g. `Ranarr`.
+
+#### regrowTickRate
+
+`final int regrowTickRate`
+
+Minutes per regrowth tick, 0 when the crop does not regrow.
+
+#### stages
+
+`final int stages`
+
+Number of growth stages.
+
+#### tickRate
+
+`final int tickRate`
+
+Minutes per growth tick.
+
+### Constructor Detail
+
+#### Crop
+
+`Crop(String name, int tickRate, int stages, int regrowTickRate, int harvestStages)`
+
+- **Parameter** `name` — display name
+- **Parameter** `tickRate` — minutes per growth tick
+- **Parameter** `stages` — growth stages
+- **Parameter** `regrowTickRate` — minutes per regrowth tick
+- **Parameter** `harvestStages` — harvest stages
+
+---
+
+## com.oveduumnakal.charactersnapshot.FarmingTimers.Decoded
+
+_class_
+
+`static final class Decoded`
+
+A decoded patch state.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `final Crop` | `crop` | The crop. |
+| `final String` | `cropKey` | Crop enum name. |
+| `final int` | `stage` | Current growth stage. |
+| `final String` | `state` | Crop state enum name: HARVESTABLE, GROWING, DISEASED, DEAD, EMPTY or FILLING. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `Decoded(Crop crop, String cropKey, String state, int stage)` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `int` | `stages()` |  |
+| `int` | `tickRate()` |  |
+
+### Field Detail
+
+#### crop
+
+`final Crop crop`
+
+The crop.
+
+#### cropKey
+
+`final String cropKey`
+
+Crop enum name.
+
+#### stage
+
+`final int stage`
+
+Current growth stage.
+
+#### state
+
+`final String state`
+
+Crop state enum name: HARVESTABLE, GROWING, DISEASED, DEAD, EMPTY or FILLING.
+
+### Constructor Detail
+
+#### Decoded
+
+`Decoded(Crop crop, String cropKey, String state, int stage)`
+
+- **Parameter** `crop` — the crop
+- **Parameter** `cropKey` — the crop enum name
+- **Parameter** `state` — the crop state enum name
+- **Parameter** `stage` — the stage
+
+### Method Detail
+
+#### stages
+
+`int stages()`
+
+- **Returns:** the stage count that applies in this state
+
+#### tickRate
+
+`int tickRate()`
+
+- **Returns:** minutes per tick that applies in this state, 0 when the state does not progress
+
+---
+
+## com.oveduumnakal.charactersnapshot.FarmingTimers.PatchDef
+
+_class_
+
+`static final class PatchDef`
+
+A farming patch as Time Tracking lists it.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `final String` | `implementation` | Patch implementation enum name, e.g. |
+| `final String` | `name` | Patch label within the region, possibly empty. |
+| `final String` | `region` | Region name, e.g. |
+| `final int` | `regionId` | Region id used in the config key. |
+| `final int` | `varbit` | Varbit that carries the patch state. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `PatchDef(String region, int regionId, String name, int varbit, String implementation)` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `String` | `configKey()` |  |
+| `String` | `label()` |  |
+
+### Field Detail
+
+#### implementation
+
+`final String implementation`
+
+Patch implementation enum name, e.g. `HERB`.
+
+#### name
+
+`final String name`
+
+Patch label within the region, possibly empty.
+
+#### region
+
+`final String region`
+
+Region name, e.g. `Catherby`.
+
+#### regionId
+
+`final int regionId`
+
+Region id used in the config key.
+
+#### varbit
+
+`final int varbit`
+
+Varbit that carries the patch state.
+
+### Constructor Detail
+
+#### PatchDef
+
+`PatchDef(String region, int regionId, String name, int varbit, String implementation)`
+
+- **Parameter** `region` — region name
+- **Parameter** `regionId` — region id
+- **Parameter** `name` — patch label
+- **Parameter** `varbit` — state varbit
+- **Parameter** `implementation` — implementation enum name
+
+### Method Detail
+
+#### configKey
+
+`String configKey()`
+
+- **Returns:** the config key Time Tracking stores this patch under
+
+#### label
+
+`String label()`
+
+- **Returns:** the human-readable patch label, e.g. `Catherby allotment (North)`
+
+---
+
+## com.oveduumnakal.charactersnapshot.FarmingTimers.Range
+
+_class_
+
+`static final class Range`
+
+One decode range: a varbit value in `[low, high]` means a crop in a crop state.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `final int` | `base` | Constant of the stage formula `base + mult * value`. |
+| `final String` | `crop` | Crop enum name. |
+| `final int` | `high` | Last varbit value of the range, inclusive. |
+| `final int` | `low` | First varbit value of the range. |
+| `final int` | `mult` | Multiplier of the varbit value in the stage formula. |
+| `final String` | `state` | Crop state enum name. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `Range(int low, int high, String crop, String state, int mult, int base)` |  |
+
+### Field Detail
+
+#### base
+
+`final int base`
+
+Constant of the stage formula `base + mult * value`.
+
+#### crop
+
+`final String crop`
+
+Crop enum name.
+
+#### high
+
+`final int high`
+
+Last varbit value of the range, inclusive.
+
+#### low
+
+`final int low`
+
+First varbit value of the range.
+
+#### mult
+
+`final int mult`
+
+Multiplier of the varbit value in the stage formula.
+
+#### state
+
+`final String state`
+
+Crop state enum name.
+
+### Constructor Detail
+
+#### Range
+
+`Range(int low, int high, String crop, String state, int mult, int base)`
+
+- **Parameter** `low` — first value
+- **Parameter** `high` — last value
+- **Parameter** `crop` — crop enum name
+- **Parameter** `state` — crop state enum name
+- **Parameter** `mult` — stage multiplier
+- **Parameter** `base` — stage constant
+
+---
+
 ## com.oveduumnakal.charactersnapshot.SlayerInfo
 
 _class_
@@ -1222,6 +1808,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private String` | `spellbook` |  |
 | `private final Map<String,Instant>` | `storageUpdated` |  |
 | `private final Map<String,List<ItemEntry>>` | `storages` |  |
+| `private TimersData` | `timers` |  |
 
 ### Constructor Summary
 
@@ -1262,6 +1849,8 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollRunePouch()` | Polls the rune pouch contents. |
 | `public boolean` | `pollSlayer()` | Polls the slayer state. |
 | `public boolean` | `pollSpellbook()` | Polls the active spellbook from the spellbook varbit (0 standard, 1 ancient, 2 lunar, 3 arceuus). |
+| `public boolean` | `pollTimers()` | Re-reads the farming and birdhouse timers from the Time Tracking plugin's stored data. |
+| `boolean` | `pollTimers(long nowSeconds)` | Re-reads the farming and birdhouse timers as of a given time. |
 | `private List<BlockedTask>` | `readBlockedTasks()` | Reads every master's blocked task slots, falling back to the legacy shared block list when no per-master slot is filled. |
 | `private List<String>` | `readFlags(Map<String,Integer> varbits)` | Lists the keys whose varbit is non-zero. |
 | `private PlayerInfo` | `readPlayerInfo(Player localPlayer)` | Reads the live player's identity and account context. |
@@ -1543,6 +2132,10 @@ Identity captured by the last snapshot built with a live local player; cleared b
 #### storages
 
 `private final Map<String,List<ItemEntry>> storages`
+
+#### timers
+
+`private TimersData timers`
 
 ### Constructor Detail
 
@@ -1826,6 +2419,23 @@ assigned.
 Polls the active spellbook from the spellbook varbit (0 standard, 1 ancient, 2 lunar, 3 arceuus).
 
 - **Returns:** whether the spellbook changed since the last poll
+
+#### pollTimers
+
+`public boolean pollTimers()`
+
+Re-reads the farming and birdhouse timers from the Time Tracking plugin's stored data.
+
+- **Returns:** whether the timers changed since the last poll
+
+#### pollTimers
+
+`boolean pollTimers(long nowSeconds)`
+
+Re-reads the farming and birdhouse timers as of a given time.
+
+- **Parameter** `nowSeconds` — the current time, Unix seconds
+- **Returns:** whether the timers changed since the last poll
 
 #### readBlockedTasks
 
@@ -2152,6 +2762,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 |---|---|
 | _class_ [`BankData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbankdata) | Bank contents: total distinct item count and a flat list of the stacks it holds. |
 | _class_ [`BankTab`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbanktab) | A bank tab: an index (0 for the main tab, 1 to 9 for the numbered tabs) and the items it holds. |
+| _class_ [`BirdhouseTimer`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbirdhousetimer) | The projected state of one birdhouse space. |
 | _class_ [`BlockedTask`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotblockedtask) | One blocked slayer task slot. |
 | _class_ [`CollectionLogData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogdata) | Collection log: the account-wide obtained and total counts, the flat list of obtained items, and the obtained items grouped by the log page they were seen on. |
 | _class_ [`CollectionLogPage`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogpage) | One collection log page as last seen: how many of its slots there are and which are obtained. |
@@ -2159,6 +2770,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | _class_ [`CombatAchievementTask`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementtask) | A single combat-achievement task and whether it is complete. |
 | _class_ [`DiaryRegion`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiaryregion) | Completion of the four achievement-diary tiers for one region, plus the individual tasks where known. |
 | _class_ [`DiaryTask`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotdiarytask) | One achievement-diary task and whether it is complete. |
+| _class_ [`FarmingTimer`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotfarmingtimer) | The projected state of one farming patch or compost bin. |
 | _class_ [`GeOffer`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotgeoffer) | One active Grand Exchange offer. |
 | _class_ [`InventoryItem`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotinventoryitem) | An inventory item, carrying its slot index in addition to the item stack. |
 | _class_ [`ItemEntry`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotitementry) | One stack of items: id, resolved name, and quantity. |
@@ -2168,6 +2780,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | _class_ [`SkillEntry`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotskillentry) | Real level and experience for one skill, plus the current boosted level. |
 | _class_ [`SlayerData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotslayerdata) | The slayer state. |
 | _class_ [`TierCount`](#comoveduumnakalcharactersnapshotmodelcharactersnapshottiercount) | Completed and total task counts for one combat-achievement tier. |
+| _class_ [`TimersData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshottimersdata) | Farming and birdhouse timers. |
 | _class_ [`VitalsData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotvitalsdata) | Current combat vitals: hitpoints, prayer, and run energy. |
 
 ### Field Summary
@@ -2194,6 +2807,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | `public Map<String,SkillEntry>` | `skills` | Real level and experience per skill, keyed by upper-case skill name, plus `OVERALL`. |
 | `public SlayerData` | `slayer` | Slayer state; points and streak always set once polled, task fields null/0 when no task. |
 | `public Map<String,List<ItemEntry>>` | `storages` | Last known contents of storage containers that are only readable when opened, keyed by storage (`lootingBag`, `seedVault`, `groupStorage`); a storage never opened is absent. |
+| `public TimersData` | `timers` | Farming patch and birdhouse timers decoded from RuneLite's Time Tracking data. |
 | `public VitalsData` | `vitals` | Current combat vitals (hitpoints, prayer, run energy). |
 
 ### Field Detail
@@ -2325,6 +2939,13 @@ Slayer state; points and streak always set once polled, task fields null/0 when 
 Last known contents of storage containers that are only readable when opened, keyed by storage
 (`lootingBag`, `seedVault`, `groupStorage`); a storage never opened is absent.
 
+#### timers
+
+`public TimersData timers`
+
+Farming patch and birdhouse timers decoded from RuneLite's Time Tracking data. Only as fresh as the
+player's last visit to each patch. Absent when the toggle is off or Time Tracking has no data.
+
 #### vitals
 
 `public VitalsData vitals`
@@ -2442,6 +3063,76 @@ Tab index: 0 is the main tab, 1 to 9 are the numbered tabs.
 
 - **Parameter** `tabIndex` — the tab index
 - **Parameter** `items` — the items in the tab
+
+---
+
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BirdhouseTimer
+
+_class_
+
+`public static class BirdhouseTimer`
+
+The projected state of one birdhouse space.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public String` | `house` | Birdhouse type, e.g. |
+| `public String` | `lastChecked` | ISO-8601 instant of the last time the state was stored, i.e. |
+| `public String` | `readyAt` | ISO-8601 instant the birdhouse finishes (or finished); null unless seeded. |
+| `public String` | `space` | Space name, e.g. |
+| `public String` | `state` | One of EMPTY, BUILT, SEEDED, READY, UNKNOWN. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `BirdhouseTimer(String space, String house, String state, String readyAt, String lastChecked)` |  |
+
+### Field Detail
+
+#### house
+
+`public String house`
+
+Birdhouse type, e.g. `Oak Bird House`; null when the space is empty.
+
+#### lastChecked
+
+`public String lastChecked`
+
+ISO-8601 instant of the last time the state was stored, i.e. the last visit.
+
+#### readyAt
+
+`public String readyAt`
+
+ISO-8601 instant the birdhouse finishes (or finished); null unless seeded.
+
+#### space
+
+`public String space`
+
+Space name, e.g. `Mushroom Meadow (North)`.
+
+#### state
+
+`public String state`
+
+One of EMPTY, BUILT, SEEDED, READY, UNKNOWN.
+
+### Constructor Detail
+
+#### BirdhouseTimer
+
+`public BirdhouseTimer(String space, String house, String state, String readyAt, String lastChecked)`
+
+- **Parameter** `space` — space name
+- **Parameter** `house` — birdhouse type, or null
+- **Parameter** `state` — projected state
+- **Parameter** `readyAt` — completion instant, or null
+- **Parameter** `lastChecked` — last-visit instant
 
 ---
 
@@ -3041,6 +3732,108 @@ Task text.
 
 - **Parameter** `name` — task text
 - **Parameter** `completed` — whether the task is complete
+
+---
+
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.FarmingTimer
+
+_class_
+
+`public static class FarmingTimer`
+
+The projected state of one farming patch or compost bin.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public String` | `crop` | Crop name, e.g. |
+| `public String` | `lastChecked` | ISO-8601 instant of the last time the patch state was stored, i.e. |
+| `public String` | `patch` | Human-readable patch, e.g. |
+| `public String` | `readyAt` | ISO-8601 instant the crop finishes (or finished) growing; null when it is not growing. |
+| `public String` | `region` | Region the patch is in, e.g. |
+| `public int` | `stage` | Projected growth stage. |
+| `public int` | `stages` | Number of stages in the current phase. |
+| `public String` | `state` | One of GROWING, HARVESTABLE, DISEASED, DEAD, EMPTY, FILLING. |
+| `public String` | `type` | Patch type, e.g. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `FarmingTimer(String patch, String region, String type, String crop, String state, int stage, int stages, String readyAt, String lastChecked)` |  |
+
+### Field Detail
+
+#### crop
+
+`public String crop`
+
+Crop name, e.g. `Ranarr`; `Weeds` for an empty patch.
+
+#### lastChecked
+
+`public String lastChecked`
+
+ISO-8601 instant of the last time the patch state was stored, i.e. the last visit.
+
+#### patch
+
+`public String patch`
+
+Human-readable patch, e.g. `Catherby herb`.
+
+#### readyAt
+
+`public String readyAt`
+
+ISO-8601 instant the crop finishes (or finished) growing; null when it is not growing.
+
+#### region
+
+`public String region`
+
+Region the patch is in, e.g. `Catherby`.
+
+#### stage
+
+`public int stage`
+
+Projected growth stage.
+
+#### stages
+
+`public int stages`
+
+Number of stages in the current phase.
+
+#### state
+
+`public String state`
+
+One of GROWING, HARVESTABLE, DISEASED, DEAD, EMPTY, FILLING.
+
+#### type
+
+`public String type`
+
+Patch type, e.g. `herb`, `fruit tree`, `compost`.
+
+### Constructor Detail
+
+#### FarmingTimer
+
+`public FarmingTimer(String patch, String region, String type, String crop, String state, int stage, int stages, String readyAt, String lastChecked)`
+
+- **Parameter** `patch` — patch label
+- **Parameter** `region` — region name
+- **Parameter** `type` — patch type
+- **Parameter** `crop` — crop name
+- **Parameter** `state` — projected state
+- **Parameter** `stage` — projected stage
+- **Parameter** `stages` — stage count
+- **Parameter** `readyAt` — completion instant, or null
+- **Parameter** `lastChecked` — last-visit instant
 
 ---
 
@@ -3667,6 +4460,52 @@ Number of tasks in the tier.
 
 - **Parameter** `completed` — completed task count
 - **Parameter** `total` — total task count
+
+---
+
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.TimersData
+
+_class_
+
+`public static class TimersData`
+
+Farming and birdhouse timers.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public List<BirdhouseTimer>` | `birdhouses` | Birdhouse spaces with stored data. |
+| `public List<FarmingTimer>` | `farming` | Farming patches with stored data; patches never visited are not listed. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `TimersData(List<FarmingTimer> farming, List<BirdhouseTimer> birdhouses)` |  |
+
+### Field Detail
+
+#### birdhouses
+
+`public List<BirdhouseTimer> birdhouses`
+
+Birdhouse spaces with stored data.
+
+#### farming
+
+`public List<FarmingTimer> farming`
+
+Farming patches with stored data; patches never visited are not listed.
+
+### Constructor Detail
+
+#### TimersData
+
+`public TimersData(List<FarmingTimer> farming, List<BirdhouseTimer> birdhouses)`
+
+- **Parameter** `farming` — farming patch timers
+- **Parameter** `birdhouses` — birdhouse timers
 
 ---
 
