@@ -345,4 +345,20 @@ public interface CharacterSnapshotConfig extends Config
 	{
 		return true;
 	}
+
+	/**
+	 * @return whether to include daily reward claim status and the Kingdom of Miscellania
+	 */
+	@ConfigItem(
+		keyName = "syncDailies",
+		name = "Daily rewards",
+		description = "Include which daily rewards (herb boxes, battlestaves, sand...) are unlocked and "
+			+ "claimed today, and Kingdom of Miscellania approval and coffer",
+		section = dataSection,
+		position = 18
+	)
+	default boolean syncDailies()
+	{
+		return true;
+	}
 }

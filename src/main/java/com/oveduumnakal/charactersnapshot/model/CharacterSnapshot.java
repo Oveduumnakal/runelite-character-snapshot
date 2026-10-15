@@ -109,6 +109,16 @@ public class CharacterSnapshot
 	public TimersData timers;
 
 	/**
+	 * Claimable daily rewards keyed by name ({@code herbBoxes}, {@code battlestaves}, ...), whether each is
+	 * unlocked and whether today's is already claimed. The game resets claims at 00:00 UTC; compare with
+	 * {@link #lastUpdated}. Absent when the toggle is off.
+	 */
+	public Map<String, DailyTask> dailies;
+
+	/** Kingdom of Miscellania approval and coffer; absent before Throne of Miscellania or when the toggle is off. */
+	public MiscellaniaData miscellania;
+
+	/**
 	 * Identity and account context of the logged-in character.
 	 */
 	public static class PlayerInfo
@@ -1140,6 +1150,68 @@ public class CharacterSnapshot
 			this.state = state;
 			this.readyAt = readyAt;
 			this.lastChecked = lastChecked;
+		}
+	}
+
+	/**
+	 * One claimable daily reward.
+	 */
+	@EqualsAndHashCode
+	public static class DailyTask
+	{
+		/** Whether the reward is unlocked (diary tier, quest or account type allows it). */
+		public boolean unlocked;
+
+		/** Whether today's reward has been claimed in full. */
+		public boolean claimed;
+
+		/** Amount claimed today, for rewards claimed in parts (herb boxes, bonemeal); null otherwise. */
+		public Integer claimedCount;
+
+		/** Daily maximum for rewards claimed in parts; null otherwise. */
+		public Integer max;
+
+		/**
+		 * @param unlocked     whether the reward is unlocked
+		 * @param claimed      whether today's reward is claimed
+		 * @param claimedCount amount claimed today, or null
+		 * @param max          daily maximum, or null
+		 */
+		public DailyTask(boolean unlocked, boolean claimed, Integer claimedCount, Integer max)
+		{
+			this.unlocked = unlocked;
+			this.claimed = claimed;
+			this.claimedCount = claimedCount;
+			this.max = max;
+		}
+	}
+
+	/**
+	 * Kingdom of Miscellania state. The game only sends the values while the player is in the kingdom, so they
+	 * are as fresh as {@link #lastChanged}; RuneLite's Kingdom of Miscellania plugin data fills the gap.
+	 */
+	@EqualsAndHashCode
+	public static class MiscellaniaData
+	{
+		/** Approval, 0 to 100 percent. */
+		public int approvalPercent;
+
+		/** Coins in the coffer. */
+		public int coffer;
+
+		/** ISO-8601 instant the values were last seen changing; null when unknown. */
+		public String lastChanged;
+
+		/**
+		 * @param approvalPercent approval percentage
+		 * @param coffer          coins in the coffer
+		 * @param lastChanged     last-change instant, or null
+		 */
+		public MiscellaniaData(int approvalPercent, int coffer, String lastChanged)
+		{
+			this.approvalPercent = approvalPercent;
+			this.coffer = coffer;
+			this.lastChanged = lastChanged;
 		}
 	}
 }

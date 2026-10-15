@@ -376,6 +376,9 @@ public class CharacterSnapshotPlugin extends Plugin
 		if (config.syncTimers())
 			changed |= collector.pollTimers();
 
+		if (config.syncDailies())
+			changed |= collector.pollDailies();
+
 		if (changed)
 			dirty = true;
 	}
@@ -449,6 +452,9 @@ public class CharacterSnapshotPlugin extends Plugin
 
 		if (config.syncTimers())
 			collector.pollTimers();
+
+		if (config.syncDailies())
+			collector.pollDailies();
 	}
 
 	/**
