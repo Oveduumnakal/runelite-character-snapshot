@@ -25,6 +25,7 @@ missing sections as "not exported", not "empty".
 | `runePouch` | array | Runes in the rune pouch; present only while one is in the inventory. See below. |
 | `storages` | object | Last known looting bag, seed vault, group storage, seed box, tackle box, plank sack, gravestone, Death's office, hunter/forestry kits, Dizana's quiver, boat cargo holds and barbarian knapsack contents. See below. |
 | `toolLeprechaun` | object | Tool leprechaun storage, raw varbit values. See below. |
+| `toolLeprechaunTotals` | object | Tool leprechaun contents decoded into Store-screen totals. See below. |
 | `quests` | array | One entry per quest. |
 | `questPoints` | int | Total quest points. |
 | `achievementDiaries` | object | Map of region name → tier completion. |
@@ -120,6 +121,16 @@ An **item entry** is `{ itemId, name, quantity }`; `name` is null for an unresol
   are not decoded: 0/1 for single tools, a type index for `wateringCan` and `bottomlessBucketType`, counts
   otherwise, where an `extra*` key holds the higher part of a count that overflows its base key. Read live;
   absent when nothing is stored. Under the Storages toggle.
+
+- `toolLeprechaunTotals` (additive, optional): the same contents decoded into the totals the leprechaun's Store
+  screen shows, present exactly when `toolLeprechaun` is: `rakes`, `seedDibbers`, `spades`, `secateurs`,
+  `trowels` (each `base + 2 × extra`), `magicSecateurs` (boolean: the stored secateurs are magic), `buckets`
+  (`base + 32 × extra`), `compost` and `supercompost` (`base + 256 × extra`), `ultracompost` (base only),
+  `plantCure` (raw count), `wateringCanCharges` (`value − 1`; absent when no can is stored) and
+  `bottomlessBucket` (`{ type, uses }`, raw varbit values, absent when both are 0). Not decoded: the
+  `extra2Buckets` weight (ignored, it has only ever been 0), the Gricoller's can value, and what the
+  bottomless bucket `type` means. Example: `{ "rakes": 2, "spades": 3, "buckets": 77, "supercompost": 801,
+  "wateringCanCharges": 7, ... }`. The raw `toolLeprechaun` map is unchanged. Under the Storages toggle.
 
 ### Carried-over sections and `sectionUpdated`
 
