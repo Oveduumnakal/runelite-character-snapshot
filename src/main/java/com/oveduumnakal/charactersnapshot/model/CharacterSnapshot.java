@@ -119,6 +119,12 @@ public class CharacterSnapshot
 	public MiscellaniaData miscellania;
 
 	/**
+	 * Minigame reward-shop balances keyed by currency ({@code nightmareZone}, {@code titheFarm}, ...), in a fixed
+	 * order. Absent when the toggle is off.
+	 */
+	public Map<String, Integer> minigamePoints;
+
+	/**
 	 * Identity and account context of the logged-in character.
 	 */
 	public static class PlayerInfo

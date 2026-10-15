@@ -361,4 +361,20 @@ public interface CharacterSnapshotConfig extends Config
 	{
 		return true;
 	}
+
+	/**
+	 * @return whether to include minigame reward-shop points
+	 */
+	@ConfigItem(
+		keyName = "syncMinigamePoints",
+		name = "Minigame points",
+		description = "Include minigame reward points (Nightmare Zone, Tithe Farm, Giants' Foundry, Mixology, "
+			+ "Tempoross, Soul Wars, kudos...)",
+		section = dataSection,
+		position = 19
+	)
+	default boolean syncMinigamePoints()
+	{
+		return true;
+	}
 }

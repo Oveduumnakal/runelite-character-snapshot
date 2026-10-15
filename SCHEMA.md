@@ -38,6 +38,7 @@ missing sections as "not exported", not "empty".
 | `timers` | object | Farming patch and birdhouse timers. |
 | `dailies` | object | Daily rewards: unlocked and claimed today. See below. |
 | `miscellania` | object | Kingdom of Miscellania approval and coffer. See below. |
+| `minigamePoints` | object | Minigame reward-shop balances. See below. |
 
 ## player
 
@@ -310,6 +311,14 @@ game only sends the values inside the kingdom, so away from it the values RuneLi
 plugin stored on the last visit are used, with that visit's `lastChanged`; `lastChanged` is null when the
 values were read live and the plugin has no matching record. Approval and coffer decay daily after
 `lastChanged`.
+
+## minigamePoints
+
+Map of currency → balance, every key always present (0 when none), in this order: `nightmareZone`,
+`giantsFoundry`, `mixologyMox`, `mixologyAga`, `mixologyLye`, `soulWarsZeal`, `valeTotemsResearch`,
+`titheFarm`, `temporossPermits`, `museumKudos` (Varrock Museum), `pvpArena`. Each is one named game variable
+read live. Pest Control, Mahogany Homes, Last Man Standing, Guardians of the Rift and Barbarian Assault are
+not exported: their currency has no clearly named variable. Absent when the Minigame points toggle is off.
 
 ## Versioning
 

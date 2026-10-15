@@ -54,6 +54,9 @@ assistant. The plugin makes **no network calls of any kind** — nothing leaves 
 - **Daily rewards.** Which dailies (herb boxes, battlestaves, sand, flax...) are unlocked and still
   unclaimed today, plus Kingdom of Miscellania approval and coffer.
 
+- **Minigame points.** Nightmare Zone, Tithe Farm, Giants' Foundry, Mastering Mixology, Tempoross,
+  Soul Wars, Vale Totems, PvP Arena and museum kudos balances.
+
 ### Yours to tune
 
 - **Toggle every category** so you export only what you want.

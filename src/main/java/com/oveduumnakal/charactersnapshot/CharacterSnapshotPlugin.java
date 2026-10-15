@@ -376,6 +376,9 @@ public class CharacterSnapshotPlugin extends Plugin
 		if (config.syncTimers())
 			changed |= collector.pollTimers();
 
+		if (config.syncMinigamePoints())
+			changed |= collector.pollMinigamePoints();
+
 		if (config.syncDailies())
 			changed |= collector.pollDailies();
 
@@ -452,6 +455,9 @@ public class CharacterSnapshotPlugin extends Plugin
 
 		if (config.syncTimers())
 			collector.pollTimers();
+
+		if (config.syncMinigamePoints())
+			collector.pollMinigamePoints();
 
 		if (config.syncDailies())
 			collector.pollDailies();
