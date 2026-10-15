@@ -66,14 +66,14 @@ public class SailingTest
 		ownBoat(client, VarbitID.SAILING_BOAT_2_OWNED, VarbitID.SAILING_BOAT_2_PORT, 60);
 		ownBoat(client, VarbitID.SAILING_BOAT_3_OWNED, VarbitID.SAILING_BOAT_3_PORT, 9999);
 		dockName(client, 1, 101, "The Pandemonium");
-		dockName(client, 60, 160, "Wyrmscraid Cavern");
+		dockName(client, 60, 160, "Wyrmscraig Cavern");
 
 		SailingData sailing = Sailing.read(client);
 
 		assertEquals(1, sailing.boats.get(0).port);
 		assertEquals("The Pandemonium", sailing.boats.get(0).portName);
 		assertEquals(60, sailing.boats.get(1).port);
-		assertEquals("Wyrmscraid Cavern", sailing.boats.get(1).portName);
+		assertEquals("Wyrmscraig Cavern", sailing.boats.get(1).portName);
 		assertEquals(9999, sailing.boats.get(2).port);
 		assertNull(sailing.boats.get(2).portName);
 	}
@@ -98,6 +98,26 @@ public class SailingTest
 		when(client.getVarbitValue(VarbitID.SAILING_BOAT_1_TYPE)).thenReturn(77);
 		boat = Sailing.read(client).boats.get(0);
 		assertNull(boat.typeName);
+	}
+
+	/**
+	 * A blank display name falls back to the boat table's plain name column.
+	 */
+	@Test
+	public void fallsBackToPlainBoatName()
+	{
+		Client client = loggedInClient();
+		when(client.getVarbitValue(VarbitID.SAILING_BOAT_1_OWNED)).thenReturn(1);
+		when(client.getVarbitValue(VarbitID.SAILING_BOAT_1_TYPE)).thenReturn(2);
+		when(client.getDBRowsByValue(DBTableID.SailingBoat.ID, DBTableID.SailingBoat.COL_TYPE_ID, 0, 2))
+			.thenReturn(Collections.singletonList(202));
+		when(client.getDBTableField(202, DBTableID.SailingBoat.COL_DISPLAYNAME, 0))
+			.thenReturn(new Object[]{""});
+		when(client.getDBTableField(202, DBTableID.SailingBoat.COL_NAME, 0))
+			.thenReturn(new Object[]{"Sloop"});
+
+		BoatData boat = Sailing.read(client).boats.get(0);
+		assertEquals("Sloop", boat.typeName);
 	}
 
 	/**

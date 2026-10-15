@@ -2249,7 +2249,7 @@ runtime, so ports and boat types added later are named without a plugin update.
 - **Parameter** `idColumn` — the column holding the raw id the boat varbits store
 - **Parameter** `nameColumn` — the column holding the display name
 - **Parameter** `id` — the raw id to look up
-- **Returns:** the name, or null when the id has no row or the name is not text
+- **Returns:** the name, or null when the id has no row or the name is not text or is blank
 
 #### value
 
