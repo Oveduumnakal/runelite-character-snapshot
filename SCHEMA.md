@@ -41,6 +41,7 @@ missing sections as "not exported", not "empty".
 | `miscellania` | object | Kingdom of Miscellania approval and coffer. See below. |
 | `minigamePoints` | object | Minigame reward-shop balances. See below. |
 | `transport` | object | Fairy ring access and travel log, quetzal landing sites. See below. |
+| `house` | object | Player-owned house fields, raw game values. See below. |
 
 ## player
 
@@ -346,6 +347,16 @@ Torum, Colossal Wyrm Remains, Outer Fortis, Fortis Colosseum, Aldarin, Quetzacal
 Tal Teklan, Auburn Valley, Kastori). Transports gated only by quests or diaries (spirit trees, gnome gliders,
 charter ships) are not repeated here; read them from `quests` and `achievementDiaries`. Sailing ports are under
 `sailing`. Absent when the Transport unlocks toggle is off.
+
+## house
+
+`{ location, style, size, servant, jewelleryBox, nexusTeleports }`, present once the player owns a house
+(`POH_HOUSE_LOCATION` > 0). **All values are the game's raw varbit values and are not decoded yet**:
+`location` (`POH_HOUSE_LOCATION`), `style` (`POH_HOUSE_STYLE`), `size` (`POH_HOUSE_SIZE`), `servant`
+(`POH_SERVANT_TYPE`, 0 = none), `jewelleryBox` (`POH_JEWELLERYBOX_MULTI`, 0 = none built; higher values are
+expected to be basic, fancy, ornate), and `nexusTeleports`, the portal nexus teleport slots 1 to 45 whose
+`POH_NEXUS_TELE_<n>` varbit is set. Room contents (portal chamber, pool, altar, spirit tree) have no varbits
+and are not exported. Absent when the Player-owned house toggle is off.
 
 ## Versioning
 

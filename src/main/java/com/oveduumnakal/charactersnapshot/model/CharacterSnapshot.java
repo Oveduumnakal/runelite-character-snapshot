@@ -133,6 +133,9 @@ public class CharacterSnapshot
 	/** Transport unlocks kept in game variables (fairy rings, quetzal sites); absent when the toggle is off. */
 	public TransportData transport;
 
+	/** Player-owned house fields kept in game variables, raw values; absent with no house or the toggle off. */
+	public HouseData house;
+
 	/**
 	 * Identity and account context of the logged-in character.
 	 */
@@ -1255,6 +1258,50 @@ public class CharacterSnapshot
 			this.fairyRings = fairyRings;
 			this.fairyRingLog = fairyRingLog;
 			this.quetzalSites = quetzalSites;
+		}
+	}
+
+	/**
+	 * Player-owned house fields kept in game variables. All values are the game's raw varbit values.
+	 */
+	@EqualsAndHashCode
+	public static class HouseData
+	{
+		/** House location id (raw {@code POH_HOUSE_LOCATION}). */
+		public int location;
+
+		/** House style id (raw {@code POH_HOUSE_STYLE}). */
+		public int style;
+
+		/** Raw {@code POH_HOUSE_SIZE}. */
+		public int size;
+
+		/** Servant id, 0 for none (raw {@code POH_SERVANT_TYPE}). */
+		public int servant;
+
+		/** Jewellery box state, 0 when none is built (raw {@code POH_JEWELLERYBOX_MULTI}). */
+		public int jewelleryBox;
+
+		/** Portal nexus teleport slots (1 to 45) whose varbit is set. */
+		public List<Integer> nexusTeleports;
+
+		/**
+		 * @param location       house location id
+		 * @param style          house style id
+		 * @param size           raw house size
+		 * @param servant        servant id
+		 * @param jewelleryBox   jewellery box state
+		 * @param nexusTeleports set nexus teleport slots
+		 */
+		public HouseData(int location, int style, int size, int servant, int jewelleryBox,
+			List<Integer> nexusTeleports)
+		{
+			this.location = location;
+			this.style = style;
+			this.size = size;
+			this.servant = servant;
+			this.jewelleryBox = jewelleryBox;
+			this.nexusTeleports = nexusTeleports;
 		}
 	}
 }

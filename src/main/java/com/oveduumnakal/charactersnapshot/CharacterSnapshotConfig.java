@@ -392,4 +392,20 @@ public interface CharacterSnapshotConfig extends Config
 	{
 		return true;
 	}
+
+	/**
+	 * @return whether to include player-owned house fields
+	 */
+	@ConfigItem(
+		keyName = "syncHouse",
+		name = "Player-owned house",
+		description = "Include house location, style, servant, jewellery box and portal nexus teleports "
+			+ "(raw game values)",
+		section = dataSection,
+		position = 21
+	)
+	default boolean syncHouse()
+	{
+		return true;
+	}
 }
