@@ -2130,8 +2130,8 @@ _class_
 `final class Sailing`
 
 Reads Sailing state from its named game variables: owned boats and their parts, unlocked crew, charting
-progress and Barracuda Trials performance. Ids such as boat type, port and part tiers are raw game values.
-Every read runs on the client thread.
+progress and Barracuda Trials performance. Boat type and port are also named from the game's database tables;
+part tiers are raw game values. Every read runs on the client thread.
 
 ### Field Summary
 
@@ -2161,6 +2161,7 @@ Every read runs on the client thread.
 | Modifier and Type | Method | Description |
 |---|---|---|
 | `static SailingData` | `read(Client client)` | Reads the Sailing state. |
+| `static String` | `tableName(Client client, int table, int idColumn, int nameColumn, int id)` | Looks up a display name in a game database table by its id column. |
 | `private static int` | `value(Client client, int[] table, int slot)` | Reads one boat slot's varbit from a per-slot table. |
 
 ### Field Detail
@@ -2235,6 +2236,20 @@ Reads the Sailing state.
 
 - **Parameter** `client` — the client
 - **Returns:** the Sailing state
+
+#### tableName
+
+`static String tableName(Client client, int table, int idColumn, int nameColumn, int id)`
+
+Looks up a display name in a game database table by its id column. The name comes from the game cache at
+runtime, so ports and boat types added later are named without a plugin update.
+
+- **Parameter** `client` — the client
+- **Parameter** `table` — the database table id
+- **Parameter** `idColumn` — the column holding the raw id the boat varbits store
+- **Parameter** `nameColumn` — the column holding the display name
+- **Parameter** `id` — the raw id to look up
+- **Returns:** the name, or null when the id has no row or the name is not text
 
 #### value
 
@@ -4268,16 +4283,18 @@ One owned boat. Type, port and part values are the game's raw ids.
 | `public int` | `keel` | Raw keel tier id. |
 | `public int` | `maxHp` | Stored maximum hitpoints. |
 | `public int` | `port` | Raw id of the port the boat is moored at. |
+| `public String` | `portName` | Name of the port the boat is moored at, from the game's dock table; null when the id is unknown. |
 | `public int` | `sail` | Raw sail tier id. |
 | `public int` | `slot` | Boat slot, 1 to 5. |
 | `public int` | `steering` | Raw steering (helm) tier id. |
 | `public int` | `type` | Raw boat type id. |
+| `public String` | `typeName` | Boat type name from the game's boat table; null when the id is not in the table. |
 
 ### Constructor Summary
 
 | Constructor | Description |
 |---|---|
-| `BoatData(int slot, int type, int port, int hull, int keel, int sail, int steering, int hp, int maxHp)` |  |
+| `BoatData(int slot, int type, String typeName, int port, String portName, int hull, int keel, int sail, int steering, int hp, int maxHp)` |  |
 
 ### Field Detail
 
@@ -4311,6 +4328,12 @@ Stored maximum hitpoints.
 
 Raw id of the port the boat is moored at.
 
+#### portName
+
+`public String portName`
+
+Name of the port the boat is moored at, from the game's dock table; null when the id is unknown.
+
 #### sail
 
 `public int sail`
@@ -4335,15 +4358,23 @@ Raw steering (helm) tier id.
 
 Raw boat type id.
 
+#### typeName
+
+`public String typeName`
+
+Boat type name from the game's boat table; null when the id is not in the table.
+
 ### Constructor Detail
 
 #### BoatData
 
-`public BoatData(int slot, int type, int port, int hull, int keel, int sail, int steering, int hp, int maxHp)`
+`public BoatData(int slot, int type, String typeName, int port, String portName, int hull, int keel, int sail, int steering, int hp, int maxHp)`
 
 - **Parameter** `slot` — boat slot
 - **Parameter** `type` — raw type id
+- **Parameter** `typeName` — type name, or null when unknown
 - **Parameter** `port` — raw port id
+- **Parameter** `portName` — port name, or null when unknown
 - **Parameter** `hull` — raw hull id
 - **Parameter** `keel` — raw keel id
 - **Parameter** `sail` — raw sail id

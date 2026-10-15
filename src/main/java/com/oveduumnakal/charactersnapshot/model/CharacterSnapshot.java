@@ -1434,8 +1434,14 @@ public class CharacterSnapshot
 		/** Raw boat type id. */
 		public int type;
 
+		/** Boat type name from the game's boat table; null when the id is not in the table. */
+		public String typeName;
+
 		/** Raw id of the port the boat is moored at. */
 		public int port;
+
+		/** Name of the port the boat is moored at, from the game's dock table; null when the id is unknown. */
+		public String portName;
 
 		/** Raw hull tier id. */
 		public int hull;
@@ -1458,7 +1464,9 @@ public class CharacterSnapshot
 		/**
 		 * @param slot     boat slot
 		 * @param type     raw type id
+		 * @param typeName type name, or null when unknown
 		 * @param port     raw port id
+		 * @param portName port name, or null when unknown
 		 * @param hull     raw hull id
 		 * @param keel     raw keel id
 		 * @param sail     raw sail id
@@ -1466,11 +1474,14 @@ public class CharacterSnapshot
 		 * @param hp       stored hitpoints
 		 * @param maxHp    stored maximum hitpoints
 		 */
-		public BoatData(int slot, int type, int port, int hull, int keel, int sail, int steering, int hp, int maxHp)
+		public BoatData(int slot, int type, String typeName, int port, String portName, int hull, int keel, int sail,
+			int steering, int hp, int maxHp)
 		{
 			this.slot = slot;
 			this.type = type;
+			this.typeName = typeName;
 			this.port = port;
+			this.portName = portName;
 			this.hull = hull;
 			this.keel = keel;
 			this.sail = sail;

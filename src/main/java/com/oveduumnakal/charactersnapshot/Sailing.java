@@ -13,13 +13,14 @@ import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BoatData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SailingData;
 
 import net.runelite.api.Client;
+import net.runelite.api.gameval.DBTableID;
 import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
 
 /**
  * Reads Sailing state from its named game variables: owned boats and their parts, unlocked crew, charting
- * progress and Barracuda Trials performance. Ids such as boat type, port and part tiers are raw game values.
- * Every read runs on the client thread.
+ * progress and Barracuda Trials performance. Boat type and port are also named from the game's database tables;
+ * part tiers are raw game values. Every read runs on the client thread.
  */
 final class Sailing
 {
@@ -121,10 +122,15 @@ final class Sailing
 			if (client.getVarbitValue(BOAT_OWNED[i]) <= 0)
 				continue;
 
-			boats.add(new BoatData(i + 1, value(client, BOAT_TYPE, i), value(client, BOAT_PORT, i),
-				value(client, BOAT_HULL, i), value(client, BOAT_KEEL, i), value(client, BOAT_SAIL, i),
-				value(client, BOAT_STEERING, i), value(client, BOAT_STORED_HP, i),
-				value(client, BOAT_STORED_MAXHP, i)));
+			int type = value(client, BOAT_TYPE, i);
+			int port = value(client, BOAT_PORT, i);
+			String typeName = tableName(client, DBTableID.SailingBoat.ID, DBTableID.SailingBoat.COL_TYPE_ID,
+				DBTableID.SailingBoat.COL_DISPLAYNAME, type);
+			String portName = tableName(client, DBTableID.SailingDock.ID, DBTableID.SailingDock.COL_DOCK_ID,
+				DBTableID.SailingDock.COL_NICE_NAME, port);
+			boats.add(new BoatData(i + 1, type, typeName, port, portName, value(client, BOAT_HULL, i),
+				value(client, BOAT_KEEL, i), value(client, BOAT_SAIL, i), value(client, BOAT_STEERING, i),
+				value(client, BOAT_STORED_HP, i), value(client, BOAT_STORED_MAXHP, i)));
 		}
 
 		List<String> crew = new ArrayList<>();
@@ -144,6 +150,30 @@ final class Sailing
 
 		return new SailingData(boats, crew, charted, client.getVarpValue(VarPlayerID.SAILING_CHARTING_TOTAL_ENTRIES),
 			trials);
+	}
+
+	/**
+	 * Looks up a display name in a game database table by its id column. The name comes from the game cache at
+	 * runtime, so ports and boat types added later are named without a plugin update.
+	 *
+	 * @param client     the client
+	 * @param table      the database table id
+	 * @param idColumn   the column holding the raw id the boat varbits store
+	 * @param nameColumn the column holding the display name
+	 * @param id         the raw id to look up
+	 * @return the name, or null when the id has no row or the name is not text
+	 */
+	static String tableName(Client client, int table, int idColumn, int nameColumn, int id)
+	{
+		List<Integer> rows = client.getDBRowsByValue(table, idColumn, 0, id);
+		if (rows == null || rows.isEmpty())
+			return null;
+
+		Object[] field = client.getDBTableField(rows.get(0), nameColumn, 0);
+		if (field == null || field.length == 0 || !(field[0] instanceof String))
+			return null;
+
+		return (String) field[0];
 	}
 
 	/**
