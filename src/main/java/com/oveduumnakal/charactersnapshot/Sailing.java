@@ -126,6 +126,12 @@ final class Sailing
 			int port = value(client, BOAT_PORT, i);
 			String typeName = tableName(client, DBTableID.SailingBoat.ID, DBTableID.SailingBoat.COL_TYPE_ID,
 				DBTableID.SailingBoat.COL_DISPLAYNAME, type);
+			if (typeName == null)
+			{
+				typeName = tableName(client, DBTableID.SailingBoat.ID, DBTableID.SailingBoat.COL_TYPE_ID,
+					DBTableID.SailingBoat.COL_NAME, type);
+			}
+
 			String portName = tableName(client, DBTableID.SailingDock.ID, DBTableID.SailingDock.COL_DOCK_ID,
 				DBTableID.SailingDock.COL_NICE_NAME, port);
 			boats.add(new BoatData(i + 1, type, typeName, port, portName, value(client, BOAT_HULL, i),
@@ -161,7 +167,7 @@ final class Sailing
 	 * @param idColumn   the column holding the raw id the boat varbits store
 	 * @param nameColumn the column holding the display name
 	 * @param id         the raw id to look up
-	 * @return the name, or null when the id has no row or the name is not text
+	 * @return the name, or null when the id has no row or the name is not text or is blank
 	 */
 	static String tableName(Client client, int table, int idColumn, int nameColumn, int id)
 	{
@@ -173,7 +179,8 @@ final class Sailing
 		if (field == null || field.length == 0 || !(field[0] instanceof String))
 			return null;
 
-		return (String) field[0];
+		String name = ((String) field[0]).trim();
+		return name.isEmpty() ? null : name;
 	}
 
 	/**
