@@ -355,9 +355,13 @@ not exported: their currency has no clearly named variable. Absent when the Mini
 
 ## transport
 
-`{ fairyRings, fairyRingLog, quetzalSites }`. `fairyRings` (boolean) is whether the player may use fairy
+`{ fairyRings, fairyRingLog, fairyRingFavourites, quetzalSites }`. `fairyRings` (boolean) is whether the player may use fairy
 rings (the game's fairy ring permission varbit). `fairyRingLog` lists the codes recorded in the fairy ring
-travel log (e.g. `AJR`, `CKS`), alphabetical, out of the 55 codes the log tracks. `quetzalSites` lists the
+travel log (e.g. `AJR`, `CKS`), alphabetical, out of the 55 codes the log tracks. `fairyRingFavourites` lists the codes saved as favourites on the fairy
+ring interface (e.g. `CKR`, `BKS`), in slot order with empty slots skipped; each code is decoded from the
+slot's three dial varbits (dial 1 `A D C B`, dial 2 `I L K J`, dial 3 `P S R Q` for values 0 to 3), and a slot
+counts only when its set flag is non-zero. The last fairy ring destination is not exported yet. Absent from
+older files, which read as no favourites. `quetzalSites` lists the
 quetzal landing sites whose varbit is set (Civitas illa Fortis, The Teomat, Sunset Coast, Hunter Guild, Cam
 Torum, Colossal Wyrm Remains, Outer Fortis, Fortis Colosseum, Aldarin, Quetzacalli Gorge, Salvager Overlook,
 Tal Teklan, Auburn Valley, Kastori). Transports gated only by quests or diaries (spirit trees, gnome gliders,

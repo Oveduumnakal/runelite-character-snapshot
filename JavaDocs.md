@@ -3686,6 +3686,8 @@ the client thread.
 
 | Modifier and Type | Field | Description |
 |---|---|---|
+| `static final String[]` | `FAIRY_RING_DIALS` | Letters of the three fairy ring dials, indexed by the dial varbit value. |
+| `static final int[][]` | `FAIRY_RING_FAVOURITES` | Per favourite slot: the three dial varbits followed by the set-flag varbit, in slot order. |
 | `static final Map<String,Integer>` | `FAIRY_RING_LOG` | Fairy ring code to the varbit that is non-zero once the code is in the travel log. |
 | `static final Map<String,Integer>` | `QUETZAL_SITES` | Quetzal landing site name to the varbit that is non-zero once the site is available. |
 
@@ -3699,10 +3701,23 @@ the client thread.
 
 | Modifier and Type | Method | Description |
 |---|---|---|
+| `private static List<String>` | `favourites(Client client)` | Decodes the fairy ring codes saved as favourites. |
 | `static TransportData` | `read(Client client)` | Reads the transport unlocks. |
 | `private static List<String>` | `set(Client client, Map<String,Integer> table)` | Lists the keys of a table whose varbit is non-zero. |
 
 ### Field Detail
+
+#### FAIRY_RING_DIALS
+
+`static final String[] FAIRY_RING_DIALS`
+
+Letters of the three fairy ring dials, indexed by the dial varbit value.
+
+#### FAIRY_RING_FAVOURITES
+
+`static final int[][] FAIRY_RING_FAVOURITES`
+
+Per favourite slot: the three dial varbits followed by the set-flag varbit, in slot order.
 
 #### FAIRY_RING_LOG
 
@@ -3723,6 +3738,16 @@ Quetzal landing site name to the varbit that is non-zero once the site is availa
 `private Transport()`
 
 ### Method Detail
+
+#### favourites
+
+`private static List<String> favourites(Client client)`
+
+Decodes the fairy ring codes saved as favourites. A slot is skipped when its set flag is zero or a dial
+holds a value outside the four letters.
+
+- **Parameter** `client` — the client
+- **Returns:** the saved codes, in slot order
 
 #### read
 
@@ -6163,6 +6188,7 @@ Transport unlocks kept in game variables.
 
 | Modifier and Type | Field | Description |
 |---|---|---|
+| `public List<String>` | `fairyRingFavourites` | Fairy ring codes saved as favourites, e.g. |
 | `public List<String>` | `fairyRingLog` | Fairy ring codes in the travel log, e.g. |
 | `public boolean` | `fairyRings` | Whether the player may use fairy rings. |
 | `public List<String>` | `quetzalSites` | Quetzal landing sites available, by name. |
@@ -6171,9 +6197,15 @@ Transport unlocks kept in game variables.
 
 | Constructor | Description |
 |---|---|
-| `TransportData(boolean fairyRings, List<String> fairyRingLog, List<String> quetzalSites)` |  |
+| `TransportData(boolean fairyRings, List<String> fairyRingLog, List<String> fairyRingFavourites, List<String> quetzalSites)` |  |
 
 ### Field Detail
+
+#### fairyRingFavourites
+
+`public List<String> fairyRingFavourites`
+
+Fairy ring codes saved as favourites, e.g. `CKR`, in slot order; empty slots are skipped.
 
 #### fairyRingLog
 
@@ -6197,10 +6229,11 @@ Quetzal landing sites available, by name.
 
 #### TransportData
 
-`public TransportData(boolean fairyRings, List<String> fairyRingLog, List<String> quetzalSites)`
+`public TransportData(boolean fairyRings, List<String> fairyRingLog, List<String> fairyRingFavourites, List<String> quetzalSites)`
 
 - **Parameter** `fairyRings` — whether fairy rings may be used
 - **Parameter** `fairyRingLog` — codes in the travel log
+- **Parameter** `fairyRingFavourites` — codes saved as favourites
 - **Parameter** `quetzalSites` — available quetzal sites
 
 ---

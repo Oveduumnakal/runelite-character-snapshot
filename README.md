@@ -59,8 +59,8 @@ assistant. The plugin makes **no network calls of any kind** — nothing leaves 
 - **Minigame points.** Nightmare Zone, Tithe Farm, Giants' Foundry, Mastering Mixology, Tempoross,
   Soul Wars, Vale Totems, PvP Arena and museum kudos balances.
 
-- **Transport unlocks.** Fairy ring access and the codes in your travel log, and which quetzal landing
-  sites you can fly to.
+- **Transport unlocks.** Fairy ring access, the codes in your travel log, your saved fairy ring
+  favourites, and which quetzal landing sites you can fly to.
 
 - **Player-owned house.** House location, style, servant, jewellery box and portal nexus teleports, as
   the game's raw values.
