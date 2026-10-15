@@ -13,6 +13,7 @@ import org.junit.Test;
 
 import net.runelite.api.Client;
 import net.runelite.api.ItemComposition;
+import net.runelite.api.ParamID;
 import net.runelite.api.Player;
 import net.runelite.api.Prayer;
 import net.runelite.api.VarbitComposition;
@@ -77,23 +78,25 @@ public class PrayerMagicTest
 	}
 
 	/**
-	 * The autocast spell is named from its spell object; defensive mode is reported alongside it.
+	 * The autocast spell is named from its spell object's spell-name param, as in game where the object's item
+	 * name is {@code "null"}; defensive mode is reported alongside it.
 	 */
 	@Test
 	public void namesAutocastSpell()
 	{
 		Client client = loggedInClient();
 		ItemComposition spell = mock(ItemComposition.class);
-		when(spell.getName()).thenReturn("Fire Surge");
-		when(client.getVarpValue(VarPlayerID.AUTOCAST_SPELL_OBJ)).thenReturn(20200);
-		when(client.getItemDefinition(20200)).thenReturn(spell);
+		when(spell.getName()).thenReturn("null");
+		when(spell.getStringValue(ParamID.SPELL_NAME)).thenReturn("Wind Wave");
+		when(client.getVarpValue(VarPlayerID.AUTOCAST_SPELL_OBJ)).thenReturn(3313);
+		when(client.getItemDefinition(3313)).thenReturn(spell);
 		when(client.getVarbitValue(VarbitID.AUTOCAST_DEFMODE)).thenReturn(1);
 		SnapshotCollector collector = new SnapshotCollector(client, config(true));
 
 		assertTrue(collector.pollPrayerMagic());
 		PlayerInfo player = collector.buildSnapshot().player;
 
-		assertEquals("Fire Surge", player.autocastSpell);
+		assertEquals("Wind Wave", player.autocastSpell);
 		assertEquals(Boolean.TRUE, player.autocastDefensive);
 		assertFalse(collector.pollPrayerMagic());
 	}

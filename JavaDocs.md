@@ -1745,6 +1745,7 @@ autocast spell. Every read runs on the client thread.
 |---|---|---|
 | `static boolean` | `autocastDefensive(Client client)` | Reports whether the autocast is set to defensive casting. |
 | `static String` | `autocastSpell(Client client)` | Names the autocast spell from the spell object the game stores for it. |
+| `private static boolean` | `isBlank(String name)` | Tells whether a definition name is missing; the game uses `"null"` for unnamed objects. |
 | `static List<String>` | `quickPrayers(Client client)` | Lists the prayers selected as quick prayers. |
 | `static List<String>` | `unlockedPrayers(Client client)` | Lists the unlocked reward prayers. |
 
@@ -1777,10 +1778,20 @@ Reports whether the autocast is set to defensive casting.
 
 `static String autocastSpell(Client client)`
 
-Names the autocast spell from the spell object the game stores for it.
+Names the autocast spell from the spell object the game stores for it. Spell objects carry no item name;
+the name is their `ParamID#SPELL_NAME` param, with the item name as a fallback.
 
 - **Parameter** `client` — the client
 - **Returns:** the spell name, or `null` when nothing is autocast or the name cannot be read
+
+#### isBlank
+
+`private static boolean isBlank(String name)`
+
+Tells whether a definition name is missing; the game uses `"null"` for unnamed objects.
+
+- **Parameter** `name` — the name to check
+- **Returns:** whether the name is null, empty or `"null"`
 
 #### quickPrayers
 

@@ -12,6 +12,7 @@ import java.util.Map;
 
 import net.runelite.api.Client;
 import net.runelite.api.ItemComposition;
+import net.runelite.api.ParamID;
 import net.runelite.api.Prayer;
 import net.runelite.api.VarbitComposition;
 import net.runelite.api.gameval.VarPlayerID;
@@ -89,7 +90,8 @@ final class PrayerMagic
 	}
 
 	/**
-	 * Names the autocast spell from the spell object the game stores for it.
+	 * Names the autocast spell from the spell object the game stores for it. Spell objects carry no item name;
+	 * the name is their {@link ParamID#SPELL_NAME} param, with the item name as a fallback.
 	 *
 	 * @param client the client
 	 * @return the spell name, or {@code null} when nothing is autocast or the name cannot be read
@@ -103,13 +105,30 @@ final class PrayerMagic
 		try
 		{
 			ItemComposition def = client.getItemDefinition(spellObj);
-			String name = def != null ? def.getName() : null;
-			return name == null || name.isEmpty() || "null".equals(name) ? null : name;
+			if (def == null)
+				return null;
+
+			String name = def.getStringValue(ParamID.SPELL_NAME);
+			if (isBlank(name))
+				name = def.getName();
+
+			return isBlank(name) ? null : name;
 		}
 		catch (RuntimeException e)
 		{
 			return null;
 		}
+	}
+
+	/**
+	 * Tells whether a definition name is missing; the game uses {@code "null"} for unnamed objects.
+	 *
+	 * @param name the name to check
+	 * @return whether the name is null, empty or {@code "null"}
+	 */
+	private static boolean isBlank(String name)
+	{
+		return name == null || name.isEmpty() || "null".equals(name);
 	}
 
 	/**
