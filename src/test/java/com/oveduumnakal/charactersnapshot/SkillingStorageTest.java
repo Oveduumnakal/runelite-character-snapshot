@@ -59,6 +59,41 @@ public class SkillingStorageTest
 	}
 
 	/**
+	 * The kit, quiver, cargo hold and knapsack containers map to their own keys.
+	 */
+	@Test
+	public void remainingContainersAreStorages()
+	{
+		assertEquals("huntsmansKit", SnapshotCollector.storageKey(InventoryID.HUNTSMANS_KIT));
+		assertEquals("forestryKit", SnapshotCollector.storageKey(InventoryID.FORESTRY_KIT));
+		assertEquals("dizanasQuiver", SnapshotCollector.storageKey(InventoryID.DIZANAS_QUIVER_AMMO));
+		assertEquals("cargoHold1", SnapshotCollector.storageKey(InventoryID.SAILING_BOAT_1_CARGOHOLD));
+		assertEquals("cargoHold2", SnapshotCollector.storageKey(InventoryID.SAILING_BOAT_2_CARGOHOLD));
+		assertEquals("cargoHold3", SnapshotCollector.storageKey(InventoryID.SAILING_BOAT_3_CARGOHOLD));
+		assertEquals("cargoHold4", SnapshotCollector.storageKey(InventoryID.SAILING_BOAT_4_CARGOHOLD));
+		assertEquals("cargoHold5", SnapshotCollector.storageKey(InventoryID.SAILING_BOAT_5_CARGOHOLD));
+		assertEquals("barbarianKnapsack", SnapshotCollector.storageKey(InventoryID.BARBARIAN_KNAPSACK));
+	}
+
+	/**
+	 * A cargo hold change lands under its key with a capture time.
+	 */
+	@Test
+	public void cargoHoldContentsAreExported()
+	{
+		Client client = loggedInClient();
+		SnapshotCollector collector = new SnapshotCollector(client, config(true));
+		ItemContainer hold = mock(ItemContainer.class);
+		when(hold.getItems()).thenReturn(new Item[]{new Item(ItemID.RANARR_SEED, 7)});
+		collector.updateStorage(SnapshotCollector.storageKey(InventoryID.SAILING_BOAT_3_CARGOHOLD), hold);
+
+		CharacterSnapshot snapshot = collector.buildSnapshot();
+		List<ItemEntry> cargo = snapshot.storages.get("cargoHold3");
+		assertEquals(7, cargo.get(0).quantity);
+		assertNotNull(snapshot.sectionUpdated.get("storages.cargoHold3"));
+	}
+
+	/**
 	 * The plank sack lists only planks it holds, with a capture time, and reports a change once.
 	 */
 	@Test

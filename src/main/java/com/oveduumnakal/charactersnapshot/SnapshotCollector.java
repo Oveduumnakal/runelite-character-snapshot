@@ -1562,6 +1562,15 @@ public class SnapshotCollector
 		STORAGE_KEYS.put(InventoryID.INV_GROUP_TEMP, "groupStorage");
 		STORAGE_KEYS.put(InventoryID.SEED_BOX, "seedBox");
 		STORAGE_KEYS.put(InventoryID.TACKLE_BOX, "tackleBox");
+		STORAGE_KEYS.put(InventoryID.HUNTSMANS_KIT, "huntsmansKit");
+		STORAGE_KEYS.put(InventoryID.FORESTRY_KIT, "forestryKit");
+		STORAGE_KEYS.put(InventoryID.DIZANAS_QUIVER_AMMO, "dizanasQuiver");
+		STORAGE_KEYS.put(InventoryID.SAILING_BOAT_1_CARGOHOLD, "cargoHold1");
+		STORAGE_KEYS.put(InventoryID.SAILING_BOAT_2_CARGOHOLD, "cargoHold2");
+		STORAGE_KEYS.put(InventoryID.SAILING_BOAT_3_CARGOHOLD, "cargoHold3");
+		STORAGE_KEYS.put(InventoryID.SAILING_BOAT_4_CARGOHOLD, "cargoHold4");
+		STORAGE_KEYS.put(InventoryID.SAILING_BOAT_5_CARGOHOLD, "cargoHold5");
+		STORAGE_KEYS.put(InventoryID.BARBARIAN_KNAPSACK, "barbarianKnapsack");
 		STORAGE_KEYS.put(InventoryID.GRAVESTONE, "gravestone");
 		STORAGE_KEYS.put(InventoryID.DEATH_PERMANENT, "deathsOffice");
 	}
