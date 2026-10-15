@@ -40,6 +40,7 @@ missing sections as "not exported", not "empty".
 | `dailies` | object | Daily rewards: unlocked and claimed today. See below. |
 | `miscellania` | object | Kingdom of Miscellania approval and coffer. See below. |
 | `minigamePoints` | object | Minigame reward-shop balances. See below. |
+| `transport` | object | Fairy ring access and travel log, quetzal landing sites. See below. |
 
 ## player
 
@@ -334,6 +335,17 @@ Map of currency → balance, every key always present (0 when none), in this ord
 `titheFarm`, `temporossPermits`, `museumKudos` (Varrock Museum), `pvpArena`. Each is one named game variable
 read live. Pest Control, Mahogany Homes, Last Man Standing, Guardians of the Rift and Barbarian Assault are
 not exported: their currency has no clearly named variable. Absent when the Minigame points toggle is off.
+
+## transport
+
+`{ fairyRings, fairyRingLog, quetzalSites }`. `fairyRings` (boolean) is whether the player may use fairy
+rings (the game's fairy ring permission varbit). `fairyRingLog` lists the codes recorded in the fairy ring
+travel log (e.g. `AJR`, `CKS`), alphabetical, out of the 55 codes the log tracks. `quetzalSites` lists the
+quetzal landing sites whose varbit is set (Civitas illa Fortis, The Teomat, Sunset Coast, Hunter Guild, Cam
+Torum, Colossal Wyrm Remains, Outer Fortis, Fortis Colosseum, Aldarin, Quetzacalli Gorge, Salvager Overlook,
+Tal Teklan, Auburn Valley, Kastori). Transports gated only by quests or diaries (spirit trees, gnome gliders,
+charter ships) are not repeated here; read them from `quests` and `achievementDiaries`. Sailing ports are under
+`sailing`. Absent when the Transport unlocks toggle is off.
 
 ## Versioning
 

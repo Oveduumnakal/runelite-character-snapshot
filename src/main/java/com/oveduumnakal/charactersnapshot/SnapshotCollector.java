@@ -41,6 +41,7 @@ import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.QuestEntry;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SkillEntry;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SlayerData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.TimersData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.TransportData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.VitalsData;
 
 import net.runelite.api.Client;
@@ -282,6 +283,7 @@ public class SnapshotCollector
 		miscellania = null;
 		minigamePoints = null;
 		toolLeprechaun = null;
+		transport = null;
 	}
 
 	/**
@@ -1238,6 +1240,12 @@ public class SnapshotCollector
 		if (config.syncStorages() && toolLeprechaun != null)
 			data.toolLeprechaun = new LinkedHashMap<>(toolLeprechaun);
 
+		if (config.syncTransport() && transport != null)
+		{
+			data.transport = new TransportData(transport.fairyRings, new ArrayList<>(transport.fairyRingLog),
+				new ArrayList<>(transport.quetzalSites));
+		}
+
 		return data;
 	}
 
@@ -1964,6 +1972,21 @@ public class SnapshotCollector
 		Map<String, Integer> tools = SkillingStorage.readToolLeprechaun(client);
 		changed |= !Objects.equals(tools, toolLeprechaun);
 		toolLeprechaun = tools;
+		return changed;
+	}
+
+	private TransportData transport = null;
+
+	/**
+	 * Polls the transport unlocks.
+	 *
+	 * @return whether they changed since the last poll
+	 */
+	public boolean pollTransport()
+	{
+		TransportData fresh = Transport.read(client);
+		boolean changed = !fresh.equals(transport);
+		transport = fresh;
 		return changed;
 	}
 }

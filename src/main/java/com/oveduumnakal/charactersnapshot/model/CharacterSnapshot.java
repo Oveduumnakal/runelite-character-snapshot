@@ -130,6 +130,9 @@ public class CharacterSnapshot
 	 */
 	public Map<String, Integer> toolLeprechaun;
 
+	/** Transport unlocks kept in game variables (fairy rings, quetzal sites); absent when the toggle is off. */
+	public TransportData transport;
+
 	/**
 	 * Identity and account context of the logged-in character.
 	 */
@@ -1224,6 +1227,34 @@ public class CharacterSnapshot
 			this.approvalPercent = approvalPercent;
 			this.coffer = coffer;
 			this.lastChanged = lastChanged;
+		}
+	}
+
+	/**
+	 * Transport unlocks kept in game variables.
+	 */
+	@EqualsAndHashCode
+	public static class TransportData
+	{
+		/** Whether the player may use fairy rings. */
+		public boolean fairyRings;
+
+		/** Fairy ring codes in the travel log, e.g. {@code AJR}, alphabetical. */
+		public List<String> fairyRingLog;
+
+		/** Quetzal landing sites available, by name. */
+		public List<String> quetzalSites;
+
+		/**
+		 * @param fairyRings   whether fairy rings may be used
+		 * @param fairyRingLog codes in the travel log
+		 * @param quetzalSites available quetzal sites
+		 */
+		public TransportData(boolean fairyRings, List<String> fairyRingLog, List<String> quetzalSites)
+		{
+			this.fairyRings = fairyRings;
+			this.fairyRingLog = fairyRingLog;
+			this.quetzalSites = quetzalSites;
 		}
 	}
 }

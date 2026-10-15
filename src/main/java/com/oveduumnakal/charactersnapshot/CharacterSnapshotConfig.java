@@ -377,4 +377,19 @@ public interface CharacterSnapshotConfig extends Config
 	{
 		return true;
 	}
+
+	/**
+	 * @return whether to include transport unlocks (fairy rings, quetzal sites)
+	 */
+	@ConfigItem(
+		keyName = "syncTransport",
+		name = "Transport unlocks",
+		description = "Include fairy ring access and travel log, and available quetzal landing sites",
+		section = dataSection,
+		position = 20
+	)
+	default boolean syncTransport()
+	{
+		return true;
+	}
 }

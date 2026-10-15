@@ -25,6 +25,7 @@
 - [com.oveduumnakal.charactersnapshot.SlayerInfo](#comoveduumnakalcharactersnapshotslayerinfo)
 - [com.oveduumnakal.charactersnapshot.SnapshotCollector](#comoveduumnakalcharactersnapshotsnapshotcollector)
 - [com.oveduumnakal.charactersnapshot.SnapshotWriter](#comoveduumnakalcharactersnapshotsnapshotwriter)
+- [com.oveduumnakal.charactersnapshot.Transport](#comoveduumnakalcharactersnapshottransport)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot](#comoveduumnakalcharactersnapshotmodelcharactersnapshot)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbankdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BankTab](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbanktab)
@@ -49,6 +50,7 @@
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SlayerData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotslayerdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.TierCount](#comoveduumnakalcharactersnapshotmodelcharactersnapshottiercount)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.TimersData](#comoveduumnakalcharactersnapshotmodelcharactersnapshottimersdata)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.TransportData](#comoveduumnakalcharactersnapshotmodelcharactersnapshottransportdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.VitalsData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotvitalsdata)
 
 ---
@@ -95,6 +97,7 @@ for each category of data written to the export file.
 | `default boolean` | `syncSlayer()` |  |
 | `default boolean` | `syncStorages()` |  |
 | `default boolean` | `syncTimers()` |  |
+| `default boolean` | `syncTransport()` |  |
 | `default boolean` | `syncVitals()` |  |
 
 ### Field Detail
@@ -245,6 +248,12 @@ Storage section: where and how often data is written.
 `default boolean syncTimers()`
 
 - **Returns:** whether to include farming patch and birdhouse timers
+
+#### syncTransport
+
+`default boolean syncTransport()`
+
+- **Returns:** whether to include transport unlocks (fairy rings, quetzal sites)
 
 #### syncVitals
 
@@ -2276,6 +2285,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private final Map<String,List<ItemEntry>>` | `storages` |  |
 | `private TimersData` | `timers` |  |
 | `private Map<String,Integer>` | `toolLeprechaun` |  |
+| `private TransportData` | `transport` |  |
 | `private List<String>` | `unlockedPrayers` |  |
 | `private final Map<String,Integer>` | `varpKillCounts` |  |
 
@@ -2330,6 +2340,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollSpellbook()` | Polls the active spellbook from the spellbook varbit (0 standard, 1 ancient, 2 lunar, 3 arceuus). |
 | `public boolean` | `pollTimers()` | Re-reads the farming and birdhouse timers from the Time Tracking plugin's stored data. |
 | `boolean` | `pollTimers(long nowSeconds)` | Re-reads the farming and birdhouse timers as of a given time. |
+| `public boolean` | `pollTransport()` | Polls the transport unlocks. |
 | `private List<BlockedTask>` | `readBlockedTasks()` | Reads every master's blocked task slots, falling back to the legacy shared block list when no per-master slot is filled. |
 | `private List<String>` | `readFlags(Map<String,Integer> varbits)` | Lists the keys whose varbit is non-zero. |
 | `private PlayerInfo` | `readPlayerInfo(Player localPlayer)` | Reads the live player's identity and account context. |
@@ -2682,6 +2693,10 @@ Identity captured by the last snapshot built with a live local player; cleared b
 #### toolLeprechaun
 
 `private Map<String,Integer> toolLeprechaun`
+
+#### transport
+
+`private TransportData transport`
 
 #### unlockedPrayers
 
@@ -3066,6 +3081,14 @@ Re-reads the farming and birdhouse timers as of a given time.
 - **Parameter** `nowSeconds` — the current time, Unix seconds
 - **Returns:** whether the timers changed since the last poll
 
+#### pollTransport
+
+`public boolean pollTransport()`
+
+Polls the transport unlocks.
+
+- **Returns:** whether they changed since the last poll
+
 #### readBlockedTasks
 
 `private List<BlockedTask> readBlockedTasks()`
@@ -3386,6 +3409,79 @@ Writes the snapshot to `<syncDir>/<sanitized-username>.json` atomically.
 
 ---
 
+## com.oveduumnakal.charactersnapshot.Transport
+
+_class_
+
+`final class Transport`
+
+Reads transport unlocks the game keeps in varbits: fairy ring access and travel-log entries, and quetzal
+landing sites. Transports gated only by quests or diaries are left to those sections. Every read runs on
+the client thread.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `static final Map<String,Integer>` | `FAIRY_RING_LOG` | Fairy ring code to the varbit that is non-zero once the code is in the travel log. |
+| `static final Map<String,Integer>` | `QUETZAL_SITES` | Quetzal landing site name to the varbit that is non-zero once the site is available. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `Transport()` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `static TransportData` | `read(Client client)` | Reads the transport unlocks. |
+| `private static List<String>` | `set(Client client, Map<String,Integer> table)` | Lists the keys of a table whose varbit is non-zero. |
+
+### Field Detail
+
+#### FAIRY_RING_LOG
+
+`static final Map<String,Integer> FAIRY_RING_LOG`
+
+Fairy ring code to the varbit that is non-zero once the code is in the travel log.
+
+#### QUETZAL_SITES
+
+`static final Map<String,Integer> QUETZAL_SITES`
+
+Quetzal landing site name to the varbit that is non-zero once the site is available.
+
+### Constructor Detail
+
+#### Transport
+
+`private Transport()`
+
+### Method Detail
+
+#### read
+
+`static TransportData read(Client client)`
+
+Reads the transport unlocks.
+
+- **Parameter** `client` — the client
+- **Returns:** the transport state
+
+#### set
+
+`private static List<String> set(Client client, Map<String,Integer> table)`
+
+Lists the keys of a table whose varbit is non-zero.
+
+- **Parameter** `client` — the client
+- **Parameter** `table` — key to varbit
+- **Returns:** the keys set, in table order
+
+---
+
 ## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot
 
 _class_
@@ -3423,6 +3519,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | _class_ [`SlayerData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotslayerdata) | The slayer state. |
 | _class_ [`TierCount`](#comoveduumnakalcharactersnapshotmodelcharactersnapshottiercount) | Completed and total task counts for one combat-achievement tier. |
 | _class_ [`TimersData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshottimersdata) | Farming and birdhouse timers. |
+| _class_ [`TransportData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshottransportdata) | Transport unlocks kept in game variables. |
 | _class_ [`VitalsData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotvitalsdata) | Current combat vitals: hitpoints, prayer, and run energy. |
 
 ### Field Summary
@@ -3455,6 +3552,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | `public Map<String,List<ItemEntry>>` | `storages` | Last known contents of storage containers that are only readable when opened, keyed by storage (`lootingBag`, `seedVault`, `groupStorage`); a storage never opened is absent. |
 | `public TimersData` | `timers` | Farming patch and birdhouse timers decoded from RuneLite's Time Tracking data. |
 | `public Map<String,Integer>` | `toolLeprechaun` | Tool leprechaun storage as raw varbit values keyed by tool (`rake`, `buckets`, ...); see `SCHEMA.md`. |
+| `public TransportData` | `transport` | Transport unlocks kept in game variables (fairy rings, quetzal sites); absent when the toggle is off. |
 | `public VitalsData` | `vitals` | Current combat vitals (hitpoints, prayer, run energy). |
 
 ### Field Detail
@@ -3627,6 +3725,12 @@ player's last visit to each patch. Absent when the toggle is off or Time Trackin
 
 Tool leprechaun storage as raw varbit values keyed by tool (`rake`, `buckets`, ...); see
 `SCHEMA.md`. Absent when nothing is stored or the storages toggle is off.
+
+#### transport
+
+`public TransportData transport`
+
+Transport unlocks kept in game variables (fairy rings, quetzal sites); absent when the toggle is off.
 
 #### vitals
 
@@ -5334,6 +5438,60 @@ Farming patches with stored data; patches never visited are not listed.
 
 - **Parameter** `farming` — farming patch timers
 - **Parameter** `birdhouses` — birdhouse timers
+
+---
+
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.TransportData
+
+_class_
+
+`public static class TransportData`
+
+Transport unlocks kept in game variables.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public List<String>` | `fairyRingLog` | Fairy ring codes in the travel log, e.g. |
+| `public boolean` | `fairyRings` | Whether the player may use fairy rings. |
+| `public List<String>` | `quetzalSites` | Quetzal landing sites available, by name. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `TransportData(boolean fairyRings, List<String> fairyRingLog, List<String> quetzalSites)` |  |
+
+### Field Detail
+
+#### fairyRingLog
+
+`public List<String> fairyRingLog`
+
+Fairy ring codes in the travel log, e.g. `AJR`, alphabetical.
+
+#### fairyRings
+
+`public boolean fairyRings`
+
+Whether the player may use fairy rings.
+
+#### quetzalSites
+
+`public List<String> quetzalSites`
+
+Quetzal landing sites available, by name.
+
+### Constructor Detail
+
+#### TransportData
+
+`public TransportData(boolean fairyRings, List<String> fairyRingLog, List<String> quetzalSites)`
+
+- **Parameter** `fairyRings` — whether fairy rings may be used
+- **Parameter** `fairyRingLog` — codes in the travel log
+- **Parameter** `quetzalSites` — available quetzal sites
 
 ---
 
