@@ -65,7 +65,7 @@ assistant. The plugin makes **no network calls of any kind** — nothing leaves 
 - **Player-owned house.** House location, style, servant, jewellery box and portal nexus teleports, as
   the game's raw values.
 
-- **Sailing.** Owned boats with their parts and hitpoints, unlocked crew, charting progress and Barracuda
+- **Sailing.** Owned boats with their type, docked port, parts and hitpoints, unlocked crew, charting progress and Barracuda
   Trials performance.
 
 ### Yours to tune

@@ -15,6 +15,7 @@ import org.junit.Test;
 import net.runelite.api.Client;
 import net.runelite.api.Player;
 import net.runelite.api.WorldType;
+import net.runelite.api.gameval.DBTableID;
 import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
 
@@ -55,6 +56,51 @@ public class SailingTest
 	}
 
 	/**
+	 * A boat's port id is named from the dock table, and the raw id is kept.
+	 */
+	@Test
+	public void namesBoatPorts()
+	{
+		Client client = loggedInClient();
+		ownBoat(client, VarbitID.SAILING_BOAT_1_OWNED, VarbitID.SAILING_BOAT_1_PORT, 1);
+		ownBoat(client, VarbitID.SAILING_BOAT_2_OWNED, VarbitID.SAILING_BOAT_2_PORT, 60);
+		ownBoat(client, VarbitID.SAILING_BOAT_3_OWNED, VarbitID.SAILING_BOAT_3_PORT, 9999);
+		dockName(client, 1, 101, "The Pandemonium");
+		dockName(client, 60, 160, "Wyrmscraid Cavern");
+
+		SailingData sailing = Sailing.read(client);
+
+		assertEquals(1, sailing.boats.get(0).port);
+		assertEquals("The Pandemonium", sailing.boats.get(0).portName);
+		assertEquals(60, sailing.boats.get(1).port);
+		assertEquals("Wyrmscraid Cavern", sailing.boats.get(1).portName);
+		assertEquals(9999, sailing.boats.get(2).port);
+		assertNull(sailing.boats.get(2).portName);
+	}
+
+	/**
+	 * A boat type id is named from the boat table; an unknown id has no name.
+	 */
+	@Test
+	public void namesBoatTypes()
+	{
+		Client client = loggedInClient();
+		when(client.getVarbitValue(VarbitID.SAILING_BOAT_1_OWNED)).thenReturn(1);
+		when(client.getVarbitValue(VarbitID.SAILING_BOAT_1_TYPE)).thenReturn(2);
+		when(client.getDBRowsByValue(DBTableID.SailingBoat.ID, DBTableID.SailingBoat.COL_TYPE_ID, 0, 2))
+			.thenReturn(Collections.singletonList(202));
+		when(client.getDBTableField(202, DBTableID.SailingBoat.COL_DISPLAYNAME, 0))
+			.thenReturn(new Object[]{"Skiff"});
+
+		BoatData boat = Sailing.read(client).boats.get(0);
+		assertEquals("Skiff", boat.typeName);
+
+		when(client.getVarbitValue(VarbitID.SAILING_BOAT_1_TYPE)).thenReturn(77);
+		boat = Sailing.read(client).boats.get(0);
+		assertNull(boat.typeName);
+	}
+
+	/**
 	 * Crew, charting bits across varps and trial values are read.
 	 */
 	@Test
@@ -90,6 +136,35 @@ public class SailingTest
 
 		when(config.syncSailing()).thenReturn(false);
 		assertNull(collector.buildSnapshot().sailing);
+	}
+
+	/**
+	 * Marks a boat slot owned and moored at a port.
+	 *
+	 * @param client the mock client
+	 * @param owned  the slot's owned varbit
+	 * @param portVarbit the slot's port varbit
+	 * @param port   the raw port id
+	 */
+	private static void ownBoat(Client client, int owned, int portVarbit, int port)
+	{
+		when(client.getVarbitValue(owned)).thenReturn(1);
+		when(client.getVarbitValue(portVarbit)).thenReturn(port);
+	}
+
+	/**
+	 * Adds a dock row with a name to the mock dock table.
+	 *
+	 * @param client the mock client
+	 * @param port   the raw port id
+	 * @param row    the dock row id
+	 * @param name   the dock's display name
+	 */
+	private static void dockName(Client client, int port, int row, String name)
+	{
+		when(client.getDBRowsByValue(DBTableID.SailingDock.ID, DBTableID.SailingDock.COL_DOCK_ID, 0, port))
+			.thenReturn(Collections.singletonList(row));
+		when(client.getDBTableField(row, DBTableID.SailingDock.COL_NICE_NAME, 0)).thenReturn(new Object[]{name});
 	}
 
 	/**

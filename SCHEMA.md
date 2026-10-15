@@ -379,9 +379,11 @@ and are not exported. Absent when the Player-owned house toggle is off.
 `{ boats, crew, chartingTasksCompleted, chartingEntries, barracudaTrials }`, read live from Sailing's named
 game variables.
 
-- `boats[]`: one entry per owned boat slot (`SAILING_BOAT_<n>_OWNED` set): `{ slot, type, port, hull, keel,
-  sail, steering, hp, maxHp }`. `slot` is 1 to 5; `hp`/`maxHp` are the stored hitpoints. **`type`, `port` and
-  the part fields are raw game ids, not decoded yet.**
+- `boats[]`: one entry per owned boat slot (`SAILING_BOAT_<n>_OWNED` set): `{ slot, type, typeName,
+  port, portName, hull, keel, sail, steering, hp, maxHp }`. `slot` is 1 to 5; `hp`/`maxHp` are the stored
+  hitpoints. `portName` is the dock the boat is moored at (for example `The Pandemonium`) and `typeName` the
+  boat type, both read from the game's own tables at runtime; each is absent when its id is not in the table
+  (never guessed). **`type`, `port` and the part fields stay raw game ids.**
 - `crew[]`: unlocked crew members: `generic1` to `generic5`, `werewolf`, `fremennik`, `spiritAngler`,
   `captainSiad`, `ghostJenkins`.
 - `chartingTasksCompleted`: set bits across the twelve `SAILING_CHARTING_COMPLETION_<n>` varps, i.e. charting
