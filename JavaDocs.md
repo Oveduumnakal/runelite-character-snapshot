@@ -34,6 +34,7 @@
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BirdhouseTimer](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbirdhousetimer)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BlockedTask](#comoveduumnakalcharactersnapshotmodelcharactersnapshotblockedtask)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BoatData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotboatdata)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BottomlessBucket](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbottomlessbucket)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CollectionLogData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CollectionLogPage](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogpage)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.CombatAchievementData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementdata)
@@ -55,6 +56,7 @@
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SlayerData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotslayerdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.TierCount](#comoveduumnakalcharactersnapshotmodelcharactersnapshottiercount)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.TimersData](#comoveduumnakalcharactersnapshotmodelcharactersnapshottimersdata)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ToolLeprechaunTotals](#comoveduumnakalcharactersnapshotmodelcharactersnapshottoolleprechauntotals)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.TransportData](#comoveduumnakalcharactersnapshotmodelcharactersnapshottransportdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.VitalsData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotvitalsdata)
 
@@ -2273,6 +2275,8 @@ the tool leprechaun. Every read runs on the client thread.
 
 | Modifier and Type | Method | Description |
 |---|---|---|
+| `static ToolLeprechaunTotals` | `decodeToolTotals(Map<String,Integer> raw)` | Decodes the raw tool leprechaun values into the totals the Store screen shows. |
+| `private static int` | `raw(Map<String,Integer> raw, String key)` |  |
 | `static Map<String,Integer>` | `readToolLeprechaun(Client client)` | Reads the tool leprechaun's storage. |
 
 ### Field Detail
@@ -2298,6 +2302,22 @@ the `extra*` varbits hold the higher part of counts above the base varbit's rang
 `private SkillingStorage()`
 
 ### Method Detail
+
+#### decodeToolTotals
+
+`static ToolLeprechaunTotals decodeToolTotals(Map<String,Integer> raw)`
+
+Decodes the raw tool leprechaun values into the totals the Store screen shows. Rakes, dibbers, spades,
+secateurs and trowels are `base + 2 * extra`; buckets are `base + 32 * extra` (the
+`extra2Buckets` weight is unverified, so it is ignored); compost and supercompost are
+`base + 256 * extra`; the watering can holds `value - 1` charges.
+
+- **Parameter** `raw` — storage key to raw varbit value, as from `#readToolLeprechaun`
+- **Returns:** the decoded totals
+
+#### raw
+
+`private static int raw(Map<String,Integer> raw, String key)`
 
 #### readToolLeprechaun
 
@@ -3729,6 +3749,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | _class_ [`BirdhouseTimer`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbirdhousetimer) | The projected state of one birdhouse space. |
 | _class_ [`BlockedTask`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotblockedtask) | One blocked slayer task slot. |
 | _class_ [`BoatData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotboatdata) | One owned boat. |
+| _class_ [`BottomlessBucket`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotbottomlessbucket) | Raw contents of the bottomless bucket; the meaning of `type` is not decoded. |
 | _class_ [`CollectionLogData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogdata) | Collection log: the account-wide obtained and total counts, the flat list of obtained items, and the obtained items grouped by the log page they were seen on. |
 | _class_ [`CollectionLogPage`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcollectionlogpage) | One collection log page as last seen: how many of its slots there are and which are obtained. |
 | _class_ [`CombatAchievementData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotcombatachievementdata) | Combat-achievement tier progress. |
@@ -3750,6 +3771,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | _class_ [`SlayerData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotslayerdata) | The slayer state. |
 | _class_ [`TierCount`](#comoveduumnakalcharactersnapshotmodelcharactersnapshottiercount) | Completed and total task counts for one combat-achievement tier. |
 | _class_ [`TimersData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshottimersdata) | Farming and birdhouse timers. |
+| _class_ [`ToolLeprechaunTotals`](#comoveduumnakalcharactersnapshotmodelcharactersnapshottoolleprechauntotals) | Tool leprechaun contents as the totals shown on the Store screen, decoded from the raw varbits. |
 | _class_ [`TransportData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshottransportdata) | Transport unlocks kept in game variables. |
 | _class_ [`VitalsData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotvitalsdata) | Current combat vitals: hitpoints, prayer, and run energy. |
 
@@ -3785,6 +3807,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | `public Map<String,List<ItemEntry>>` | `storages` | Last known contents of storage containers that are only readable when opened, keyed by storage (`lootingBag`, `seedVault`, `groupStorage`); a storage never opened is absent. |
 | `public TimersData` | `timers` | Farming patch and birdhouse timers decoded from RuneLite's Time Tracking data. |
 | `public Map<String,Integer>` | `toolLeprechaun` | Tool leprechaun storage as raw varbit values keyed by tool (`rake`, `buckets`, ...); see `SCHEMA.md`. |
+| `public ToolLeprechaunTotals` | `toolLeprechaunTotals` | Tool leprechaun contents decoded into totals, derived from `#toolLeprechaun`; see `SCHEMA.md`. |
 | `public TransportData` | `transport` | Transport unlocks kept in game variables (fairy rings, quetzal sites); absent when the toggle is off. |
 | `public VitalsData` | `vitals` | Current combat vitals (hitpoints, prayer, run energy). |
 
@@ -3970,6 +3993,13 @@ player's last visit to each patch. Absent when the toggle is off or Time Trackin
 
 Tool leprechaun storage as raw varbit values keyed by tool (`rake`, `buckets`, ...); see
 `SCHEMA.md`. Absent when nothing is stored or the storages toggle is off.
+
+#### toolLeprechaunTotals
+
+`public ToolLeprechaunTotals toolLeprechaunTotals`
+
+Tool leprechaun contents decoded into totals, derived from `#toolLeprechaun`; see `SCHEMA.md`.
+Absent whenever `toolLeprechaun` is.
 
 #### transport
 
@@ -4320,6 +4350,52 @@ Raw boat type id.
 - **Parameter** `steering` — raw steering id
 - **Parameter** `hp` — stored hitpoints
 - **Parameter** `maxHp` — stored maximum hitpoints
+
+---
+
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BottomlessBucket
+
+_class_
+
+`public static class BottomlessBucket`
+
+Raw contents of the bottomless bucket; the meaning of `type` is not decoded.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public int` | `type` | Raw type varbit. |
+| `public int` | `uses` | Raw quantity varbit, the number of uses left. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `BottomlessBucket(int type, int uses)` |  |
+
+### Field Detail
+
+#### type
+
+`public int type`
+
+Raw type varbit.
+
+#### uses
+
+`public int uses`
+
+Raw quantity varbit, the number of uses left.
+
+### Constructor Detail
+
+#### BottomlessBucket
+
+`public BottomlessBucket(int type, int uses)`
+
+- **Parameter** `type` — raw type varbit
+- **Parameter** `uses` — raw quantity varbit
 
 ---
 
@@ -5933,6 +6009,114 @@ Farming patches with stored data; patches never visited are not listed.
 
 - **Parameter** `farming` — farming patch timers
 - **Parameter** `birdhouses` — birdhouse timers
+
+---
+
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ToolLeprechaunTotals
+
+_class_
+
+`public static class ToolLeprechaunTotals`
+
+Tool leprechaun contents as the totals shown on the Store screen, decoded from the raw varbits.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public BottomlessBucket` | `bottomlessBucket` | Bottomless bucket contents, or `null` when the raw type and uses are both zero. |
+| `public int` | `buckets` | Buckets stored; the `extra2Buckets` part of the count is not decoded. |
+| `public int` | `compost` | Compost stored. |
+| `public boolean` | `magicSecateurs` | Whether the stored secateurs are magic secateurs. |
+| `public int` | `plantCure` | Plant cure stored. |
+| `public int` | `rakes` | Rakes stored. |
+| `public int` | `secateurs` | Secateurs stored. |
+| `public int` | `seedDibbers` | Seed dibbers stored. |
+| `public int` | `spades` | Spades stored. |
+| `public int` | `supercompost` | Supercompost stored. |
+| `public int` | `trowels` | Trowels stored. |
+| `public int` | `ultracompost` | Ultracompost stored. |
+| `public Integer` | `wateringCanCharges` | Charges of the stored watering can, or `null` when none is stored. |
+
+### Field Detail
+
+#### bottomlessBucket
+
+`public BottomlessBucket bottomlessBucket`
+
+Bottomless bucket contents, or `null` when the raw type and uses are both zero.
+
+#### buckets
+
+`public int buckets`
+
+Buckets stored; the `extra2Buckets` part of the count is not decoded.
+
+#### compost
+
+`public int compost`
+
+Compost stored.
+
+#### magicSecateurs
+
+`public boolean magicSecateurs`
+
+Whether the stored secateurs are magic secateurs.
+
+#### plantCure
+
+`public int plantCure`
+
+Plant cure stored.
+
+#### rakes
+
+`public int rakes`
+
+Rakes stored.
+
+#### secateurs
+
+`public int secateurs`
+
+Secateurs stored.
+
+#### seedDibbers
+
+`public int seedDibbers`
+
+Seed dibbers stored.
+
+#### spades
+
+`public int spades`
+
+Spades stored.
+
+#### supercompost
+
+`public int supercompost`
+
+Supercompost stored.
+
+#### trowels
+
+`public int trowels`
+
+Trowels stored.
+
+#### ultracompost
+
+`public int ultracompost`
+
+Ultracompost stored.
+
+#### wateringCanCharges
+
+`public Integer wateringCanCharges`
+
+Charges of the stored watering can, or `null` when none is stored.
 
 ---
 

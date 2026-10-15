@@ -5,10 +5,13 @@
 package com.oveduumnakal.charactersnapshot;
 
 import java.util.EnumSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ToolLeprechaunTotals;
 import org.junit.Test;
 
 import net.runelite.api.Client;
@@ -158,6 +161,111 @@ public class SkillingStorageTest
 
 		when(config.syncStorages()).thenReturn(false);
 		assertNull(collector.buildSnapshot().toolLeprechaun);
+	}
+
+	/**
+	 * Decodes a tool leprechaun state from the given raw key/value pairs, all others zero.
+	 *
+	 * @param pairs alternating raw key and value
+	 * @return the decoded totals
+	 */
+	private static ToolLeprechaunTotals decode(Object... pairs)
+	{
+		Map<String, Integer> raw = new LinkedHashMap<>();
+		for (String key : SkillingStorage.TOOL_LEPRECHAUN.keySet())
+			raw.put(key, 0);
+
+		for (int i = 0; i < pairs.length; i += 2)
+			raw.put((String) pairs[i], (Integer) pairs[i + 1]);
+
+		return SkillingStorage.decodeToolTotals(raw);
+	}
+
+	/**
+	 * Rakes, spades, trowels and seed dibbers decode as base plus two per extra.
+	 */
+	@Test
+	public void toolTotalsSingleTools()
+	{
+		assertEquals(2, decode("rake", 0, "extraRakes", 1).rakes);
+		assertEquals(3, decode("spade", 1, "extraSpades", 1).spades);
+		assertEquals(2, decode("trowel", 0, "extraTrowels", 1).trowels);
+		assertEquals(1, decode("seedDibber", 1, "extraSeedDibbers", 0).seedDibbers);
+		assertEquals(1, decode("secateurs", 1, "extraSecateurs", 0).secateurs);
+	}
+
+	/**
+	 * Magic secateurs are a flag.
+	 */
+	@Test
+	public void toolTotalsMagicSecateursFlag()
+	{
+		assertTrue(decode("magicSecateurs", 1).magicSecateurs);
+		assertFalse(decode().magicSecateurs);
+	}
+
+	/**
+	 * Buckets decode as base plus 32 per extra; the extra2 part is ignored.
+	 */
+	@Test
+	public void toolTotalsBuckets()
+	{
+		assertEquals(77, decode("buckets", 13, "extraBuckets", 2, "extra2Buckets", 0).buckets);
+	}
+
+	/**
+	 * Compost and supercompost decode as base plus 256 per extra; ultracompost is the base alone.
+	 */
+	@Test
+	public void toolTotalsCompost()
+	{
+		assertEquals(801, decode("supercompost", 33, "extraSupercompost", 3).supercompost);
+		assertEquals(16, decode("compost", 16, "extraCompost", 0).compost);
+		assertEquals(150, decode("ultracompost", 150).ultracompost);
+	}
+
+	/**
+	 * The watering can reports its value minus one as charges, and none when empty.
+	 */
+	@Test
+	public void toolTotalsWateringCan()
+	{
+		assertEquals(Integer.valueOf(7), decode("wateringCan", 8).wateringCanCharges);
+		assertNull(decode("wateringCan", 0).wateringCanCharges);
+	}
+
+	/**
+	 * Plant cure is a raw count and the bottomless bucket keeps its raw type and uses.
+	 */
+	@Test
+	public void toolTotalsPlantCureAndBottomlessBucket()
+	{
+		ToolLeprechaunTotals totals = decode("plantCure", 4, "bottomlessBucketType", 4,
+			"bottomlessBucketQuantity", 598);
+
+		assertEquals(4, totals.plantCure);
+		assertEquals(4, totals.bottomlessBucket.type);
+		assertEquals(598, totals.bottomlessBucket.uses);
+		assertNull(decode().bottomlessBucket);
+	}
+
+	/**
+	 * The totals ride along with the raw map in the snapshot and follow the storages toggle.
+	 */
+	@Test
+	public void toolTotalsInSnapshot()
+	{
+		Client client = loggedInClient();
+		CharacterSnapshotConfig config = config(true);
+		SnapshotCollector collector = new SnapshotCollector(client, config);
+		when(client.getVarbitValue(VarbitID.FARMING_TOOLS_SPADE)).thenReturn(1);
+		when(client.getVarbitValue(VarbitID.FARMING_TOOLS_EXTRASPADES)).thenReturn(1);
+		collector.pollSkillingStorages();
+
+		assertEquals(3, collector.buildSnapshot().toolLeprechaunTotals.spades);
+
+		when(config.syncStorages()).thenReturn(false);
+		assertNull(collector.buildSnapshot().toolLeprechaunTotals);
 	}
 
 	/**

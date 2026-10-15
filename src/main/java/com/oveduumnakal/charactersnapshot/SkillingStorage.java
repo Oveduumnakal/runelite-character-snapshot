@@ -7,6 +7,9 @@ package com.oveduumnakal.charactersnapshot;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.BottomlessBucket;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ToolLeprechaunTotals;
+
 import net.runelite.api.Client;
 import net.runelite.api.gameval.ItemID;
 import net.runelite.api.gameval.VarbitID;
@@ -84,5 +87,41 @@ final class SkillingStorage
 		}
 
 		return any ? stored : null;
+	}
+
+	/**
+	 * Decodes the raw tool leprechaun values into the totals the Store screen shows. Rakes, dibbers, spades,
+	 * secateurs and trowels are {@code base + 2 * extra}; buckets are {@code base + 32 * extra} (the
+	 * {@code extra2Buckets} weight is unverified, so it is ignored); compost and supercompost are
+	 * {@code base + 256 * extra}; the watering can holds {@code value - 1} charges.
+	 *
+	 * @param raw storage key to raw varbit value, as from {@link #readToolLeprechaun}
+	 * @return the decoded totals
+	 */
+	static ToolLeprechaunTotals decodeToolTotals(Map<String, Integer> raw)
+	{
+		ToolLeprechaunTotals totals = new ToolLeprechaunTotals();
+		totals.rakes = raw(raw, "rake") + 2 * raw(raw, "extraRakes");
+		totals.seedDibbers = raw(raw, "seedDibber") + 2 * raw(raw, "extraSeedDibbers");
+		totals.spades = raw(raw, "spade") + 2 * raw(raw, "extraSpades");
+		totals.secateurs = raw(raw, "secateurs") + 2 * raw(raw, "extraSecateurs");
+		totals.magicSecateurs = raw(raw, "magicSecateurs") != 0;
+		totals.trowels = raw(raw, "trowel") + 2 * raw(raw, "extraTrowels");
+		int can = raw(raw, "wateringCan");
+		totals.wateringCanCharges = can > 0 ? can - 1 : null;
+		totals.buckets = raw(raw, "buckets") + 32 * raw(raw, "extraBuckets");
+		totals.compost = raw(raw, "compost") + 256 * raw(raw, "extraCompost");
+		totals.supercompost = raw(raw, "supercompost") + 256 * raw(raw, "extraSupercompost");
+		totals.ultracompost = raw(raw, "ultracompost");
+		totals.plantCure = raw(raw, "plantCure");
+		int type = raw(raw, "bottomlessBucketType");
+		int uses = raw(raw, "bottomlessBucketQuantity");
+		totals.bottomlessBucket = type != 0 || uses != 0 ? new BottomlessBucket(type, uses) : null;
+		return totals;
+	}
+
+	private static int raw(Map<String, Integer> raw, String key)
+	{
+		return raw.getOrDefault(key, 0);
 	}
 }

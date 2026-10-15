@@ -130,6 +130,12 @@ public class CharacterSnapshot
 	 */
 	public Map<String, Integer> toolLeprechaun;
 
+	/**
+	 * Tool leprechaun contents decoded into totals, derived from {@link #toolLeprechaun}; see {@code SCHEMA.md}.
+	 * Absent whenever {@code toolLeprechaun} is.
+	 */
+	public ToolLeprechaunTotals toolLeprechaunTotals;
+
 	/** Transport unlocks kept in game variables (fairy rings, quetzal sites); absent when the toggle is off. */
 	public TransportData transport;
 
@@ -1233,6 +1239,75 @@ public class CharacterSnapshot
 			this.approvalPercent = approvalPercent;
 			this.coffer = coffer;
 			this.lastChanged = lastChanged;
+		}
+	}
+
+	/**
+	 * Tool leprechaun contents as the totals shown on the Store screen, decoded from the raw varbits.
+	 */
+	@EqualsAndHashCode
+	public static class ToolLeprechaunTotals
+	{
+		/** Rakes stored. */
+		public int rakes;
+
+		/** Seed dibbers stored. */
+		public int seedDibbers;
+
+		/** Spades stored. */
+		public int spades;
+
+		/** Secateurs stored. */
+		public int secateurs;
+
+		/** Whether the stored secateurs are magic secateurs. */
+		public boolean magicSecateurs;
+
+		/** Trowels stored. */
+		public int trowels;
+
+		/** Charges of the stored watering can, or {@code null} when none is stored. */
+		public Integer wateringCanCharges;
+
+		/** Buckets stored; the {@code extra2Buckets} part of the count is not decoded. */
+		public int buckets;
+
+		/** Compost stored. */
+		public int compost;
+
+		/** Supercompost stored. */
+		public int supercompost;
+
+		/** Ultracompost stored. */
+		public int ultracompost;
+
+		/** Plant cure stored. */
+		public int plantCure;
+
+		/** Bottomless bucket contents, or {@code null} when the raw type and uses are both zero. */
+		public BottomlessBucket bottomlessBucket;
+	}
+
+	/**
+	 * Raw contents of the bottomless bucket; the meaning of {@code type} is not decoded.
+	 */
+	@EqualsAndHashCode
+	public static class BottomlessBucket
+	{
+		/** Raw type varbit. */
+		public int type;
+
+		/** Raw quantity varbit, the number of uses left. */
+		public int uses;
+
+		/**
+		 * @param type raw type varbit
+		 * @param uses raw quantity varbit
+		 */
+		public BottomlessBucket(int type, int uses)
+		{
+			this.type = type;
+			this.uses = uses;
 		}
 	}
 

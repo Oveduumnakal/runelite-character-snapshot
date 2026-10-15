@@ -1242,7 +1242,10 @@ public class SnapshotCollector
 			data.minigamePoints = new LinkedHashMap<>(minigamePoints);
 
 		if (config.syncStorages() && toolLeprechaun != null)
+		{
 			data.toolLeprechaun = new LinkedHashMap<>(toolLeprechaun);
+			data.toolLeprechaunTotals = SkillingStorage.decodeToolTotals(toolLeprechaun);
+		}
 
 		if (config.syncTransport() && transport != null)
 		{
