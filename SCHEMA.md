@@ -23,7 +23,7 @@ missing sections as "not exported", not "empty".
 | `inventory` | array | One entry per slot; empty slots have `itemId` -1. |
 | `equipment` | object | Map of slot name → item entry. |
 | `runePouch` | array | Runes in the rune pouch; present only while one is in the inventory. See below. |
-| `storages` | object | Last known looting bag, seed vault, group storage, seed box, tackle box and plank sack contents. See below. |
+| `storages` | object | Last known looting bag, seed vault, group storage, seed box, tackle box, plank sack, gravestone and Death's office contents. See below. |
 | `toolLeprechaun` | object | Tool leprechaun storage, raw varbit values. See below. |
 | `quests` | array | One entry per quest. |
 | `questPoints` | int | Total quest points. |
@@ -93,12 +93,16 @@ An **item entry** is `{ itemId, name, quantity }`; `name` is null for an unresol
   omits the field. Read live from varbits, so it is as current as the last inventory change or 30-tick poll.
   It is not carried over from a previous session.
 
-- `storages` (additive, optional): `{ lootingBag, seedVault, groupStorage, seedBox, tackleBox, plankSack }`,
+- `storages` (additive, optional): `{ lootingBag, seedVault, groupStorage, seedBox, tackleBox, plankSack, gravestone, deathsOffice }`,
   each an array of item entries (empty slots omitted). A storage appears only once it has been captured: the
   client exposes the container storages only when the player opens or checks them, so each key is the last
   known copy and is carried over between sessions like the bank. A storage never opened is absent; one opened
   while empty is `[]`. `plankSack` is read from the game's plank-sack varbits (plain, oak, teak, mahogany,
-  camphor, ironwood, rosewood planks) and appears once the sack has held planks. The whole field is absent when
+  camphor, ironwood, rosewood planks) and appears once the sack has held planks. `gravestone` holds the
+  items in your gravestone and `deathsOffice` the items Death is keeping for you; both are captured whenever the
+  game sends them (on death, at the grave, in Death's office) and kept until it sends them again, so an emptied
+  grave reads `[]` only after the game reports it — check `sectionUpdated`. The gravestone timer is not
+  exported. The whole field is absent when
   none has been captured. Capture times are in `sectionUpdated` as `storages.<name>`.
 
 - `toolLeprechaun` (additive, optional): map of tool → raw varbit value, every key present once anything is

@@ -1538,6 +1538,8 @@ public class SnapshotCollector
 		STORAGE_KEYS.put(InventoryID.INV_GROUP_TEMP, "groupStorage");
 		STORAGE_KEYS.put(InventoryID.SEED_BOX, "seedBox");
 		STORAGE_KEYS.put(InventoryID.TACKLE_BOX, "tackleBox");
+		STORAGE_KEYS.put(InventoryID.GRAVESTONE, "gravestone");
+		STORAGE_KEYS.put(InventoryID.DEATH_PERMANENT, "deathsOffice");
 	}
 
 	private final Map<String, List<ItemEntry>> storages = new LinkedHashMap<>();
