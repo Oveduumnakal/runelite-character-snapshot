@@ -33,7 +33,7 @@ assistant. The plugin makes **no network calls of any kind** — nothing leaves 
   inside instances), and active Grand Exchange offers.
 
 - **Character and account.** Name, combat level, world, account type (ironman and friends), members
-  status, and active spellbook.
+  status, active spellbook, unlocked reward prayers (Rigour, Augury...), quick prayers, and autocast spell.
 
 - **Items.** Bank contents split into your real bank tabs, inventory, worn equipment, rune pouch, and the
   looting bag, seed vault and group storage. Containers the game only shows when opened are captured

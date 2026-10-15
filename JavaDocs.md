@@ -18,6 +18,7 @@
 - [com.oveduumnakal.charactersnapshot.FarmingTimers.PatchDef](#comoveduumnakalcharactersnapshotfarmingtimerspatchdef)
 - [com.oveduumnakal.charactersnapshot.FarmingTimers.Range](#comoveduumnakalcharactersnapshotfarmingtimersrange)
 - [com.oveduumnakal.charactersnapshot.KillCountVarps](#comoveduumnakalcharactersnapshotkillcountvarps)
+- [com.oveduumnakal.charactersnapshot.PrayerMagic](#comoveduumnakalcharactersnapshotprayermagic)
 - [com.oveduumnakal.charactersnapshot.SlayerInfo](#comoveduumnakalcharactersnapshotslayerinfo)
 - [com.oveduumnakal.charactersnapshot.SnapshotCollector](#comoveduumnakalcharactersnapshotsnapshotcollector)
 - [com.oveduumnakal.charactersnapshot.SnapshotWriter](#comoveduumnakalcharactersnapshotsnapshotwriter)
@@ -122,7 +123,7 @@ Storage section: where and how often data is written.
 
 `default boolean syncAccountInfo()`
 
-- **Returns:** whether to include account type, membership, and world
+- **Returns:** whether to include account type, membership, spellbook and prayer/magic setup
 
 #### syncBank
 
@@ -1717,6 +1718,104 @@ Varp id to export key, in varp order.
 
 ---
 
+## com.oveduumnakal.charactersnapshot.PrayerMagic
+
+_class_
+
+`final class PrayerMagic`
+
+Reads the character's prayer and magic setup: unlocked reward prayers, selected quick prayers and the
+autocast spell. Every read runs on the client thread.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `static final Map<String,Integer>` | `UNLOCK_VARBITS` | Reward prayer name to the varbit that is 1 once the prayer is unlocked. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `PrayerMagic()` |  |
+
+### Method Summary
+
+| Modifier and Type | Method | Description |
+|---|---|---|
+| `static boolean` | `autocastDefensive(Client client)` | Reports whether the autocast is set to defensive casting. |
+| `static String` | `autocastSpell(Client client)` | Names the autocast spell from the spell object the game stores for it. |
+| `private static boolean` | `isBlank(String name)` | Tells whether a definition name is missing; the game uses `"null"` for unnamed objects. |
+| `static List<String>` | `quickPrayers(Client client)` | Lists the prayers selected as quick prayers. |
+| `static List<String>` | `unlockedPrayers(Client client)` | Lists the unlocked reward prayers. |
+
+### Field Detail
+
+#### UNLOCK_VARBITS
+
+`static final Map<String,Integer> UNLOCK_VARBITS`
+
+Reward prayer name to the varbit that is 1 once the prayer is unlocked.
+
+### Constructor Detail
+
+#### PrayerMagic
+
+`private PrayerMagic()`
+
+### Method Detail
+
+#### autocastDefensive
+
+`static boolean autocastDefensive(Client client)`
+
+Reports whether the autocast is set to defensive casting.
+
+- **Parameter** `client` — the client
+- **Returns:** whether defensive autocast is on
+
+#### autocastSpell
+
+`static String autocastSpell(Client client)`
+
+Names the autocast spell from the spell object the game stores for it. Spell objects carry no item name;
+the name is their `ParamID#SPELL_NAME` param, with the item name as a fallback.
+
+- **Parameter** `client` — the client
+- **Returns:** the spell name, or `null` when nothing is autocast or the name cannot be read
+
+#### isBlank
+
+`private static boolean isBlank(String name)`
+
+Tells whether a definition name is missing; the game uses `"null"` for unnamed objects.
+
+- **Parameter** `name` — the name to check
+- **Returns:** whether the name is null, empty or `"null"`
+
+#### quickPrayers
+
+`static List<String> quickPrayers(Client client)`
+
+Lists the prayers selected as quick prayers. The quick-prayer mask shares its bit layout with the
+active-prayer mask, so each standard prayer's bit is found from its own active varbit's position in
+that mask (read from the varbit definitions). Prayers stored outside the active-prayer mask, such as
+the ruinous prayers, are skipped.
+
+- **Parameter** `client` — the client
+- **Returns:** selected prayer names (RuneLite `Prayer` names), empty when none or not resolvable
+
+#### unlockedPrayers
+
+`static List<String> unlockedPrayers(Client client)`
+
+Lists the unlocked reward prayers.
+
+- **Parameter** `client` — the client
+- **Returns:** unlocked prayer names in `#UNLOCK_VARBITS` order, empty when none
+
+---
+
 ## com.oveduumnakal.charactersnapshot.SlayerInfo
 
 _class_
@@ -1843,6 +1942,8 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private static final String[]` | `SPELLBOOK_NAMES` | Spellbook varbit values 0 to 3, in order; any other value is reported as unknown. |
 | `private static final Map<Integer,String>` | `STORAGE_KEYS` | Storage containers captured when opened, keyed by container id to export key. |
 | `private final Map<String,Integer>` | `activityCounts` |  |
+| `private Boolean` | `autocastDefensive` |  |
+| `private String` | `autocastSpell` |  |
 | `private List<ItemEntry>` | `bankItems` |  |
 | `private List<BankTab>` | `bankTabs` |  |
 | `private int` | `bankTotal` |  |
@@ -1875,6 +1976,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private WorldPoint` | `polledLocation` |  |
 | `private Integer` | `questPoints` |  |
 | `private List<QuestEntry>` | `quests` |  |
+| `private List<String>` | `quickPrayers` |  |
 | `private List<ItemEntry>` | `runePouch` |  |
 | `private final Map<String,SkillEntry>` | `skills` |  |
 | `private SlayerData` | `slayer` |  |
@@ -1884,6 +1986,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private final Map<String,Instant>` | `storageUpdated` |  |
 | `private final Map<String,List<ItemEntry>>` | `storages` |  |
 | `private TimersData` | `timers` |  |
+| `private List<String>` | `unlockedPrayers` |  |
 | `private final Map<String,Integer>` | `varpKillCounts` |  |
 
 ### Constructor Summary
@@ -1905,6 +2008,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private VitalsData` | `buildVitals()` | Reads current combat vitals from boosted and real skill levels and run energy. |
 | `public boolean` | `captureCollectionLog()` | Captures the collection log page currently drawn. |
 | `private List<BankTab>` | `copyBankTabs()` | Copies the cached bank tabs so a built snapshot does not share lists with the cache. |
+| `private static void` | `copyPrayerMagic(List<String> unlocked, List<String> quick, String spell, Boolean defensive, PlayerInfo target)` | Copies the prayer and magic setup into a player info, copying the lists. |
 | `private Map<String,Integer>` | `countsFor(String key)` |  |
 | `private DiaryRegion` | `diaryRegion(String region, int easy, int medium, int hard, int elite)` | Reads a diary region whose four tier varbits are 0/1 completion flags. |
 | `private DiaryRegion` | `diaryRegion(String region, int easy, int medium, int hard, int elite, int doneValue)` | Reads a diary region's four tiers and its mapped tasks. |
@@ -1926,6 +2030,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollDiaries()` | Polls achievement-diary completion for every region via named RuneLite varbits, and each mapped task via `DiaryTasks`. |
 | `public boolean` | `pollKillCounts()` | Reads every boss kill-count varp (authoritative, exact and current), then merges the counts the Chat Commands plugin stored in the RuneScape-profile config (group `killcount`, key = lower-cased name) as a fallback for bosses without a varp. |
 | `public boolean` | `pollMovement()` | Compares the character's real-world location and run energy against the previous call. |
+| `public boolean` | `pollPrayerMagic()` | Polls the unlocked reward prayers, the selected quick prayers and the autocast spell. |
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
 | `public boolean` | `pollRunePouch()` | Polls the rune pouch contents. |
 | `public boolean` | `pollSlayer()` | Polls the slayer state. |
@@ -2081,6 +2186,14 @@ one the legacy `InventoryID.GROUP_STORAGE` constant held; the current API names 
 
 `private final Map<String,Integer> activityCounts`
 
+#### autocastDefensive
+
+`private Boolean autocastDefensive`
+
+#### autocastSpell
+
+`private String autocastSpell`
+
 #### bankItems
 
 `private List<ItemEntry> bankItems`
@@ -2219,6 +2332,10 @@ Identity captured by the last snapshot built with a live local player; cleared b
 
 `private List<QuestEntry> quests`
 
+#### quickPrayers
+
+`private List<String> quickPrayers`
+
 #### runePouch
 
 `private List<ItemEntry> runePouch`
@@ -2254,6 +2371,10 @@ Identity captured by the last snapshot built with a live local player; cleared b
 #### timers
 
 `private TimersData timers`
+
+#### unlockedPrayers
+
+`private List<String> unlockedPrayers`
 
 #### varpKillCounts
 
@@ -2355,6 +2476,18 @@ the account-wide counts are read from the collection log varps.
 Copies the cached bank tabs so a built snapshot does not share lists with the cache.
 
 - **Returns:** a deep copy of the cached tabs
+
+#### copyPrayerMagic
+
+`private static void copyPrayerMagic(List<String> unlocked, List<String> quick, String spell, Boolean defensive, PlayerInfo target)`
+
+Copies the prayer and magic setup into a player info, copying the lists.
+
+- **Parameter** `unlocked` — unlocked reward prayers, may be `null`
+- **Parameter** `quick` — selected quick prayers, may be `null`
+- **Parameter** `spell` — autocast spell name, may be `null`
+- **Parameter** `defensive` — whether the autocast is defensive, may be `null`
+- **Parameter** `target` — the player info to fill
 
 #### countsFor
 
@@ -2535,6 +2668,14 @@ Compares the character's real-world location and run energy against the previous
 run every game tick so walking or regenerating run energy marks the snapshot dirty.
 
 - **Returns:** whether an enabled value (location or vitals) changed since the last call
+
+#### pollPrayerMagic
+
+`public boolean pollPrayerMagic()`
+
+Polls the unlocked reward prayers, the selected quick prayers and the autocast spell.
+
+- **Returns:** whether any of them changed since the last poll
 
 #### pollQuests
 
@@ -4290,9 +4431,13 @@ Identity and account context of the logged-in character.
 | Modifier and Type | Field | Description |
 |---|---|---|
 | `public String` | `accountType` | Account type, e.g. |
+| `public Boolean` | `autocastDefensive` | Whether the autocast is defensive; null when nothing is autocast or account info is not exported. |
+| `public String` | `autocastSpell` | Name of the autocast spell; null when nothing is autocast or account info is not exported. |
 | `public int` | `combatLevel` | Combat level. |
 | `public Boolean` | `members` | Whether the current world is a members' world; `null` when account info is not exported. |
+| `public List<String>` | `quickPrayers` | Prayers selected as quick prayers, by RuneLite prayer name; null when account info is not exported. |
 | `public String` | `spellbook` | Active spellbook: `STANDARD`, `ANCIENT`, `LUNAR` or `ARCEUUS`; null if unknown. |
+| `public List<String>` | `unlockedPrayers` | Unlocked reward prayers: `RIGOUR`, `AUGURY`, `PRESERVE`, `DEADEYE`, `MYSTIC_VIGOUR`. |
 | `public String` | `username` | In-game display name. |
 | `public int` | `world` | World the character is logged into. |
 
@@ -4311,6 +4456,18 @@ Identity and account context of the logged-in character.
 
 Account type, e.g. `NORMAL`, `IRONMAN`, `HARDCORE_IRONMAN`.
 
+#### autocastDefensive
+
+`public Boolean autocastDefensive`
+
+Whether the autocast is defensive; null when nothing is autocast or account info is not exported.
+
+#### autocastSpell
+
+`public String autocastSpell`
+
+Name of the autocast spell; null when nothing is autocast or account info is not exported.
+
 #### combatLevel
 
 `public int combatLevel`
@@ -4323,11 +4480,24 @@ Combat level.
 
 Whether the current world is a members' world; `null` when account info is not exported.
 
+#### quickPrayers
+
+`public List<String> quickPrayers`
+
+Prayers selected as quick prayers, by RuneLite prayer name; null when account info is not exported.
+
 #### spellbook
 
 `public String spellbook`
 
 Active spellbook: `STANDARD`, `ANCIENT`, `LUNAR` or `ARCEUUS`; null if unknown.
+
+#### unlockedPrayers
+
+`public List<String> unlockedPrayers`
+
+Unlocked reward prayers: `RIGOUR`, `AUGURY`, `PRESERVE`, `DEADEYE`,
+`MYSTIC_VIGOUR`. Empty when none; null when account info is not exported.
 
 #### username
 

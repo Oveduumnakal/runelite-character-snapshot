@@ -256,6 +256,10 @@ public class SnapshotCollector
 		slayer = null;
 		runePouch = null;
 		spellbook = null;
+		unlockedPrayers = null;
+		quickPrayers = null;
+		autocastSpell = null;
+		autocastDefensive = null;
 		clogPages.clear();
 		clogItems.clear();
 		clogSearchActive = false;
@@ -1141,6 +1145,8 @@ public class SnapshotCollector
 			lastPlayer.accountType,
 			lastPlayer.members,
 			lastPlayer.spellbook);
+		copyPrayerMagic(lastPlayer.unlockedPrayers, lastPlayer.quickPrayers, lastPlayer.autocastSpell,
+			lastPlayer.autocastDefensive, data.player);
 
 		if (config.syncSkills() && !skills.isEmpty())
 			data.skills = new LinkedHashMap<>(skills);
@@ -1575,6 +1581,34 @@ public class SnapshotCollector
 		return changed;
 	}
 
+	private List<String> unlockedPrayers = null;
+
+	private List<String> quickPrayers = null;
+
+	private String autocastSpell = null;
+
+	private Boolean autocastDefensive = null;
+
+	/**
+	 * Polls the unlocked reward prayers, the selected quick prayers and the autocast spell.
+	 *
+	 * @return whether any of them changed since the last poll
+	 */
+	public boolean pollPrayerMagic()
+	{
+		List<String> unlocked = PrayerMagic.unlockedPrayers(client);
+		List<String> quick = PrayerMagic.quickPrayers(client);
+		String spell = PrayerMagic.autocastSpell(client);
+		Boolean defensive = spell != null ? PrayerMagic.autocastDefensive(client) : null;
+		boolean changed = !Objects.equals(unlocked, unlockedPrayers) || !Objects.equals(quick, quickPrayers)
+			|| !Objects.equals(spell, autocastSpell) || !Objects.equals(defensive, autocastDefensive);
+		unlockedPrayers = unlocked;
+		quickPrayers = quick;
+		autocastSpell = spell;
+		autocastDefensive = defensive;
+		return changed;
+	}
+
 	/** Index of the page title text among the children of the collection log header widget. */
 	private static final int CLOG_HEADER_TITLE_INDEX = 0;
 
@@ -1770,13 +1804,35 @@ public class SnapshotCollector
 			book = spellbook;
 		}
 
-		return new PlayerInfo(
+		PlayerInfo info = new PlayerInfo(
 			localPlayer.getName(),
 			localPlayer.getCombatLevel(),
 			client.getWorld(),
 			accountType,
 			members,
 			book);
+		if (config.syncAccountInfo())
+			copyPrayerMagic(unlockedPrayers, quickPrayers, autocastSpell, autocastDefensive, info);
+
+		return info;
+	}
+
+	/**
+	 * Copies the prayer and magic setup into a player info, copying the lists.
+	 *
+	 * @param unlocked  unlocked reward prayers, may be {@code null}
+	 * @param quick     selected quick prayers, may be {@code null}
+	 * @param spell     autocast spell name, may be {@code null}
+	 * @param defensive whether the autocast is defensive, may be {@code null}
+	 * @param target    the player info to fill
+	 */
+	private static void copyPrayerMagic(List<String> unlocked, List<String> quick, String spell, Boolean defensive,
+		PlayerInfo target)
+	{
+		target.unlockedPrayers = unlocked != null ? new ArrayList<>(unlocked) : null;
+		target.quickPrayers = quick != null ? new ArrayList<>(quick) : null;
+		target.autocastSpell = spell;
+		target.autocastDefensive = defensive;
 	}
 
 	private WorldPoint polledLocation = null;

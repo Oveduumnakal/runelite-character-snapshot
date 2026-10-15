@@ -132,6 +132,21 @@ public class CharacterSnapshot
 		public String spellbook;
 
 		/**
+		 * Unlocked reward prayers: {@code RIGOUR}, {@code AUGURY}, {@code PRESERVE}, {@code DEADEYE},
+		 * {@code MYSTIC_VIGOUR}. Empty when none; null when account info is not exported.
+		 */
+		public List<String> unlockedPrayers;
+
+		/** Prayers selected as quick prayers, by RuneLite prayer name; null when account info is not exported. */
+		public List<String> quickPrayers;
+
+		/** Name of the autocast spell; null when nothing is autocast or account info is not exported. */
+		public String autocastSpell;
+
+		/** Whether the autocast is defensive; null when nothing is autocast or account info is not exported. */
+		public Boolean autocastDefensive;
+
+		/**
 		 * @param username    display name
 		 * @param combatLevel combat level
 		 * @param world       current world
