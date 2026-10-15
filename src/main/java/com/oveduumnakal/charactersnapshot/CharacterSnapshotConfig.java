@@ -408,4 +408,19 @@ public interface CharacterSnapshotConfig extends Config
 	{
 		return true;
 	}
+
+	/**
+	 * @return whether to include Sailing boats, crew, charting and Barracuda Trials
+	 */
+	@ConfigItem(
+		keyName = "syncSailing",
+		name = "Sailing",
+		description = "Include owned boats and their parts, unlocked crew, charting progress and Barracuda Trials",
+		section = dataSection,
+		position = 22
+	)
+	default boolean syncSailing()
+	{
+		return true;
+	}
 }
