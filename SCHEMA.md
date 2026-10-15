@@ -23,7 +23,8 @@ missing sections as "not exported", not "empty".
 | `inventory` | array | One entry per slot; empty slots have `itemId` -1. |
 | `equipment` | object | Map of slot name → item entry. |
 | `runePouch` | array | Runes in the rune pouch; present only while one is in the inventory. See below. |
-| `storages` | object | Last known looting bag, seed vault and group storage contents. See below. |
+| `storages` | object | Last known looting bag, seed vault, group storage, seed box, tackle box and plank sack contents. See below. |
+| `toolLeprechaun` | object | Tool leprechaun storage, raw varbit values. See below. |
 | `quests` | array | One entry per quest. |
 | `questPoints` | int | Total quest points. |
 | `achievementDiaries` | object | Map of region name → tier completion. |
@@ -92,12 +93,22 @@ An **item entry** is `{ itemId, name, quantity }`; `name` is null for an unresol
   omits the field. Read live from varbits, so it is as current as the last inventory change or 30-tick poll.
   It is not carried over from a previous session.
 
-- `storages` (additive, optional): `{ lootingBag: [...], seedVault: [...], groupStorage: [...] }`, each an
-  array of item entries (empty slots omitted). A storage appears only once it has been captured: the client
-  exposes these containers only when the player opens them, so each key is the last known copy and is
-  carried over between sessions like the bank. A storage never opened is absent; one opened while empty is `[]`.
-  The whole field is absent when none has been captured. Capture times are in `sectionUpdated` as
-  `storages.lootingBag`, `storages.seedVault` and `storages.groupStorage`.
+- `storages` (additive, optional): `{ lootingBag, seedVault, groupStorage, seedBox, tackleBox, plankSack }`,
+  each an array of item entries (empty slots omitted). A storage appears only once it has been captured: the
+  client exposes the container storages only when the player opens or checks them, so each key is the last
+  known copy and is carried over between sessions like the bank. A storage never opened is absent; one opened
+  while empty is `[]`. `plankSack` is read from the game's plank-sack varbits (plain, oak, teak, mahogany,
+  camphor, ironwood, rosewood planks) and appears once the sack has held planks. The whole field is absent when
+  none has been captured. Capture times are in `sectionUpdated` as `storages.<name>`.
+
+- `toolLeprechaun` (additive, optional): map of tool → raw varbit value, every key present once anything is
+  stored: `rake`, `extraRakes`, `seedDibber`, `extraSeedDibbers`, `spade`, `extraSpades`, `secateurs`,
+  `magicSecateurs`, `extraSecateurs`, `wateringCan`, `trowel`, `extraTrowels`, `buckets`, `extraBuckets`,
+  `extra2Buckets`, `compost`, `extraCompost`, `supercompost`, `extraSupercompost`, `ultracompost`,
+  `plantCure`, `bottomlessBucketType`, `bottomlessBucketQuantity`. Values are the game's raw varbit values and
+  are not decoded: 0/1 for single tools, a type index for `wateringCan` and `bottomlessBucketType`, counts
+  otherwise, where an `extra*` key holds the higher part of a count that overflows its base key. Read live;
+  absent when nothing is stored. Under the Storages toggle.
 
 ### Carried-over sections and `sectionUpdated`
 

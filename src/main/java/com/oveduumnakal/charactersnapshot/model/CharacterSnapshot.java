@@ -125,6 +125,12 @@ public class CharacterSnapshot
 	public Map<String, Integer> minigamePoints;
 
 	/**
+	 * Tool leprechaun storage as raw varbit values keyed by tool ({@code rake}, {@code buckets}, ...); see
+	 * {@code SCHEMA.md}. Absent when nothing is stored or the storages toggle is off.
+	 */
+	public Map<String, Integer> toolLeprechaun;
+
+	/**
 	 * Identity and account context of the logged-in character.
 	 */
 	public static class PlayerInfo
