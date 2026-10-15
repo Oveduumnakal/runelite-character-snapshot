@@ -1007,6 +1007,34 @@ public class SnapshotCollectorTest
 	}
 
 	/**
+	 * The kit, quiver, cargo hold and knapsack storages are carried over from a previous export.
+	 */
+	@Test
+	public void remainingStoragesRestore()
+	{
+		Client client = loggedInClient("Zezima");
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+		CharacterSnapshot old = previous("Zezima", "Dragon claws");
+		old.storages = new LinkedHashMap<>();
+		String[] keys = {"huntsmansKit", "forestryKit", "dizanasQuiver", "cargoHold1", "cargoHold5",
+			"barbarianKnapsack"};
+		for (String key : keys)
+		{
+			old.storages.put(key, Collections.singletonList(new ItemEntry(7, "Bones", 3)));
+			old.sectionUpdated.put("storages." + key, OLD_BANK_TIME);
+		}
+
+		collector.restore(old);
+		CharacterSnapshot data = collector.buildSnapshot();
+
+		for (String key : keys)
+		{
+			assertEquals(Arrays.asList(7), ids(data.storages.get(key)));
+			assertEquals(OLD_BANK_TIME, data.sectionUpdated.get("storages." + key));
+		}
+	}
+
+	/**
 	 * Obtained items (opacity 0) are captured per page, merged across pages, and persisted via restore.
 	 */
 	@Test
