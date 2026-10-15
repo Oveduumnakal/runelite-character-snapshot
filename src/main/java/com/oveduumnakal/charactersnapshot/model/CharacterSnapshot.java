@@ -1323,18 +1323,24 @@ public class CharacterSnapshot
 		/** Fairy ring codes in the travel log, e.g. {@code AJR}, alphabetical. */
 		public List<String> fairyRingLog;
 
+		/** Fairy ring codes saved as favourites, e.g. {@code CKR}, in slot order; empty slots are skipped. */
+		public List<String> fairyRingFavourites;
+
 		/** Quetzal landing sites available, by name. */
 		public List<String> quetzalSites;
 
 		/**
-		 * @param fairyRings   whether fairy rings may be used
-		 * @param fairyRingLog codes in the travel log
-		 * @param quetzalSites available quetzal sites
+		 * @param fairyRings          whether fairy rings may be used
+		 * @param fairyRingLog        codes in the travel log
+		 * @param fairyRingFavourites codes saved as favourites
+		 * @param quetzalSites        available quetzal sites
 		 */
-		public TransportData(boolean fairyRings, List<String> fairyRingLog, List<String> quetzalSites)
+		public TransportData(boolean fairyRings, List<String> fairyRingLog, List<String> fairyRingFavourites,
+			List<String> quetzalSites)
 		{
 			this.fairyRings = fairyRings;
 			this.fairyRingLog = fairyRingLog;
+			this.fairyRingFavourites = fairyRingFavourites;
 			this.quetzalSites = quetzalSites;
 		}
 	}

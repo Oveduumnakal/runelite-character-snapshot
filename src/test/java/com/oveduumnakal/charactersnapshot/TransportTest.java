@@ -48,6 +48,41 @@ public class TransportTest
 	}
 
 	/**
+	 * Favourites decode each dial to its letter, skip slots whose set flag is zero, and keep slot order.
+	 */
+	@Test
+	public void decodesFavourites()
+	{
+		Client client = loggedInClient();
+		when(client.getVarbitValue(VarbitID.FAIRYRING_FAVE_SET_1)).thenReturn(1);
+		when(client.getVarbitValue(VarbitID.FAIRYRING_FAVE_1_1)).thenReturn(2);
+		when(client.getVarbitValue(VarbitID.FAIRYRING_FAVE_1_2)).thenReturn(2);
+		when(client.getVarbitValue(VarbitID.FAIRYRING_FAVE_1_3)).thenReturn(2);
+		when(client.getVarbitValue(VarbitID.FAIRYRING_FAVE_SET_2)).thenReturn(0);
+		when(client.getVarbitValue(VarbitID.FAIRYRING_FAVE_2_1)).thenReturn(3);
+		when(client.getVarbitValue(VarbitID.FAIRYRING_FAVE_SET_10)).thenReturn(1);
+		when(client.getVarbitValue(VarbitID.FAIRYRING_FAVE_10_1)).thenReturn(3);
+		when(client.getVarbitValue(VarbitID.FAIRYRING_FAVE_10_2)).thenReturn(2);
+		when(client.getVarbitValue(VarbitID.FAIRYRING_FAVE_10_3)).thenReturn(1);
+
+		assertEquals(Arrays.asList("CKR", "BKS"), Transport.read(client).fairyRingFavourites);
+	}
+
+	/**
+	 * With no favourites saved the list is empty, and a set slot with an out-of-range dial is skipped.
+	 */
+	@Test
+	public void emptyAndInvalidFavouritesAreSkipped()
+	{
+		Client client = loggedInClient();
+		assertEquals(Collections.emptyList(), Transport.read(client).fairyRingFavourites);
+
+		when(client.getVarbitValue(VarbitID.FAIRYRING_FAVE_SET_3)).thenReturn(1);
+		when(client.getVarbitValue(VarbitID.FAIRYRING_FAVE_3_1)).thenReturn(7);
+		assertEquals(Collections.emptyList(), Transport.read(client).fairyRingFavourites);
+	}
+
+	/**
 	 * The fairy ring table holds every travel-log code, alphabetical.
 	 */
 	@Test

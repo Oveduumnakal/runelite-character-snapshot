@@ -27,6 +27,33 @@ final class Transport
 	/** Quetzal landing site name to the varbit that is non-zero once the site is available. */
 	static final Map<String, Integer> QUETZAL_SITES = new LinkedHashMap<>();
 
+	/** Letters of the three fairy ring dials, indexed by the dial varbit value. */
+	static final String[] FAIRY_RING_DIALS = {"ADCB", "ILKJ", "PSRQ"};
+
+	/** Per favourite slot: the three dial varbits followed by the set-flag varbit, in slot order. */
+	static final int[][] FAIRY_RING_FAVOURITES = {
+		{VarbitID.FAIRYRING_FAVE_1_1, VarbitID.FAIRYRING_FAVE_1_2, VarbitID.FAIRYRING_FAVE_1_3,
+			VarbitID.FAIRYRING_FAVE_SET_1},
+		{VarbitID.FAIRYRING_FAVE_2_1, VarbitID.FAIRYRING_FAVE_2_2, VarbitID.FAIRYRING_FAVE_2_3,
+			VarbitID.FAIRYRING_FAVE_SET_2},
+		{VarbitID.FAIRYRING_FAVE_3_1, VarbitID.FAIRYRING_FAVE_3_2, VarbitID.FAIRYRING_FAVE_3_3,
+			VarbitID.FAIRYRING_FAVE_SET_3},
+		{VarbitID.FAIRYRING_FAVE_4_1, VarbitID.FAIRYRING_FAVE_4_2, VarbitID.FAIRYRING_FAVE_4_3,
+			VarbitID.FAIRYRING_FAVE_SET_4},
+		{VarbitID.FAIRYRING_FAVE_5_1, VarbitID.FAIRYRING_FAVE_5_2, VarbitID.FAIRYRING_FAVE_5_3,
+			VarbitID.FAIRYRING_FAVE_SET_5},
+		{VarbitID.FAIRYRING_FAVE_6_1, VarbitID.FAIRYRING_FAVE_6_2, VarbitID.FAIRYRING_FAVE_6_3,
+			VarbitID.FAIRYRING_FAVE_SET_6},
+		{VarbitID.FAIRYRING_FAVE_7_1, VarbitID.FAIRYRING_FAVE_7_2, VarbitID.FAIRYRING_FAVE_7_3,
+			VarbitID.FAIRYRING_FAVE_SET_7},
+		{VarbitID.FAIRYRING_FAVE_8_1, VarbitID.FAIRYRING_FAVE_8_2, VarbitID.FAIRYRING_FAVE_8_3,
+			VarbitID.FAIRYRING_FAVE_SET_8},
+		{VarbitID.FAIRYRING_FAVE_9_1, VarbitID.FAIRYRING_FAVE_9_2, VarbitID.FAIRYRING_FAVE_9_3,
+			VarbitID.FAIRYRING_FAVE_SET_9},
+		{VarbitID.FAIRYRING_FAVE_10_1, VarbitID.FAIRYRING_FAVE_10_2, VarbitID.FAIRYRING_FAVE_10_3,
+			VarbitID.FAIRYRING_FAVE_SET_10},
+	};
+
 	static
 	{
 		FAIRY_RING_LOG.put("AIQ", VarbitID.FAIRYRINGS_LOG_AIQ);
@@ -113,7 +140,38 @@ final class Transport
 	static TransportData read(Client client)
 	{
 		boolean fairyRings = client.getVarbitValue(VarbitID.FAIRYRING_PERMISSION) > 0;
-		return new TransportData(fairyRings, set(client, FAIRY_RING_LOG), set(client, QUETZAL_SITES));
+		return new TransportData(fairyRings, set(client, FAIRY_RING_LOG), favourites(client),
+			set(client, QUETZAL_SITES));
+	}
+
+	/**
+	 * Decodes the fairy ring codes saved as favourites. A slot is skipped when its set flag is zero or a dial
+	 * holds a value outside the four letters.
+	 *
+	 * @param client the client
+	 * @return the saved codes, in slot order
+	 */
+	private static List<String> favourites(Client client)
+	{
+		List<String> codes = new ArrayList<>();
+		for (int[] slot : FAIRY_RING_FAVOURITES)
+		{
+			if (client.getVarbitValue(slot[3]) == 0)
+				continue;
+
+			StringBuilder code = new StringBuilder();
+			for (int dial = 0; dial < FAIRY_RING_DIALS.length; dial++)
+			{
+				int value = client.getVarbitValue(slot[dial]);
+				if (value >= 0 && value < FAIRY_RING_DIALS[dial].length())
+					code.append(FAIRY_RING_DIALS[dial].charAt(value));
+			}
+
+			if (code.length() == FAIRY_RING_DIALS.length)
+				codes.add(code.toString());
+		}
+
+		return codes;
 	}
 
 	/**
