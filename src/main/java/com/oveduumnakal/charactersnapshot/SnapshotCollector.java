@@ -1250,7 +1250,8 @@ public class SnapshotCollector
 		if (config.syncTransport() && transport != null)
 		{
 			data.transport = new TransportData(transport.fairyRings, new ArrayList<>(transport.fairyRingLog),
-				new ArrayList<>(transport.fairyRingFavourites), new ArrayList<>(transport.quetzalSites));
+				new ArrayList<>(transport.fairyRingFavourites), transport.fairyRingLast,
+				new ArrayList<>(transport.quetzalSites));
 		}
 
 		if (config.syncHouse() && house != null)

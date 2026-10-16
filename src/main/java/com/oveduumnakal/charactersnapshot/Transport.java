@@ -15,9 +15,9 @@ import net.runelite.api.Client;
 import net.runelite.api.gameval.VarbitID;
 
 /**
- * Reads transport unlocks the game keeps in varbits: fairy ring access and travel-log entries, and quetzal
- * landing sites. Transports gated only by quests or diaries are left to those sections. Every read runs on
- * the client thread.
+ * Reads transport unlocks the game keeps in varbits: fairy ring access, travel-log entries, favourites and
+ * last destination, and quetzal landing sites. Transports gated only by quests or diaries are left to those
+ * sections. Every read runs on the client thread.
  */
 final class Transport
 {
@@ -141,7 +141,44 @@ final class Transport
 	{
 		boolean fairyRings = client.getVarbitValue(VarbitID.FAIRYRING_PERMISSION) > 0;
 		return new TransportData(fairyRings, set(client, FAIRY_RING_LOG), favourites(client),
-			set(client, QUETZAL_SITES));
+			lastDestination(client), set(client, QUETZAL_SITES));
+	}
+
+	/**
+	 * Decodes the last fairy ring code travelled to. The game packs it into six bits the same way as a
+	 * favourite slot: dial 1 in bits 4-5, dial 2 in bits 2-3, dial 3 in bits 0-1.
+	 *
+	 * @param client the client
+	 * @return the code, or null when no destination is recorded
+	 */
+	private static String lastDestination(Client client)
+	{
+		if (client.getVarbitValue(VarbitID.FAIRYRING_LASTLOC_SET) == 0)
+			return null;
+
+		int packed = client.getVarbitValue(VarbitID.FAIRYRING_LASTLOC);
+		return code((packed >> 4) & 3, (packed >> 2) & 3, packed & 3);
+	}
+
+	/**
+	 * Turns three dial values into a fairy ring code.
+	 *
+	 * @param dials the value of each dial, in dial order
+	 * @return the code, or null when a dial holds a value outside its four letters
+	 */
+	private static String code(int... dials)
+	{
+		StringBuilder code = new StringBuilder();
+		for (int dial = 0; dial < FAIRY_RING_DIALS.length; dial++)
+		{
+			int value = dials[dial];
+			if (value < 0 || value >= FAIRY_RING_DIALS[dial].length())
+				return null;
+
+			code.append(FAIRY_RING_DIALS[dial].charAt(value));
+		}
+
+		return code.toString();
 	}
 
 	/**
@@ -159,16 +196,10 @@ final class Transport
 			if (client.getVarbitValue(slot[3]) == 0)
 				continue;
 
-			StringBuilder code = new StringBuilder();
-			for (int dial = 0; dial < FAIRY_RING_DIALS.length; dial++)
-			{
-				int value = client.getVarbitValue(slot[dial]);
-				if (value >= 0 && value < FAIRY_RING_DIALS[dial].length())
-					code.append(FAIRY_RING_DIALS[dial].charAt(value));
-			}
-
-			if (code.length() == FAIRY_RING_DIALS.length)
-				codes.add(code.toString());
+			String code = code(client.getVarbitValue(slot[0]), client.getVarbitValue(slot[1]),
+				client.getVarbitValue(slot[2]));
+			if (code != null)
+				codes.add(code);
 		}
 
 		return codes;

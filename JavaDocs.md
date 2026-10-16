@@ -3678,9 +3678,9 @@ _class_
 
 `final class Transport`
 
-Reads transport unlocks the game keeps in varbits: fairy ring access and travel-log entries, and quetzal
-landing sites. Transports gated only by quests or diaries are left to those sections. Every read runs on
-the client thread.
+Reads transport unlocks the game keeps in varbits: fairy ring access, travel-log entries, favourites and
+last destination, and quetzal landing sites. Transports gated only by quests or diaries are left to those
+sections. Every read runs on the client thread.
 
 ### Field Summary
 
@@ -3701,7 +3701,9 @@ the client thread.
 
 | Modifier and Type | Method | Description |
 |---|---|---|
+| `private static String` | `code(int... dials)` | Turns three dial values into a fairy ring code. |
 | `private static List<String>` | `favourites(Client client)` | Decodes the fairy ring codes saved as favourites. |
+| `private static String` | `lastDestination(Client client)` | Decodes the last fairy ring code travelled to. |
 | `static TransportData` | `read(Client client)` | Reads the transport unlocks. |
 | `private static List<String>` | `set(Client client, Map<String,Integer> table)` | Lists the keys of a table whose varbit is non-zero. |
 
@@ -3739,6 +3741,15 @@ Quetzal landing site name to the varbit that is non-zero once the site is availa
 
 ### Method Detail
 
+#### code
+
+`private static String code(int... dials)`
+
+Turns three dial values into a fairy ring code.
+
+- **Parameter** `dials` — the value of each dial, in dial order
+- **Returns:** the code, or null when a dial holds a value outside its four letters
+
 #### favourites
 
 `private static List<String> favourites(Client client)`
@@ -3748,6 +3759,16 @@ holds a value outside the four letters.
 
 - **Parameter** `client` — the client
 - **Returns:** the saved codes, in slot order
+
+#### lastDestination
+
+`private static String lastDestination(Client client)`
+
+Decodes the last fairy ring code travelled to. The game packs it into six bits the same way as a
+favourite slot: dial 1 in bits 4-5, dial 2 in bits 2-3, dial 3 in bits 0-1.
+
+- **Parameter** `client` — the client
+- **Returns:** the code, or null when no destination is recorded
 
 #### read
 
@@ -6189,6 +6210,7 @@ Transport unlocks kept in game variables.
 | Modifier and Type | Field | Description |
 |---|---|---|
 | `public List<String>` | `fairyRingFavourites` | Fairy ring codes saved as favourites, e.g. |
+| `public String` | `fairyRingLast` | Last fairy ring code travelled to, e.g. |
 | `public List<String>` | `fairyRingLog` | Fairy ring codes in the travel log, e.g. |
 | `public boolean` | `fairyRings` | Whether the player may use fairy rings. |
 | `public List<String>` | `quetzalSites` | Quetzal landing sites available, by name. |
@@ -6197,7 +6219,7 @@ Transport unlocks kept in game variables.
 
 | Constructor | Description |
 |---|---|
-| `TransportData(boolean fairyRings, List<String> fairyRingLog, List<String> fairyRingFavourites, List<String> quetzalSites)` |  |
+| `TransportData(boolean fairyRings, List<String> fairyRingLog, List<String> fairyRingFavourites, String fairyRingLast, List<String> quetzalSites)` |  |
 
 ### Field Detail
 
@@ -6206,6 +6228,12 @@ Transport unlocks kept in game variables.
 `public List<String> fairyRingFavourites`
 
 Fairy ring codes saved as favourites, e.g. `CKR`, in slot order; empty slots are skipped.
+
+#### fairyRingLast
+
+`public String fairyRingLast`
+
+Last fairy ring code travelled to, e.g. `CKR`; null when none is recorded.
 
 #### fairyRingLog
 
@@ -6229,11 +6257,12 @@ Quetzal landing sites available, by name.
 
 #### TransportData
 
-`public TransportData(boolean fairyRings, List<String> fairyRingLog, List<String> fairyRingFavourites, List<String> quetzalSites)`
+`public TransportData(boolean fairyRings, List<String> fairyRingLog, List<String> fairyRingFavourites, String fairyRingLast, List<String> quetzalSites)`
 
 - **Parameter** `fairyRings` — whether fairy rings may be used
 - **Parameter** `fairyRingLog` — codes in the travel log
 - **Parameter** `fairyRingFavourites` — codes saved as favourites
+- **Parameter** `fairyRingLast` — last code travelled to, or null
 - **Parameter** `quetzalSites` — available quetzal sites
 
 ---
