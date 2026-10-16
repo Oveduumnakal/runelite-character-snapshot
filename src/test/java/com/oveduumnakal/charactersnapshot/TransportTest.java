@@ -24,7 +24,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests the transport unlocks: fairy ring access and travel log, quetzal sites, and the toggle.
+ * Tests the transport unlocks: fairy ring access, travel log, favourites and last destination, quetzal sites,
+ * and the toggle.
  */
 public class TransportTest
 {
@@ -80,6 +81,32 @@ public class TransportTest
 		when(client.getVarbitValue(VarbitID.FAIRYRING_FAVE_SET_3)).thenReturn(1);
 		when(client.getVarbitValue(VarbitID.FAIRYRING_FAVE_3_1)).thenReturn(7);
 		assertEquals(Collections.emptyList(), Transport.read(client).fairyRingFavourites);
+	}
+
+	/**
+	 * The last destination unpacks dial 1 from bits 4-5, dial 2 from bits 2-3 and dial 3 from bits 0-1.
+	 */
+	@Test
+	public void decodesLastDestination()
+	{
+		Client client = loggedInClient();
+		when(client.getVarbitValue(VarbitID.FAIRYRING_LASTLOC_SET)).thenReturn(1);
+		when(client.getVarbitValue(VarbitID.FAIRYRING_LASTLOC)).thenReturn((3 << 4) | (2 << 2) | 1);
+		assertEquals("BKS", Transport.read(client).fairyRingLast);
+
+		when(client.getVarbitValue(VarbitID.FAIRYRING_LASTLOC)).thenReturn(0);
+		assertEquals("AIP", Transport.read(client).fairyRingLast);
+	}
+
+	/**
+	 * With the set flag zero there is no last destination, whatever the packed value holds.
+	 */
+	@Test
+	public void lastDestinationIsNullWhenUnset()
+	{
+		Client client = loggedInClient();
+		when(client.getVarbitValue(VarbitID.FAIRYRING_LASTLOC)).thenReturn(42);
+		assertNull(Transport.read(client).fairyRingLast);
 	}
 
 	/**

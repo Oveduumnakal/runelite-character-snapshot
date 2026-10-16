@@ -1326,6 +1326,9 @@ public class CharacterSnapshot
 		/** Fairy ring codes saved as favourites, e.g. {@code CKR}, in slot order; empty slots are skipped. */
 		public List<String> fairyRingFavourites;
 
+		/** Last fairy ring code travelled to, e.g. {@code CKR}; null when none is recorded. */
+		public String fairyRingLast;
+
 		/** Quetzal landing sites available, by name. */
 		public List<String> quetzalSites;
 
@@ -1333,14 +1336,16 @@ public class CharacterSnapshot
 		 * @param fairyRings          whether fairy rings may be used
 		 * @param fairyRingLog        codes in the travel log
 		 * @param fairyRingFavourites codes saved as favourites
+		 * @param fairyRingLast       last code travelled to, or null
 		 * @param quetzalSites        available quetzal sites
 		 */
 		public TransportData(boolean fairyRings, List<String> fairyRingLog, List<String> fairyRingFavourites,
-			List<String> quetzalSites)
+			String fairyRingLast, List<String> quetzalSites)
 		{
 			this.fairyRings = fairyRings;
 			this.fairyRingLog = fairyRingLog;
 			this.fairyRingFavourites = fairyRingFavourites;
+			this.fairyRingLast = fairyRingLast;
 			this.quetzalSites = quetzalSites;
 		}
 	}
