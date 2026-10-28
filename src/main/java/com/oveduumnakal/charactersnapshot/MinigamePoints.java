@@ -7,7 +7,11 @@ package com.oveduumnakal.charactersnapshot;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.MixologyHopper;
+
 import net.runelite.api.Client;
+import net.runelite.api.Player;
+import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.gameval.VarPlayerID;
 import net.runelite.api.gameval.VarbitID;
 
@@ -23,6 +27,12 @@ final class MinigamePoints
 
 	/** Currency key to its varbit id. */
 	static final Map<String, Integer> VARBITS = new LinkedHashMap<>();
+
+	/** Region id of the Mastering Mixology lab. */
+	static final int MIXOLOGY_LAB_REGION = 5521;
+
+	/** Plane of the Mastering Mixology lab. */
+	static final int MIXOLOGY_LAB_PLANE = 0;
 
 	static
 	{
@@ -59,5 +69,26 @@ final class MinigamePoints
 			points.put(entry.getKey(), client.getVarbitValue(entry.getValue()));
 
 		return points;
+	}
+
+	/**
+	 * Reads the paste left in the Mastering Mixology lab hopper. The hopper varbits share their varps with the
+	 * lab's mixer state, and the paste only changes inside the lab, so they are read only there (the same
+	 * region and plane check the Mastering Mixology plugin makes).
+	 *
+	 * @param client the client
+	 * @return the hopper contents, or {@code null} when the player is not in the lab
+	 */
+	static MixologyHopper readHopper(Client client)
+	{
+		Player player = client.getLocalPlayer();
+		WorldPoint location = player != null ? player.getWorldLocation() : null;
+		if (location == null || location.getRegionID() != MIXOLOGY_LAB_REGION
+				|| location.getPlane() != MIXOLOGY_LAB_PLANE)
+			return null;
+
+		return new MixologyHopper(client.getVarbitValue(VarbitID.MM_AVAILABLE_MOX),
+				client.getVarbitValue(VarbitID.MM_AVAILABLE_AGA),
+				client.getVarbitValue(VarbitID.MM_AVAILABLE_LYE));
 	}
 }

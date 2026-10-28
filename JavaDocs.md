@@ -49,6 +49,7 @@
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry](#comoveduumnakalcharactersnapshotmodelcharactersnapshotitementry)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.LocationData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotlocationdata)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.MiscellaniaData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotmiscellaniadata)
+- [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.MixologyHopper](#comoveduumnakalcharactersnapshotmodelcharactersnapshotmixologyhopper)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.PlayerInfo](#comoveduumnakalcharactersnapshotmodelcharactersnapshotplayerinfo)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.QuestEntry](#comoveduumnakalcharactersnapshotmodelcharactersnapshotquestentry)
 - [com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SailingData](#comoveduumnakalcharactersnapshotmodelcharactersnapshotsailingdata)
@@ -1977,6 +1978,8 @@ Barbarian Assault) are left out rather than guessed.
 
 | Modifier and Type | Field | Description |
 |---|---|---|
+| `static final int` | `MIXOLOGY_LAB_PLANE` | Plane of the Mastering Mixology lab. |
+| `static final int` | `MIXOLOGY_LAB_REGION` | Region id of the Mastering Mixology lab. |
 | `static final Map<String,Integer>` | `VARBITS` | Currency key to its varbit id. |
 | `static final Map<String,Integer>` | `VARPS` | Currency key to its varp id. |
 
@@ -1991,8 +1994,21 @@ Barbarian Assault) are left out rather than guessed.
 | Modifier and Type | Method | Description |
 |---|---|---|
 | `static Map<String,Integer>` | `read(Client client)` | Reads every known currency. |
+| `static MixologyHopper` | `readHopper(Client client)` | Reads the paste left in the Mastering Mixology lab hopper. |
 
 ### Field Detail
+
+#### MIXOLOGY_LAB_PLANE
+
+`static final int MIXOLOGY_LAB_PLANE`
+
+Plane of the Mastering Mixology lab.
+
+#### MIXOLOGY_LAB_REGION
+
+`static final int MIXOLOGY_LAB_REGION`
+
+Region id of the Mastering Mixology lab.
 
 #### VARBITS
 
@@ -2022,6 +2038,17 @@ Reads every known currency.
 
 - **Parameter** `client` — the client
 - **Returns:** currency key to balance, varps first then varbits, each in table order
+
+#### readHopper
+
+`static MixologyHopper readHopper(Client client)`
+
+Reads the paste left in the Mastering Mixology lab hopper. The hopper varbits share their varps with the
+lab's mixer state, and the paste only changes inside the lab, so they are read only there (the same
+region and plane check the Mastering Mixology plugin makes).
+
+- **Parameter** `client` — the client
+- **Returns:** the hopper contents, or `null` when the player is not in the lab
 
 ---
 
@@ -2506,6 +2533,8 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `private PlayerInfo` | `lastPlayer` | Identity captured by the last snapshot built with a live local player; cleared by `#reset()`. |
 | `private Map<String,Integer>` | `minigamePoints` |  |
 | `private MiscellaniaData` | `miscellania` |  |
+| `private MixologyHopper` | `mixologyHopper` |  |
+| `private Instant` | `mixologyHopperUpdated` |  |
 | `private Integer` | `polledEnergy` |  |
 | `private WorldPoint` | `polledLocation` |  |
 | `private Integer` | `questPoints` |  |
@@ -2568,7 +2597,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `pollDiaries()` | Polls achievement-diary completion for every region via named RuneLite varbits, and each mapped task via `DiaryTasks`. |
 | `public boolean` | `pollHouse()` | Polls the player-owned house fields. |
 | `public boolean` | `pollKillCounts()` | Reads every boss kill-count varp (authoritative, exact and current), then merges the counts the Chat Commands plugin stored in the RuneScape-profile config (group `killcount`, key = lower-cased name) as a fallback for bosses without a varp. |
-| `public boolean` | `pollMinigamePoints()` | Polls the minigame reward-shop currencies. |
+| `public boolean` | `pollMinigamePoints()` | Polls the minigame reward-shop currencies and, while the player is in the Mastering Mixology lab, the paste in its hopper. |
 | `public boolean` | `pollMovement()` | Compares the character's real-world location and run energy against the previous call. |
 | `public boolean` | `pollPrayerMagic()` | Polls the unlocked reward prayers, the selected quick prayers and the autocast spell. |
 | `public boolean` | `pollQuests()` | Polls quest completion state and total quest points. |
@@ -2876,6 +2905,14 @@ Identity captured by the last snapshot built with a live local player; cleared b
 #### miscellania
 
 `private MiscellaniaData miscellania`
+
+#### mixologyHopper
+
+`private MixologyHopper mixologyHopper`
+
+#### mixologyHopperUpdated
+
+`private Instant mixologyHopperUpdated`
 
 #### polledEnergy
 
@@ -3253,9 +3290,10 @@ name) as a fallback for bosses without a varp. Non-boss counts such as agility l
 
 `public boolean pollMinigamePoints()`
 
-Polls the minigame reward-shop currencies.
+Polls the minigame reward-shop currencies and, while the player is in the Mastering Mixology lab, the
+paste in its hopper. Outside the lab the last hopper reading is kept.
 
-- **Returns:** whether any balance changed since the last poll
+- **Returns:** whether any balance or the hopper contents changed since the last poll
 
 #### pollMovement
 
@@ -3825,6 +3863,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | _class_ [`ItemEntry`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotitementry) | One stack of items: id, resolved name, and quantity. |
 | _class_ [`LocationData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotlocationdata) | World location of the character. |
 | _class_ [`MiscellaniaData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotmiscellaniadata) | Kingdom of Miscellania state. |
+| _class_ [`MixologyHopper`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotmixologyhopper) | Paste stored in the Mastering Mixology lab hopper, 0 to 3,000 of each kind. |
 | _class_ [`PlayerInfo`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotplayerinfo) | Identity and account context of the logged-in character. |
 | _class_ [`QuestEntry`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotquestentry) | Completion state of one quest. |
 | _class_ [`SailingData`](#comoveduumnakalcharactersnapshotmodelcharactersnapshotsailingdata) | Sailing state read from its named game variables. |
@@ -3856,6 +3895,7 @@ the configured toggles. See `SCHEMA.md` for the field-by-field contract.
 | `public LocationData` | `location` | Current world location of the character. |
 | `public Map<String,Integer>` | `minigamePoints` | Minigame reward-shop balances keyed by currency (`nightmareZone`, `titheFarm`, ...), in a fixed order. |
 | `public MiscellaniaData` | `miscellania` | Kingdom of Miscellania approval and coffer; absent before Throne of Miscellania or when the toggle is off. |
+| `public MixologyHopper` | `mixologyHopper` | Paste left in the Mastering Mixology lab hopper. |
 | `public PlayerInfo` | `player` | Identity and account context of the logged-in character. |
 | `public Integer` | `questPoints` | Total quest points. |
 | `public List<QuestEntry>` | `quests` | Quest completion state, one entry per quest. |
@@ -3976,6 +4016,14 @@ order. Absent when the toggle is off.
 `public MiscellaniaData miscellania`
 
 Kingdom of Miscellania approval and coffer; absent before Throne of Miscellania or when the toggle is off.
+
+#### mixologyHopper
+
+`public MixologyHopper mixologyHopper`
+
+Paste left in the Mastering Mixology lab hopper. Read only while the player is in the lab and carried over
+between sessions; the capture time is `sectionUpdated.mixologyHopper`. Absent until first seen in the
+lab, or when the minigame points toggle is off.
 
 #### player
 
@@ -5584,6 +5632,60 @@ ISO-8601 instant the values were last seen changing; null when unknown.
 - **Parameter** `approvalPercent` — approval percentage
 - **Parameter** `coffer` — coins in the coffer
 - **Parameter** `lastChanged` — last-change instant, or null
+
+---
+
+## com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.MixologyHopper
+
+_class_
+
+`public static class MixologyHopper`
+
+Paste stored in the Mastering Mixology lab hopper, 0 to 3,000 of each kind.
+
+### Field Summary
+
+| Modifier and Type | Field | Description |
+|---|---|---|
+| `public int` | `aga` | Aga paste. |
+| `public int` | `lye` | Lye paste. |
+| `public int` | `mox` | Mox paste. |
+
+### Constructor Summary
+
+| Constructor | Description |
+|---|---|
+| `MixologyHopper(int mox, int aga, int lye)` |  |
+
+### Field Detail
+
+#### aga
+
+`public int aga`
+
+Aga paste.
+
+#### lye
+
+`public int lye`
+
+Lye paste.
+
+#### mox
+
+`public int mox`
+
+Mox paste.
+
+### Constructor Detail
+
+#### MixologyHopper
+
+`public MixologyHopper(int mox, int aga, int lye)`
+
+- **Parameter** `mox` — mox paste
+- **Parameter** `aga` — aga paste
+- **Parameter** `lye` — lye paste
 
 ---
 

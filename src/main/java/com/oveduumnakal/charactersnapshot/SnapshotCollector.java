@@ -37,6 +37,7 @@ import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.InventoryItem;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.ItemEntry;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.LocationData;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.MiscellaniaData;
+import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.MixologyHopper;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.PlayerInfo;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.QuestEntry;
 import com.oveduumnakal.charactersnapshot.model.CharacterSnapshot.SailingData;
@@ -284,6 +285,8 @@ public class SnapshotCollector
 		dailies = null;
 		miscellania = null;
 		minigamePoints = null;
+		mixologyHopper = null;
+		mixologyHopperUpdated = null;
 		toolLeprechaun = null;
 		transport = null;
 		house = null;
@@ -568,6 +571,13 @@ public class SnapshotCollector
 					storageUpdated.put(key, time);
 				}
 			}
+		}
+
+		Instant hopperTime = sectionTime(times, "mixologyHopper", fallback);
+		if (mixologyHopperUpdated == null && hopperTime != null && previous.mixologyHopper != null)
+		{
+			mixologyHopper = previous.mixologyHopper;
+			mixologyHopperUpdated = hopperTime;
 		}
 
 		Instant clogTime = sectionTime(times, "collectionLog", fallback);
@@ -1185,6 +1195,9 @@ public class SnapshotCollector
 		if (config.syncCollectionLog())
 			data.collectionLog = buildCollectionLog();
 
+		if (config.syncMinigamePoints())
+			data.mixologyHopper = mixologyHopper;
+
 		data.sectionUpdated = buildSectionUpdated(data);
 
 		if (config.syncRunePouch() && runePouch != null)
@@ -1316,6 +1329,9 @@ public class SnapshotCollector
 
 		if (data.collectionLog != null && clogUpdated != null)
 			times.put("collectionLog", clogUpdated.toString());
+
+		if (data.mixologyHopper != null && mixologyHopperUpdated != null)
+			times.put("mixologyHopper", mixologyHopperUpdated.toString());
 
 		return times.isEmpty() ? null : times;
 	}
@@ -1958,16 +1974,30 @@ public class SnapshotCollector
 
 	private Map<String, Integer> minigamePoints = null;
 
+	private MixologyHopper mixologyHopper = null;
+
+	private Instant mixologyHopperUpdated = null;
+
 	/**
-	 * Polls the minigame reward-shop currencies.
+	 * Polls the minigame reward-shop currencies and, while the player is in the Mastering Mixology lab, the
+	 * paste in its hopper. Outside the lab the last hopper reading is kept.
 	 *
-	 * @return whether any balance changed since the last poll
+	 * @return whether any balance or the hopper contents changed since the last poll
 	 */
 	public boolean pollMinigamePoints()
 	{
 		Map<String, Integer> fresh = MinigamePoints.read(client);
 		boolean changed = !fresh.equals(minigamePoints);
 		minigamePoints = fresh;
+
+		MixologyHopper hopper = MinigamePoints.readHopper(client);
+		if (hopper != null)
+		{
+			changed |= !hopper.equals(mixologyHopper);
+			mixologyHopper = hopper;
+			mixologyHopperUpdated = Instant.now();
+		}
+
 		return changed;
 	}
 

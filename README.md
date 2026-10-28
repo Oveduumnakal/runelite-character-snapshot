@@ -57,7 +57,8 @@ assistant. The plugin makes **no network calls of any kind** — nothing leaves 
   unclaimed today, plus Kingdom of Miscellania approval and coffer.
 
 - **Minigame points.** Nightmare Zone, Tithe Farm, Giants' Foundry, Mastering Mixology, Tempoross,
-  Soul Wars, Vale Totems, PvP Arena and museum kudos balances.
+  Soul Wars, Vale Totems, PvP Arena and museum kudos balances, plus the paste left in the Mastering
+  Mixology hopper (last seen in the lab).
 
 - **Transport unlocks.** Fairy ring access, the codes in your travel log, your saved fairy ring
   favourites and last destination, and which quetzal landing sites you can fly to.

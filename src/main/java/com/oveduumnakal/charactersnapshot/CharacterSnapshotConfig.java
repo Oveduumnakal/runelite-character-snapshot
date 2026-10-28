@@ -369,7 +369,7 @@ public interface CharacterSnapshotConfig extends Config
 		keyName = "syncMinigamePoints",
 		name = "Minigame points",
 		description = "Include minigame reward points (Nightmare Zone, Tithe Farm, Giants' Foundry, Mixology, "
-			+ "Tempoross, Soul Wars, kudos...)",
+			+ "Tempoross, Soul Wars, kudos...) and the Mixology hopper paste",
 		section = dataSection,
 		position = 19
 	)
