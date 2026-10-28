@@ -41,6 +41,7 @@ missing sections as "not exported", not "empty".
 | `dailies` | object | Daily rewards: unlocked and claimed today. See below. |
 | `miscellania` | object | Kingdom of Miscellania approval and coffer. See below. |
 | `minigamePoints` | object | Minigame reward-shop balances. See below. |
+| `mixologyHopper` | object | Paste in the Mastering Mixology lab hopper, last seen in the lab. See below. |
 | `transport` | object | Fairy ring access and travel log, quetzal landing sites. See below. |
 | `house` | object | Player-owned house fields, raw game values. See below. |
 | `sailing` | object | Sailing boats, crew, charting and Barracuda Trials. See below. |
@@ -138,7 +139,8 @@ On login the plugin reloads the character's own previous file and keeps its `ban
 `equipment` until each is captured again. Inventory and equipment are re-captured almost at once; the
 bank is re-captured only when the player opens it. So the bank in a file can be from an earlier session.
 
-`sectionUpdated` maps each present item section (`bank`, `inventory`, `equipment`, and `storages.<name>`) to the ISO-8601
+`sectionUpdated` maps each present item section (`bank`, `inventory`, `equipment`, and `storages.<name>`), plus
+`collectionLog` and `mixologyHopper`, to the ISO-8601
 instant it was last captured from the client. A value earlier than `lastUpdated` means that section was
 carried over. A consumer can show it as, e.g., "bank as of 2 days ago". The field is additive: files
 written before it existed simply lack it, and a section missing from the map has an unknown capture
@@ -352,6 +354,14 @@ Map of currency → balance, every key always present (0 when none), in this ord
 `titheFarm`, `temporossPermits`, `museumKudos` (Varrock Museum), `pvpArena`. Each is one named game variable
 read live. Pest Control, Mahogany Homes, Last Man Standing, Guardians of the Rift and Barbarian Assault are
 not exported: their currency has no clearly named variable. Absent when the Minigame points toggle is off.
+
+## mixologyHopper
+
+`{ mox, aga, lye }` (additive, optional): paste left in the Mastering Mixology lab hopper, each 0 to 3,000.
+Read from the game's `MM_AVAILABLE_*` varbits only while the player is in the lab (region 5521, plane 0),
+because they share their game variables with the lab's mixer state and the paste only changes there.
+Outside the lab the last reading is kept, also across sessions; `sectionUpdated.mixologyHopper` is when it
+was last read. Absent until the lab is first visited with this field, or when the Minigame points toggle is off.
 
 ## transport
 

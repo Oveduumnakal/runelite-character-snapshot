@@ -125,6 +125,13 @@ public class CharacterSnapshot
 	public Map<String, Integer> minigamePoints;
 
 	/**
+	 * Paste left in the Mastering Mixology lab hopper. Read only while the player is in the lab and carried over
+	 * between sessions; the capture time is {@code sectionUpdated.mixologyHopper}. Absent until first seen in the
+	 * lab, or when the minigame points toggle is off.
+	 */
+	public MixologyHopper mixologyHopper;
+
+	/**
 	 * Tool leprechaun storage as raw varbit values keyed by tool ({@code rake}, {@code buckets}, ...); see
 	 * {@code SCHEMA.md}. Absent when nothing is stored or the storages toggle is off.
 	 */
@@ -1239,6 +1246,34 @@ public class CharacterSnapshot
 			this.approvalPercent = approvalPercent;
 			this.coffer = coffer;
 			this.lastChanged = lastChanged;
+		}
+	}
+
+	/**
+	 * Paste stored in the Mastering Mixology lab hopper, 0 to 3,000 of each kind.
+	 */
+	@EqualsAndHashCode
+	public static class MixologyHopper
+	{
+		/** Mox paste. */
+		public int mox;
+
+		/** Aga paste. */
+		public int aga;
+
+		/** Lye paste. */
+		public int lye;
+
+		/**
+		 * @param mox mox paste
+		 * @param aga aga paste
+		 * @param lye lye paste
+		 */
+		public MixologyHopper(int mox, int aga, int lye)
+		{
+			this.mox = mox;
+			this.aga = aga;
+			this.lye = lye;
 		}
 	}
 
