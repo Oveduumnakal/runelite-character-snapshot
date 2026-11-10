@@ -117,6 +117,30 @@ public class SnapshotCollectorTest
 	}
 
 	/**
+	 * A placeholder variant is not exported even when its slot reports a quantity of 1.
+	 */
+	@Test
+	public void placeholderWithQuantityIsNotExported()
+	{
+		Client client = loggedInClient("Zezima");
+		ItemComposition hood = named("Graceful hood");
+		ItemComposition placeholder = named("Graceful hood");
+		when(placeholder.getPlaceholderTemplateId()).thenReturn(14401);
+		when(client.getItemDefinition(11850)).thenReturn(hood);
+		when(client.getItemDefinition(18208)).thenReturn(placeholder);
+		when(client.getVarbitValue(VarbitID.BANK_TAB_1)).thenReturn(1);
+		SnapshotCollector collector = new SnapshotCollector(client, allEnabled());
+
+		collector.updateBank(container(item(18208, 1), item(11850, 1), item(18208, 1)));
+		CharacterSnapshot data = collector.buildSnapshot();
+
+		assertEquals(Arrays.asList(11850), ids(data.bank.items));
+		assertEquals(1, data.bank.totalItems);
+		assertTrue(data.bank.tabs.get(1).items.isEmpty());
+		assertEquals(Arrays.asList(11850), ids(data.bank.tabs.get(0).items));
+	}
+
+	/**
 	 * A numbered tab holding only placeholders still exists, and an empty bank still has its main tab.
 	 */
 	@Test
@@ -841,6 +865,7 @@ public class SnapshotCollectorTest
 	{
 		ItemComposition comp = mock(ItemComposition.class);
 		when(comp.getName()).thenReturn(name);
+		when(comp.getPlaceholderTemplateId()).thenReturn(-1);
 		return comp;
 	}
 
