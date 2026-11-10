@@ -413,11 +413,25 @@ public class SnapshotCollector
 		for (int i = start; i < end; i++)
 		{
 			int id = raw[i].getId();
-			if (id > 0 && raw[i].getQuantity() > 0)
+			if (id > 0 && raw[i].getQuantity() > 0 && !isPlaceholder(id))
 				slice.add(new ItemEntry(id, getItemName(id), raw[i].getQuantity()));
 		}
 
 		return slice;
+	}
+
+	/**
+	 * Tells whether an item id is a bank placeholder. A placeholder slot holds the placeholder variant
+	 * of the item, which has its own id and can report a quantity above zero, so the quantity alone
+	 * does not identify it.
+	 *
+	 * @param itemId the item id
+	 * @return whether the id is a placeholder variant
+	 */
+	private boolean isPlaceholder(int itemId)
+	{
+		ItemComposition def = client.getItemDefinition(itemId);
+		return def != null && def.getPlaceholderTemplateId() != -1;
 	}
 
 	/**

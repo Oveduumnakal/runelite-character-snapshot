@@ -2582,6 +2582,7 @@ changed, so the plugin can mark the snapshot dirty without a blanket varbit list
 | `public boolean` | `finishCollectionLogSearch()` | Closes a search pass started by `#recordCollectionLogItem(Object[])`. |
 | `private String` | `getItemName(int itemId)` | Resolves an item id to its display name. |
 | `private boolean` | `hasRunePouch()` |  |
+| `private boolean` | `isPlaceholder(int itemId)` | Tells whether an item id is a bank placeholder. |
 | `private boolean` | `isVarpBoss(String key)` |  |
 | `private Map<Integer,CombatAchievementTask>` | `loadCombatAchievementMeta()` | Reads task names, tiers, and monsters from the game cache: each tier enum lists task structs, and each struct carries the task id, name, and monster category as params. |
 | `private boolean` | `mergeClogItem(ItemEntry item)` | Merges one obtained item into the whole-log item map. |
@@ -3165,6 +3166,17 @@ Resolves an item id to its display name.
 `private boolean hasRunePouch()`
 
 - **Returns:** whether the live inventory holds any rune pouch variant
+
+#### isPlaceholder
+
+`private boolean isPlaceholder(int itemId)`
+
+Tells whether an item id is a bank placeholder. A placeholder slot holds the placeholder variant
+of the item, which has its own id and can report a quantity above zero, so the quantity alone
+does not identify it.
+
+- **Parameter** `itemId` — the item id
+- **Returns:** whether the id is a placeholder variant
 
 #### isVarpBoss
 
