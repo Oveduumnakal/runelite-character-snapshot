@@ -78,6 +78,12 @@ assistant. The plugin makes **no network calls of any kind** — nothing leaves 
 
 The exported JSON is a documented, versioned contract — see [`SCHEMA.md`](SCHEMA.md) for every field.
 
+## Credits
+
+Character Snapshot is a significantly changed fork of
+[runelite-json-export](https://github.com/isaachansen/runelite-json-export) by isaac, used under the BSD 2-Clause
+License (see [`LICENSE`](LICENSE)).
+
 ## Links
 
 - [Report a bug](https://github.com/Oveduumnakal/runelite-character-snapshot/issues/new?template=bug_report.yml)
